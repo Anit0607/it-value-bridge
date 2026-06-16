@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Next.js build output
+.next/
+out/
+
+# Environment files
+.env*
+
+# Design reference (cloned, not part of source)
+_design-ref/
+
+# Logs
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
