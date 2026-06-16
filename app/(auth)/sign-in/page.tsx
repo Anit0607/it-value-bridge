@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRole } from '@/components/RoleProvider';
 import { DEMO_USERS } from '@/lib/auth';
@@ -12,6 +13,7 @@ import {
   Briefcase,
   CheckSquare,
   ArrowRight,
+  ArrowLeft,
   type LucideIcon,
 } from 'lucide-react';
 
@@ -29,7 +31,7 @@ const ROLE_META: Record<Role, { desc: string; icon: LucideIcon }> = {
   business: { desc: 'Items where you are the business SPOC', icon: CheckSquare },
 };
 
-export default function LoginPage() {
+export default function SignInPage() {
   const { user, login } = useRole();
   const router = useRouter();
 
@@ -43,7 +45,7 @@ export default function LoginPage() {
   };
 
   return (
-    <main className="flex min-h-screen flex-col lg:flex-row">
+    <main className="flex min-h-dvh flex-col lg:flex-row">
       {/* Brand panel */}
       <div className="relative flex flex-col justify-between overflow-hidden bg-navy-900 px-8 py-10 text-white lg:w-2/5 lg:px-12 lg:py-14">
         <div
@@ -54,12 +56,12 @@ export default function LoginPage() {
           }}
           aria-hidden
         />
-        <div className="relative flex items-center gap-2.5">
+        <Link href="/" className="relative flex items-center gap-2.5">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-brand-600 shadow-lg">
             <Layers className="h-5 w-5" strokeWidth={2.25} />
           </div>
           <span className="text-lg font-semibold">IT Value Bridge</span>
-        </div>
+        </Link>
         <div className="relative hidden lg:block">
           <h1 className="text-3xl font-semibold leading-tight tracking-tight">
             Bridge IT delivery to<br />measurable business value.
@@ -69,9 +71,13 @@ export default function LoginPage() {
             health, stage pipelines, and outcome reporting for banking IT portfolios.
           </p>
         </div>
-        <div className="relative text-xs text-slate-500">
-          Prototype · seeded with 20 realistic banking IT items
-        </div>
+        <Link
+          href="/"
+          className="relative inline-flex w-fit items-center gap-1.5 text-xs text-slate-400 transition-colors hover:text-white"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Back to home
+        </Link>
       </div>
 
       {/* Login panel */}
@@ -79,7 +85,10 @@ export default function LoginPage() {
         <div className="w-full max-w-md">
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-slate-900">Select a role to continue</h2>
-            <p className="mt-1 text-sm text-slate-500">No authentication required — this is a demo.</p>
+            <p className="mt-1 text-sm text-slate-500">
+              No authentication required — this is a demo. Real sign-in arrives in the next build
+              phase.
+            </p>
           </div>
 
           <div className="space-y-2.5">

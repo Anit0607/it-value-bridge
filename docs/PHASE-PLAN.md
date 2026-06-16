@@ -652,11 +652,14 @@ model MonthlyReport {
 - ✅ Dual methodology, PMBOK knowledge areas, business-value realization (the USP) — explicit tasks.
 - ✅ Frozen RAG + stage order carried verbatim from existing code into Appendix B.
 
-**Gaps flagged for the user (resolve before the relevant phase, not blocking the plan):**
-1. **Supabase `DATABASE_URL`/`DIRECT_URL`** — required before Phase 1 Task 1.2.
-2. **Google login yes/no** — affects Phase 1 Task 1.3 (email/password ships regardless).
-3. **Self-signup default role** — plan assumes new public signups default to `BUSINESS`; PMO assigns elevated roles. Confirm.
-4. **Agile RAG rule** — waterfall RAG is frozen; Agile needs its own (plan proposes: sprint-commitment/expected-date based + stale-≥7d Red). Confirm in Phase 4.
-5. **Chart library** for burndown/velocity (Phase 4) — plan leaves open (light lib vs hand-rolled SVG).
+**Gaps — RESOLVED by user (2026-06-17):**
+1. **Supabase `DATABASE_URL`/`DIRECT_URL`** — user will provide before Phase 1; do **not** block planning/Phase 0 on it.
+2. **Google login** — **No** for now; email/password only. Structure Auth.js so a Google provider can be added later without rework (Task 1.3: keep providers array + adapter generic).
+3. **Self-signup default role** — **`BUSINESS_SPOC`** (lowest privilege). PMO/admin can elevate. (Maps to `Role.BUSINESS` in Appendix A enum.)
+4. **Agile RAG rule** (Phase 4, computed at render — waterfall RAG stays frozen):
+   - **Green:** on or ahead of burndown AND no blockers.
+   - **Amber:** behind burndown **OR** sprint ends in ≤3 days with open points **OR** any blocked story.
+   - **Red:** sprint end date passed with open points **OR** no update in ≥7 days **OR** a critical blocker.
+5. **Chart library** — **Recharts** (use for burndown + velocity in Phase 4).
 
 **Type consistency:** Prisma `Stage` enum (SCREAMING_SNAKE) vs UI `STAGES` (human labels) reconciled via mandated `lib/stage-map.ts`. Server-action names in Phase 1 Task 1.4 (`listInitiatives/getInitiative/createInitiative/updateInitiative/advanceStage/saveValidation`) are reused verbatim by Phase 2 query/task references. `enrich()` is the single RAG/days computation point referenced by all dashboards.

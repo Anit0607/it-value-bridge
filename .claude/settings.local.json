@@ -55,7 +55,15 @@
       "Bash(npm run *)",
       "Bash(echo \"PID: $!\")",
       "Bash(git clone *)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -q -m 'Snapshot before redesign *)",
+      "Bash(git config *)",
+      "Bash(python \"/c/Users/ANIT BOSE/.claude/skills/ui-ux-pro-max/src/ui-ux-pro-max/scripts/search.py\" \"enterprise SaaS B2B portfolio management banking IT dashboard professional indigo\" --design-system -f markdown)",
+      "Bash(npm i *)",
+      "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('deps:', Object.keys\\(p.dependencies\\).join\\(', '\\)\\); console.log\\('devDeps:', Object.keys\\(p.devDependencies\\).join\\(', '\\)\\);\")",
+      "Bash(rm -f app/page.tsx)",
+      "Bash(ls app/*.tsx)",
+      "Bash(BASE=http://localhost:3001 node scripts/shoot-phase0.mjs)"
     ]
   }
 }
