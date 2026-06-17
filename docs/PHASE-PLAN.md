@@ -2,6 +2,8 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL — use `superpowers:subagent-driven-development` (recommended) or `superpowers:executing-plans` to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking. Use `ui-ux-pro-max` for **every** UI task. This document is **planning only** — no application code is written here beyond schema/interface contracts that downstream tasks must honor.
 
+> **TERMINOLOGY (hard rule):** "PMBOK" is internal shorthand for the author's understanding only. It MUST NOT appear in any user-facing UI text, headings, labels, route segments, file/folder names, or comments. Use plain business terms instead: "PMBOK knowledge areas" → **governance areas**; "PMBOK process groups" → **delivery phases**; "knowledge-area matrix" → **governance matrix**. Route segment `pmbok` → **`governance`** (e.g. `app/(app)/items/[id]/governance/...`, `lib/governance.ts`, `components/governance/*`). Keep the underlying concepts; drop the acronym.
+
 **Goal:** Turn the existing localStorage prototype into a real, DB-backed, auth-protected enterprise SaaS app that tracks banking IT Change Requests & Projects across dual methodologies (Waterfall + Agile) and PMBOK knowledge areas, and translates IT delivery into business value for leadership.
 
 **Architecture:** Next.js (App Router) + TypeScript. Auth.js (NextAuth v5) email/password with RBAC over four roles. PostgreSQL (Supabase) via Prisma ORM. Data access through Server Actions / Route Handlers — the localStorage store is removed in Phase 1. UI is a single design system (Tailwind + shadcn/ui + lucide-react + Framer Motion) sourced from `_design-ref` + the `ui-ux-pro-max` skill. RAG and "days in stage" stay computed at render time, never stored.

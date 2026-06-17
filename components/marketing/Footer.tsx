@@ -5,7 +5,7 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
   {
     heading: 'Product',
     links: [
-      { label: 'PMBOK + Agile', href: '#methodology' },
+      { label: 'Methodology', href: '#methodology' },
       { label: 'Portfolio health', href: '#health' },
       { label: 'Reporting', href: '#reporting' },
     ],

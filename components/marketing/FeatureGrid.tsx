@@ -21,7 +21,7 @@ const FEATURES: Feature[] = [
   {
     icon: GitBranch,
     title: 'Dual methodology',
-    body: 'Run each initiative as Waterfall (11-stage pipeline mapped to PMBOK process groups) or Agile (epics, sprints, velocity, burndown). The tracker adapts per initiative.',
+    body: 'Run each initiative as Waterfall (11-stage pipeline mapped to delivery phases) or Agile (epics, sprints, velocity, burndown). The tracker adapts per initiative.',
   },
   {
     icon: Activity,
@@ -41,7 +41,7 @@ const FEATURES: Feature[] = [
   {
     icon: ShieldAlert,
     title: 'Risk & stakeholder registers',
-    body: 'PMBOK knowledge-area matrix across scope, schedule, cost, quality and risk — plus risk and stakeholder registers on every initiative.',
+    body: 'A governance matrix across scope, schedule, cost, quality and risk — plus risk and stakeholder registers on every initiative.',
   },
   {
     icon: Users,

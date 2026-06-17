@@ -7,7 +7,7 @@ import { CTASection } from '@/components/marketing/CTASection';
 export const metadata: Metadata = {
   title: 'IT Value Bridge — Translate IT delivery into business value',
   description:
-    'Portfolio management for banking IT. Track Change Requests and Projects across Waterfall and Agile with live RAG health, PMBOK knowledge areas, and executive reporting.',
+    'Portfolio management for banking IT. Track Change Requests and Projects across Waterfall and Agile with live RAG health, governance tracking, and executive reporting.',
 };
 
 export default function LandingPage() {

@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { Layers, Menu, X } from 'lucide-react';
 
 const LINKS = [
-  { href: '#methodology', label: 'PMBOK + Agile' },
+  { href: '#methodology', label: 'Methodology' },
   { href: '#health', label: 'Portfolio health' },
   { href: '#reporting', label: 'Reporting' },
 ];

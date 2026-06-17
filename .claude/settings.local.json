@@ -63,7 +63,12 @@
       "Bash(node -e \"const p=require\\('./package.json'\\); console.log\\('deps:', Object.keys\\(p.dependencies\\).join\\(', '\\)\\); console.log\\('devDeps:', Object.keys\\(p.devDependencies\\).join\\(', '\\)\\);\")",
       "Bash(rm -f app/page.tsx)",
       "Bash(ls app/*.tsx)",
-      "Bash(BASE=http://localhost:3001 node scripts/shoot-phase0.mjs)"
+      "Bash(BASE=http://localhost:3001 node scripts/shoot-phase0.mjs)",
+      "Bash(git commit -q -m 'feat\\(phase-0\\): design system + marketing landing page + app shell *)",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:63677/)",
+      "Bash(curl -s http://localhost:63677/)",
+      "Bash(curl -s --max-time 90 -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:63677/)",
+      "Bash(curl -s --max-time 60 http://localhost:63677/)"
     ]
   }
 }

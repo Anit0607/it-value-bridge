@@ -4,7 +4,7 @@ import { Reveal } from './Reveal';
 
 const STATS = [
   { value: '11', label: 'Delivery stages, BRD → Closed' },
-  { value: '10', label: 'PMBOK knowledge areas tracked' },
+  { value: '10', label: 'Governance areas tracked' },
   { value: '4', label: 'Role-based leadership views' },
   { value: '2', label: 'Methodologies — Waterfall & Agile' },
 ];
