@@ -19,7 +19,8 @@ for leadership.**
 | UI system | Tailwind + **shadcn/ui** + **lucide-react** + **Framer Motion** | clean enterprise SaaS look + subtle animation |
 | Design source | **ui-ux-pro-max** skill + cloned **VoltAgent/awesome-design-md** | design tokens, palettes, patterns |
 | Auth | **Auth.js (NextAuth v5)** — email/password (+ Google optional) | real sign in / sign up |
-| DB | **PostgreSQL (Supabase free tier)** + **Prisma ORM** | real persistence, migrations, type-safe |
+| DB | **Self-hosted PostgreSQL (Docker)** + **Prisma ORM** | real persistence, on the bank's own infra — no cloud (compliance) |
+| Packaging | **Docker + docker-compose** (app + postgres) | one-command, runs on their infra; air-gapped |
 | Data access | Server Actions / Route Handlers (remove localStorage mock) | real backend |
 | Auth model | RBAC: CIO / PMO / Vertical Head / Business SPOC | matches existing roles |
 
@@ -78,7 +79,7 @@ passed OR no update in 7+ days; else Amber if expected date within 14 days; else
     placeholder, footer, CTA → Sign in / Sign up.
   - Build the **app shell**: sidebar with icons + active state, top bar, user menu.
 - **Phase 1 — Auth + Database**
-  - Add Prisma + Postgres (Supabase). Auth.js: sign up, sign in, sign out,
+  - Add Prisma + self-hosted Postgres (Docker container). Auth.js: sign up, sign in, sign out,
     sessions, protected routes, RBAC. Seed DB with demo users + 20 initiatives.
   - Replace the localStorage store with DB-backed server actions.
 - **Phase 2 — Core tracker redesign (DB-backed)**
@@ -120,7 +121,8 @@ logic; **Sonnet** for the rest (UI assembly, wiring).
 ---
 
 ## 5. What you need to provide
-- **Supabase**: a free project (Phase 1) → I'll give exact steps; it yields a
-  `DATABASE_URL`. (Phase 0 needs nothing — start immediately.)
+- **Nothing external.** DB is a local Postgres Docker container (no Supabase/cloud).
+  Requires **Docker Desktop** installed on the dev machine and on the bank's host.
+  Data stays entirely on their infrastructure (Indian banking compliance).
 - **Google login?** decide yes/no for Auth.js (email/password works either way).
 - **Branding**: product name confirmed "IT Value Bridge"; logo/colors optional.

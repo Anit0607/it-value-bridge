@@ -4,11 +4,27 @@
 
 > **TERMINOLOGY (hard rule):** "PMBOK" is internal shorthand for the author's understanding only. It MUST NOT appear in any user-facing UI text, headings, labels, route segments, file/folder names, or comments. Use plain business terms instead: "PMBOK knowledge areas" → **governance areas**; "PMBOK process groups" → **delivery phases**; "knowledge-area matrix" → **governance matrix**. Route segment `pmbok` → **`governance`** (e.g. `app/(app)/items/[id]/governance/...`, `lib/governance.ts`, `components/governance/*`). Keep the underlying concepts; drop the acronym.
 
+> **DEPLOYMENT & COMPLIANCE (LOCKED 2026-06-18) — OVERRIDES any Supabase/cloud references below.**
+> Two beta users are from a bank with Indian data-residency requirements: **all data must stay on
+> infrastructure they control, and the app makes NO external network calls at runtime.**
+> - **Database:** self-hosted **PostgreSQL in a Docker container** — NOT Supabase or any cloud DB.
+>   A single `DATABASE_URL` pointing at the local service (e.g. `postgresql://itvb:itvb@db:5432/itvb`).
+>   Drop Supabase pooling / `DIRECT_URL`.
+> - **Packaging:** ship `Dockerfile` (Next.js `output: 'standalone'`) + `docker-compose.yml`
+>   (app + postgres + named volume) + `.env.example`, with one-command start (`docker compose up`).
+>   Must run on Linux, Windows, or a laptop.
+> - **Air-gapped:** no external CDNs/analytics/fonts at runtime (`next/font` self-hosts at build = OK).
+>   **AI narrative is OFF by default** — render a manual/placeholder narrative behind a disabled
+>   feature flag; no external AI API call.
+> - **Pilot data:** seed dummy/non-sensitive data only. Real data follows the bank's security review
+>   (hardening, SSO/AD, audit, encryption-at-rest) — out of scope for the beta.
+> - **Auth:** self-hosted email/password (Auth.js Credentials). No Google/external IdP.
+
 **Goal:** Turn the existing localStorage prototype into a real, DB-backed, auth-protected enterprise SaaS app that tracks banking IT Change Requests & Projects across dual methodologies (Waterfall + Agile) and PMBOK knowledge areas, and translates IT delivery into business value for leadership.
 
-**Architecture:** Next.js (App Router) + TypeScript. Auth.js (NextAuth v5) email/password with RBAC over four roles. PostgreSQL (Supabase) via Prisma ORM. Data access through Server Actions / Route Handlers — the localStorage store is removed in Phase 1. UI is a single design system (Tailwind + shadcn/ui + lucide-react + Framer Motion) sourced from `_design-ref` + the `ui-ux-pro-max` skill. RAG and "days in stage" stay computed at render time, never stored.
+**Architecture:** Next.js (App Router) + TypeScript. Auth.js (NextAuth v5) email/password with RBAC over four roles. Self-hosted PostgreSQL (Docker container, no cloud) via Prisma ORM. Data access through Server Actions / Route Handlers — the localStorage store is removed in Phase 1. UI is a single design system (Tailwind + shadcn/ui + lucide-react + Framer Motion) sourced from `_design-ref` + the `ui-ux-pro-max` skill. RAG and "days in stage" stay computed at render time, never stored.
 
-**Tech Stack:** Next.js 14.2.5, React 18, TypeScript 5, Tailwind 3.4, shadcn/ui, lucide-react, framer-motion, Auth.js v5, Prisma, PostgreSQL (Supabase), bcrypt, zod.
+**Tech Stack:** Next.js 14.2.5, React 18, TypeScript 5, Tailwind 3.4, shadcn/ui, lucide-react, framer-motion, Auth.js v5, Prisma, PostgreSQL (self-hosted via Docker), bcrypt, zod, Docker + docker-compose.
 
 **USP that must survive every phase:** *translating IT delivery into business value for leadership.*
 
@@ -115,7 +131,7 @@ New / changed top-level areas across the build (created in the phase noted):
 
 **Outcome:** Real Postgres persistence via Prisma, real Auth.js email/password with RBAC, seeded demo data, and the localStorage store fully replaced by server actions. App behaves identically to the prototype but is now backed by a database.
 
-> **User must provide (blocking):** a Supabase project → `DATABASE_URL` + `DIRECT_URL`. Also decide Google login yes/no (email/password ships either way). Do not start Task 1.2 until `DATABASE_URL` is in `.env`.
+> **No external setup needed.** The database is a local Postgres Docker container defined in `docker-compose.yml` (Task 1.0). Create `.env` from `.env.example` with `DATABASE_URL=postgresql://itvb:itvb@localhost:5432/itvb` (or `@db:5432` inside compose). Email/password auth only — no Google/OAuth. Add a **Task 1.0**: write `docker-compose.yml` (postgres + named volume) and bring it up before `prisma migrate`.
 
 ### Task 1.1: Add Prisma + define schema
 
