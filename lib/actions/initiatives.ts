@@ -296,6 +296,16 @@ export async function saveValidation(id: string, validation: BusinessValidation,
 
 // ---- Value (benefit claims + sign-off) ----
 
+export interface ValueMeasurementView {
+  id: string;
+  horizonLabel: string;
+  measuredAt: string;
+  actualValue: number | null;
+  realizedInr: number | null;
+  note: string;
+  recordedByName: string | null;
+}
+
 export interface InitiativeValue {
   estimatedCostInr: number | null;
   actualCostInr: number | null;
@@ -310,6 +320,7 @@ export interface InitiativeValue {
     baselineValue: number | null;
     targetValue: number | null;
     narrative: string;
+    measurements: ValueMeasurementView[];
   }[];
 }
 
@@ -325,12 +336,28 @@ export async function getInitiativeValue(id: string): Promise<InitiativeValue | 
         select: {
           id: true, category: true, metricName: true, unit: true,
           estimatedAnnualValueInr: true, baselineValue: true, targetValue: true, narrative: true,
+          measurements: { orderBy: { measuredAt: 'desc' } },
         },
         orderBy: { estimatedAnnualValueInr: 'desc' },
       },
     },
   });
-  return i;
+  if (!i) return null;
+  return {
+    ...i,
+    benefitClaims: i.benefitClaims.map(c => ({
+      ...c,
+      measurements: c.measurements.map(m => ({
+        id: m.id,
+        horizonLabel: m.horizonLabel,
+        measuredAt: m.measuredAt.toISOString().slice(0, 10),
+        actualValue: m.actualValue,
+        realizedInr: m.realizedInr,
+        note: m.note,
+        recordedByName: m.recordedByName,
+      })),
+    })),
+  };
 }
 
 export async function signOffValue(id: string, signedBy: string) {
