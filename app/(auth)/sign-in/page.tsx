@@ -3,7 +3,8 @@
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { signIn } from 'next-auth/react';
+import { signIn, getSession } from 'next-auth/react';
+import { getRoleHome } from '@/lib/rbac';
 import {
   Layers,
   LayoutDashboard,
@@ -45,7 +46,8 @@ export default function SignInPage() {
       if (result?.error) {
         setError('Invalid email or password.');
       } else {
-        router.push('/');
+        const session = await getSession();
+        router.push(session?.user?.role ? getRoleHome(session.user.role) : '/');
         router.refresh();
       }
     });
