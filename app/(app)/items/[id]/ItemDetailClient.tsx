@@ -4,16 +4,19 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRole } from '@/components/RoleProvider';
-import { advanceStage, updateNotes } from '@/lib/actions/initiatives';
+import { advanceStage, updateNotes, signOffValue, type InitiativeValue } from '@/lib/actions/initiatives';
 import { computeRAG, daysInStage, daysFromNow } from '@/lib/rag';
+import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE, BENEFIT_UNIT_LABEL } from '@/lib/value';
 import { RagBadge } from '@/components/RagBadge';
 import { StageProgress } from '@/components/StageProgress';
 import { STAGES } from '@/lib/types';
 import type { Item, DelaySource, Role } from '@/lib/types';
+import type { BenefitCategory, BenefitUnit } from '@prisma/client';
 import {
   ChevronRight,
   ClipboardCheck,
   CheckCircle2,
+  BadgeCheck,
   ArrowRight,
   History as HistoryIcon,
 } from 'lucide-react';
@@ -36,11 +39,23 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function ItemDetailClient({ item }: { item: Item }) {
+export function ItemDetailClient({ item, value }: { item: Item; value: InitiativeValue | null }) {
   const { user } = useRole();
   const router = useRouter();
   const [note, setNote] = useState('');
   const [isPending, startTransition] = useTransition();
+
+  const claims = value?.benefitClaims ?? [];
+  const totalValue = claims.reduce((s, b) => s + b.estimatedAnnualValueInr, 0);
+  const canSignOff = user?.role === 'PMO' || user?.role === 'CIO';
+
+  const handleSignOff = () => {
+    if (!user) return;
+    startTransition(async () => {
+      await signOffValue(item.id, user.name);
+      router.refresh();
+    });
+  };
   const [localNotes, setLocalNotes] = useState<string | null>(null);
   const [localDelayed, setLocalDelayed] = useState<boolean | null>(null);
   const [localDelaySource, setLocalDelaySource] = useState<DelaySource | undefined>(undefined);
@@ -130,14 +145,66 @@ export function ItemDetailClient({ item }: { item: Item }) {
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-            <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Business Value</h2>
-            <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
-              <Field label="Outcome Category">{item.outcomeCategory}</Field>
-              <Field label="Target Metric">{item.targetMetric}</Field>
-              <div className="col-span-2">
-                <Field label="Expected Outcome">{item.outcomeDescription}</Field>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Business Value</h2>
+              <div className="flex items-center gap-2">
+                {totalValue > 0 && (
+                  <span className="text-xs text-slate-400">
+                    Total <span className="tabular font-semibold text-brand-700">{formatInr(totalValue)}</span>
+                  </span>
+                )}
+                {value?.valueSignedOff ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                    <BadgeCheck className="h-3.5 w-3.5" />
+                    Signed off{value.valueSignOffBy ? ` · ${value.valueSignOffBy}` : ''}
+                  </span>
+                ) : (
+                  canSignOff && claims.length > 0 && (
+                    <button
+                      onClick={handleSignOff}
+                      disabled={isPending}
+                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 px-2.5 py-1 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-60"
+                    >
+                      <BadgeCheck className="h-3.5 w-3.5" />
+                      Sign off value
+                    </button>
+                  )
+                )}
               </div>
-            </dl>
+            </div>
+
+            {claims.length > 0 ? (
+              <ul className="space-y-2.5">
+                {claims.map(b => (
+                  <li key={b.id} className="rounded-lg border border-slate-100 bg-slate-50/50 p-3">
+                    <div className="flex items-center justify-between gap-3">
+                      <span className="inline-flex items-center gap-1.5 text-sm font-medium text-slate-800">
+                        <span className={`h-2 w-2 rounded-full ${CATEGORY_TONE[b.category as BenefitCategory]}`} />
+                        {BENEFIT_CATEGORY_LABEL[b.category as BenefitCategory]}
+                      </span>
+                      <span className="tabular text-sm font-semibold text-slate-800">{formatInr(b.estimatedAnnualValueInr)}</span>
+                    </div>
+                    <div className="mt-1 text-sm text-slate-600">{b.metricName}</div>
+                    {b.narrative && <div className="mt-0.5 text-xs text-slate-500">{b.narrative}</div>}
+                    {(b.baselineValue != null || b.targetValue != null) && (
+                      <div className="mt-1 text-xs text-slate-400">
+                        {b.baselineValue != null && <>baseline {b.baselineValue}{BENEFIT_UNIT_LABEL[b.unit as BenefitUnit]} </>}
+                        {b.targetValue != null && <>→ target {b.targetValue}{BENEFIT_UNIT_LABEL[b.unit as BenefitUnit]}</>}
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
+                <Field label="Outcome Category">{item.outcomeCategory}</Field>
+                <Field label="Target Metric">{item.targetMetric}</Field>
+                <div className="col-span-2">
+                  <Field label="Expected Outcome">{item.outcomeDescription}</Field>
+                </div>
+              </dl>
+            )}
+
             {item.validation && (
               <div className="mt-4 border-t border-slate-100 pt-4">
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Validation Result</h3>

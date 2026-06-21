@@ -118,6 +118,16 @@ export async function getInitiativesBySpoc(spocName: string): Promise<Item[]> {
 
 // ---- Mutations ----
 
+const BenefitInput = z.object({
+  category: z.enum(['REVENUE', 'COST_SAVING', 'CUSTOMER_EXPERIENCE', 'COMPLIANCE', 'EFFICIENCY', 'RISK_REDUCTION']),
+  metricName: z.string().min(1),
+  unit: z.enum(['INR', 'PERCENT', 'DAYS', 'HOURS', 'COUNT', 'RATIO']),
+  estimatedAnnualValueInr: z.number().min(0),
+  baselineValue: z.number().nullable().optional(),
+  targetValue: z.number().nullable().optional(),
+  narrative: z.string().default(''),
+});
+
 const CreateSchema = z.object({
   title: z.string().min(1),
   type: z.enum(['Change Request', 'Project']),
@@ -125,27 +135,24 @@ const CreateSchema = z.object({
   businessSpoc: z.string().min(1),
   businessSponsor: z.string().min(1),
   requirement: z.string().min(1),
-  outcomeCategory: z.enum(['Revenue', 'Cost Saving', 'Customer Experience', 'Compliance', 'Efficiency', 'Risk Reduction']),
-  outcomeDescription: z.string().min(1),
-  targetMetric: z.string().min(1),
   goLiveDate: z.string().min(1),
+  benefits: z.array(BenefitInput).min(1, 'Define at least one quantified benefit'),
 });
 
-const OUTCOME_TO_BENEFIT: Record<string, BenefitCategory> = {
-  Revenue: 'REVENUE',
-  'Cost Saving': 'COST_SAVING',
-  'Customer Experience': 'CUSTOMER_EXPERIENCE',
-  Compliance: 'COMPLIANCE',
-  Efficiency: 'EFFICIENCY',
-  'Risk Reduction': 'RISK_REDUCTION',
-};
+export type CreateInitiativeInput = z.infer<typeof CreateSchema>;
 
-export async function createInitiative(userName: string, formData: FormData) {
-  const raw = Object.fromEntries(formData.entries());
-  const parsed = CreateSchema.parse(raw);
+export async function createInitiative(userName: string, input: CreateInitiativeInput) {
+  const parsed = CreateSchema.parse(input);
+
+  // Primary benefit = highest projected ₹ value; drives the legacy summary fields.
+  const primary = [...parsed.benefits].sort(
+    (a, b) => b.estimatedAnnualValueInr - a.estimatedAnnualValueInr,
+  )[0];
+  const totalValue = parsed.benefits.reduce((s, b) => s + b.estimatedAnnualValueInr, 0);
 
   const today = new Date();
   const expectedDate = new Date(Date.now() + 21 * 86_400_000);
+  const okr = await prisma.okr.findFirst({ where: { category: primary.category, active: true } });
 
   const initiative = await prisma.initiative.create({
     data: {
@@ -156,9 +163,9 @@ export async function createInitiative(userName: string, formData: FormData) {
       businessSpoc: parsed.businessSpoc,
       businessSponsor: parsed.businessSponsor,
       description: parsed.requirement,
-      benefitCategory: OUTCOME_TO_BENEFIT[parsed.outcomeCategory],
-      outcomeDescription: parsed.outcomeDescription,
-      targetMetric: parsed.targetMetric,
+      benefitCategory: primary.category,
+      outcomeDescription: primary.narrative || primary.metricName,
+      targetMetric: primary.metricName,
       expectedGoLiveDate: new Date(parsed.goLiveDate),
       currentStage: 'BRD',
       currentProcessGroup: 'PLANNING',
@@ -167,6 +174,20 @@ export async function createInitiative(userName: string, formData: FormData) {
       lastUpdated: today,
       notes: '',
       delayed: false,
+      estimatedCostInr: Math.round(totalValue * 0.3),
+      valueSignedOff: false,
+      benefitClaims: {
+        create: parsed.benefits.map(b => ({
+          category: b.category,
+          metricName: b.metricName,
+          unit: b.unit,
+          estimatedAnnualValueInr: b.estimatedAnnualValueInr,
+          baselineValue: b.baselineValue ?? null,
+          targetValue: b.targetValue ?? null,
+          narrative: b.narrative,
+        })),
+      },
+      okrLinks: okr ? { create: { okrId: okr.id } } : undefined,
       history: {
         create: {
           stage: 'BRD',
@@ -180,6 +201,7 @@ export async function createInitiative(userName: string, formData: FormData) {
 
   revalidatePath('/pmo');
   revalidatePath('/cio');
+  revalidatePath('/value');
   return initiative.id;
 }
 
@@ -270,4 +292,52 @@ export async function saveValidation(id: string, validation: BusinessValidation,
 
   revalidatePath(`/items/${id}`);
   revalidatePath('/business');
+}
+
+// ---- Value (benefit claims + sign-off) ----
+
+export interface InitiativeValue {
+  estimatedCostInr: number | null;
+  actualCostInr: number | null;
+  valueSignedOff: boolean;
+  valueSignOffBy: string | null;
+  benefitClaims: {
+    id: string;
+    category: string;
+    metricName: string;
+    unit: string;
+    estimatedAnnualValueInr: number;
+    baselineValue: number | null;
+    targetValue: number | null;
+    narrative: string;
+  }[];
+}
+
+export async function getInitiativeValue(id: string): Promise<InitiativeValue | null> {
+  const i = await prisma.initiative.findUnique({
+    where: { id },
+    select: {
+      estimatedCostInr: true,
+      actualCostInr: true,
+      valueSignedOff: true,
+      valueSignOffBy: true,
+      benefitClaims: {
+        select: {
+          id: true, category: true, metricName: true, unit: true,
+          estimatedAnnualValueInr: true, baselineValue: true, targetValue: true, narrative: true,
+        },
+        orderBy: { estimatedAnnualValueInr: 'desc' },
+      },
+    },
+  });
+  return i;
+}
+
+export async function signOffValue(id: string, signedBy: string) {
+  await prisma.initiative.update({
+    where: { id },
+    data: { valueSignedOff: true, valueSignOffBy: signedBy, valueSignOffAt: new Date() },
+  });
+  revalidatePath(`/items/${id}`);
+  revalidatePath('/value');
 }
