@@ -1,18 +1,14 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
-import { listInitiativesAsItems } from '@/lib/actions/initiatives';
-import { computeRAG, ragCounts } from '@/lib/rag';
+import { getPmoList } from '@/lib/queries/dashboard';
 import { PmoDashboardClient } from './PmoDashboardClient';
 import { PageHeader } from '@/components/PageHeader';
 import { KpiCard } from '@/components/KpiCard';
 import { Layers, CheckCircle2, AlertTriangle, AlertOctagon, PlusCircle } from 'lucide-react';
 
 export default async function PmoDashboard() {
-  const items = await listInitiativesAsItems();
-
-  const active = items.filter(i => i.currentStage !== 'Closed');
-  const counts = ragCounts(active.map(i => computeRAG(i)));
+  const { items, activeCount, counts } = await getPmoList();
 
   return (
     <div className="space-y-6">
@@ -27,7 +23,7 @@ export default async function PmoDashboard() {
       </PageHeader>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard label="Active Items" value={active.length} sub={`of ${items.length} total`} icon={Layers} accent="brand" />
+        <KpiCard label="Active Items" value={activeCount} sub={`of ${items.length} total`} icon={Layers} accent="brand" />
         <KpiCard label="On Track" value={counts.green} icon={CheckCircle2} accent="emerald" />
         <KpiCard label="At Risk" value={counts.amber} icon={AlertTriangle} accent="amber" />
         <KpiCard label="Delayed" value={counts.red} icon={AlertOctagon} accent="rose" />

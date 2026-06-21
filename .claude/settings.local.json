@@ -75,7 +75,10 @@
       "PowerShell(Get-Content *)",
       "PowerShell(Start-Sleep -Seconds 3; $r = [System.Net.WebRequest]::Create\\(\"http://localhost:3000/sign-in\"\\); $r.Timeout = 10000; try { $resp = $r.GetResponse\\(\\); Write-Host \"Status: $\\($resp.StatusCode\\)\"; $resp.Close\\(\\) } catch [System.Net.WebException] { Write-Host \"WebEx: $\\($_.Exception.Status\\) - $\\($_.Exception.Message\\)\" })",
       "Bash(grep -E \"\\\\.env$\")",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Bash(ls -la .env*)",
+      "Bash(cat .env.local)",
+      "Bash(xxd)"
     ]
   }
 }

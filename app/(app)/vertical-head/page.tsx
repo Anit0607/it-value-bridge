@@ -2,8 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { getInitiativesByVerticalHead } from '@/lib/actions/initiatives';
-import { computeRAG, ragCounts } from '@/lib/rag';
+import { getVhItems } from '@/lib/queries/dashboard';
 import { KpiCard } from '@/components/KpiCard';
 import { PageHeader } from '@/components/PageHeader';
 import { ItemTable } from '@/components/ItemTable';
@@ -14,8 +13,7 @@ export default async function VerticalHeadDashboard() {
   if (!session?.user) redirect('/sign-in');
 
   const verticalHead = session.user.verticalHead ?? session.user.name;
-  const items = await getInitiativesByVerticalHead(verticalHead);
-  const counts = ragCounts(items.map(i => computeRAG(i)));
+  const { items, counts } = await getVhItems(verticalHead);
 
   return (
     <div className="space-y-6">

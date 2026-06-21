@@ -1,8 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
-import { listInitiativesAsItems } from '@/lib/actions/initiatives';
-import { computeRAG, ragCounts, daysFromNow } from '@/lib/rag';
+import { getCioSummary } from '@/lib/queries/dashboard';
 import { STAGES } from '@/lib/types';
 import { KpiCard } from '@/components/KpiCard';
 import { PageHeader } from '@/components/PageHeader';
@@ -18,36 +17,16 @@ import {
 } from 'lucide-react';
 
 export default async function CioDashboard() {
-  const items = await listInitiativesAsItems();
-
-  const currentMonth = new Date().toISOString().slice(0, 7);
-  const monthLabel = new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
-
-  const itemsWithRag = items.map(i => ({ ...i, rag: computeRAG(i) }));
-  const active = itemsWithRag.filter(i => i.currentStage !== 'Closed');
-  const counts = ragCounts(active.map(i => i.rag));
-  const total = active.length;
-  const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
-
-  const pipelineByStage = STAGES.map(s => ({
-    stage: s,
-    count: items.filter(i => i.currentStage === s).length,
-  }));
-
-  const activeVHs = [...new Set(items.map(i => i.verticalHead))].sort();
-  const vhSummary = activeVHs
-    .map(vh => {
-      const vhItems = itemsWithRag.filter(i => i.verticalHead === vh);
-      const c = ragCounts(vhItems.map(i => i.rag));
-      const lastUpdated = vhItems.map(i => i.lastUpdated).sort().reverse()[0] ?? '—';
-      return { vh, total: vhItems.length, ...c, lastUpdated };
-    })
-    .sort((a, b) => b.red - a.red || b.amber - a.amber);
-
-  const monthlyCommitted = items.filter(i => i.committedMonth === currentMonth);
-  const delivered = monthlyCommitted.filter(i => i.currentStage === 'Closed');
-  const today = new Date().toISOString().slice(0, 10);
-  const missed = monthlyCommitted.filter(i => i.currentStage !== 'Closed' && i.goLiveDate < today);
+  const {
+    totalCount,
+    activeCount: total,
+    counts,
+    pct,
+    pipelineByStage,
+    vhSummary,
+    monthLabel,
+    monthly: { committed: monthlyCommitted, delivered, missed },
+  } = await getCioSummary();
 
   return (
     <div className="space-y-6">
@@ -62,7 +41,7 @@ export default async function CioDashboard() {
       </PageHeader>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard label="Active Items" value={total} sub={`of ${items.length} total`} icon={Activity} accent="brand" />
+        <KpiCard label="Active Items" value={total} sub={`of ${totalCount} total`} icon={Activity} accent="brand" />
         <KpiCard label="On Track" value={counts.green} sub={`${pct(counts.green)}%`} icon={CheckCircle2} accent="emerald" />
         <KpiCard label="At Risk" value={counts.amber} sub={`${pct(counts.amber)}%`} icon={AlertTriangle} accent="amber" />
         <KpiCard label="Delayed" value={counts.red} sub={`${pct(counts.red)}%`} icon={AlertOctagon} accent="rose" />
@@ -72,7 +51,7 @@ export default async function CioDashboard() {
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-800">Pipeline by Stage</h2>
-            <span className="text-xs text-slate-400">{items.length} items across {STAGES.length} stages</span>
+            <span className="text-xs text-slate-400">{totalCount} items across {STAGES.length} stages</span>
           </div>
           <StageFunnel counts={pipelineByStage} />
         </div>

@@ -2,8 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
-import { getInitiativesBySpoc } from '@/lib/actions/initiatives';
-import { computeRAG } from '@/lib/rag';
+import { getBusinessValidations } from '@/lib/queries/dashboard';
 import Link from 'next/link';
 import { RagDot } from '@/components/RagBadge';
 import { PageHeader } from '@/components/PageHeader';
@@ -20,8 +19,7 @@ export default async function BusinessSpocView() {
   if (!session?.user) redirect('/sign-in');
 
   const userName = session.user.name;
-  const items = await getInitiativesBySpoc(userName);
-  const pending = items.filter(i => i.currentStage === 'Business Validation' && !i.validation);
+  const { items, pending } = await getBusinessValidations(userName);
 
   return (
     <div className="space-y-6">
@@ -93,7 +91,7 @@ export default async function BusinessSpocView() {
               </thead>
               <tbody>
                 {items.map((i, idx) => {
-                  const rag = computeRAG(i);
+                  const rag = i.rag;
                   return (
                     <tr key={i.id} className={`border-t border-slate-100 transition-colors hover:bg-brand-50/40 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                       <td className="px-5 py-2.5">
