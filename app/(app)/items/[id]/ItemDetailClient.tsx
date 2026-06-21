@@ -52,7 +52,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const handleSignOff = () => {
     if (!user) return;
     startTransition(async () => {
-      await signOffValue(item.id, user.name);
+      await signOffValue(item.id);
       router.refresh();
     });
   };
@@ -75,7 +75,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const handleComplete = () => {
     if (!user) return;
     startTransition(async () => {
-      await advanceStage(item.id, note, user.name);
+      await advanceStage(item.id, note);
       setNote('');
       router.refresh();
     });
@@ -84,7 +84,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const handleSaveNotes = () => {
     if (!user) return;
     startTransition(async () => {
-      await updateNotes(item.id, currentNotes, currentDelayed, currentDelaySource, user.name);
+      await updateNotes(item.id, currentNotes, currentDelayed, currentDelaySource);
       setLocalNotes(null);
       setLocalDelayed(null);
       setLocalDelaySource(undefined);

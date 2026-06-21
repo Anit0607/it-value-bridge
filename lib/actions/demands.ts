@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
+import { requireRole } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { STAGE_TO_PROCESS_GROUP } from '@/lib/stage-map';
@@ -80,6 +81,7 @@ export async function getDemand(id: string) {
 }
 
 export async function setDemandStatus(id: string, status: DemandStatus, reviewNote: string) {
+  await requireRole('PMO', 'CIO');
   await prisma.demand.update({
     where: { id },
     data: { status, reviewNote },
@@ -99,8 +101,7 @@ const ApproveInput = z.object({
 export type ApproveDemandInput = z.infer<typeof ApproveInput>;
 
 export async function approveDemand(id: string, input: ApproveDemandInput) {
-  const session = await auth();
-  if (!session?.user) throw new Error('Not authenticated');
+  const user = await requireRole('PMO', 'CIO');
   const completion = ApproveInput.parse(input);
 
   const demand = await prisma.demand.findUnique({
@@ -157,8 +158,8 @@ export async function approveDemand(id: string, input: ApproveDemandInput) {
       history: {
         create: {
           stage: 'BRD',
-          note: `Approved from demand by ${session.user.name}`,
-          userName: session.user.name,
+          note: `Approved from demand by ${user.name}`,
+          userName: user.name,
           createdAt: today,
         },
       },

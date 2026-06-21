@@ -12,5 +12,5 @@ export default async function ValidatePage({ params }: { params: { id: string } 
   const item = await getInitiativeItem(params.id);
   if (!item) notFound();
 
-  return <ValidateClient item={item} userName={session.user.name} />;
+  return <ValidateClient item={item} />;
 }

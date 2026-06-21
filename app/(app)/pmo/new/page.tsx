@@ -60,7 +60,7 @@ export default function NewItemPage() {
 
     startTransition(async () => {
       try {
-        const id = await createInitiative(user.name, input);
+        const id = await createInitiative(input);
         router.push(`/items/${id}`);
       } catch {
         setError('Failed to create item. Please check all fields and try again.');

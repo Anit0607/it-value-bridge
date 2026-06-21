@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
+import { requireRole } from '@/lib/authz';
 import { STAGE_LABEL, STAGE_TO_PROCESS_GROUP, nextStage } from '@/lib/stage-map';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -141,7 +142,9 @@ const CreateSchema = z.object({
 
 export type CreateInitiativeInput = z.infer<typeof CreateSchema>;
 
-export async function createInitiative(userName: string, input: CreateInitiativeInput) {
+export async function createInitiative(input: CreateInitiativeInput) {
+  const user = await requireRole('PMO', 'CIO');
+  const userName = user.name;
   const parsed = CreateSchema.parse(input);
 
   // Primary benefit = highest projected ₹ value; drives the legacy summary fields.
@@ -205,7 +208,9 @@ export async function createInitiative(userName: string, input: CreateInitiative
   return initiative.id;
 }
 
-export async function advanceStage(id: string, note: string, userName: string) {
+export async function advanceStage(id: string, note: string) {
+  const user = await requireRole('PMO', 'CIO', 'VERTICAL_HEAD');
+  const userName = user.name;
   const initiative = await prisma.initiative.findUnique({ where: { id } });
   if (!initiative) throw new Error('Initiative not found');
 
@@ -247,8 +252,8 @@ export async function updateNotes(
   notes: string,
   delayed: boolean,
   delaySource: string | undefined,
-  userName: string,
 ) {
+  await requireRole('PMO', 'CIO', 'VERTICAL_HEAD');
   const today = new Date();
   await prisma.initiative.update({
     where: { id },
@@ -263,7 +268,8 @@ export async function updateNotes(
   revalidatePath(`/items/${id}`);
 }
 
-export async function saveValidation(id: string, validation: BusinessValidation, _userName: string) {
+export async function saveValidation(id: string, validation: BusinessValidation) {
+  await requireRole('BUSINESS', 'PMO', 'CIO');
   const initiative = await prisma.initiative.findUnique({ where: { id } });
   if (!initiative || initiative.currentStage !== 'BUSINESS_VALIDATION') {
     throw new Error('Item not in Business Validation stage');
@@ -360,10 +366,11 @@ export async function getInitiativeValue(id: string): Promise<InitiativeValue | 
   };
 }
 
-export async function signOffValue(id: string, signedBy: string) {
+export async function signOffValue(id: string) {
+  const user = await requireRole('PMO', 'CIO');
   await prisma.initiative.update({
     where: { id },
-    data: { valueSignedOff: true, valueSignOffBy: signedBy, valueSignOffAt: new Date() },
+    data: { valueSignedOff: true, valueSignOffBy: user.name, valueSignOffAt: new Date() },
   });
   revalidatePath(`/items/${id}`);
   revalidatePath('/value');
