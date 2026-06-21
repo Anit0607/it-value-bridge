@@ -1,43 +1,38 @@
 'use client';
 
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, ReactNode, useEffect } from 'react';
+import { useSession, signOut } from 'next-auth/react';
 import { useRouter } from 'next/navigation';
 import type { AuthUser } from '@/lib/types';
-
-const USER_KEY = 'it-value-bridge-user';
+import { getRoleHome } from '@/lib/rbac';
+import type { Role } from '@prisma/client';
 
 interface RoleContextValue {
   user: AuthUser | null;
-  login: (user: AuthUser) => void;
   logout: () => void;
 }
 
 const RoleContext = createContext<RoleContextValue | null>(null);
 
 export function RoleProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<AuthUser | null>(null);
+  const { data: session } = useSession();
 
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem(USER_KEY);
-      if (stored) setUser(JSON.parse(stored));
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  const login = (u: AuthUser) => {
-    setUser(u);
-    try { localStorage.setItem(USER_KEY, JSON.stringify(u)); } catch { /* ignore */ }
-  };
+  const user: AuthUser | null = session?.user
+    ? {
+        id: session.user.id,
+        email: session.user.email!,
+        name: session.user.name!,
+        role: session.user.role,
+        verticalHead: session.user.verticalHead,
+      }
+    : null;
 
   const logout = () => {
-    setUser(null);
-    try { localStorage.removeItem(USER_KEY); } catch { /* ignore */ }
+    signOut({ callbackUrl: '/' });
   };
 
   return (
-    <RoleContext.Provider value={{ user, login, logout }}>
+    <RoleContext.Provider value={{ user, logout }}>
       {children}
     </RoleContext.Provider>
   );
@@ -49,11 +44,13 @@ export function useRole() {
   return ctx;
 }
 
-export function useRequireAuth() {
+export function useRequireAuth(): AuthUser | null {
   const { user } = useRole();
   const router = useRouter();
+
   useEffect(() => {
-    if (!user) router.push('/');
+    if (!user) router.push('/sign-in');
   }, [user, router]);
+
   return user;
 }

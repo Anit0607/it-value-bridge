@@ -1,0 +1,300 @@
+// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- Enums ----------
+enum Role {
+  CIO
+  PMO
+  VERTICAL_HEAD
+  BUSINESS
+}
+
+enum InitiativeType {
+  CHANGE_REQUEST
+  PROJECT
+}
+
+enum Methodology {
+  WATERFALL
+  AGILE
+}
+
+enum Stage {
+  BRD
+  FSD
+  COMMERCIAL
+  DEVELOPMENT
+  SIT
+  UAT
+  APPSEC
+  CAB_APPROVAL
+  GO_LIVE
+  BUSINESS_VALIDATION
+  CLOSED
+}
+
+enum ProcessGroup {
+  INITIATING
+  PLANNING
+  EXECUTING
+  MONITORING_CONTROLLING
+  CLOSING
+}
+
+enum BenefitCategory {
+  REVENUE
+  COST_SAVING
+  CUSTOMER_EXPERIENCE
+  COMPLIANCE
+  EFFICIENCY
+  RISK_REDUCTION
+}
+
+enum DelaySource {
+  IT
+  BUSINESS
+  VENDOR
+  EXTERNAL
+}
+
+enum KnowledgeAreaName {
+  INTEGRATION
+  SCOPE
+  SCHEDULE
+  COST
+  QUALITY
+  RESOURCE
+  COMMUNICATIONS
+  RISK
+  PROCUREMENT
+  STAKEHOLDER
+}
+
+enum KAStatus {
+  GREEN
+  AMBER
+  RED
+}
+
+enum OutcomeAchieved {
+  YES
+  PARTIALLY
+  NO
+}
+
+enum StoryStatus {
+  TODO
+  IN_PROGRESS
+  REVIEW
+  DONE
+}
+
+// ---------- Auth / Users ----------
+model User {
+  id           String   @id @default(cuid())
+  name         String
+  email        String   @unique
+  passwordHash String
+  role         Role
+  // when role = VERTICAL_HEAD this is their own name key used to scope initiatives
+  verticalHead String?
+  avatarUrl    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  ownedInitiatives Initiative[] @relation("VerticalHeadInitiatives")
+  historyEntries   HistoryLog[]
+}
+
+// ---------- Core ----------
+model Initiative {
+  id          String         @id @default(cuid())
+  title       String
+  type        InitiativeType
+  methodology Methodology    @default(WATERFALL)
+
+  verticalHeadName String
+  verticalHead     User?   @relation("VerticalHeadInitiatives", fields: [verticalHeadId], references: [id])
+  verticalHeadId   String?
+  businessSpoc     String
+  businessSponsor  String
+  description      String
+
+  // business value (intent)
+  benefitCategory    BenefitCategory
+  outcomeDescription String
+  targetMetric       String
+  expectedGoLiveDate  DateTime
+
+  // waterfall current-state (only meaningful when methodology = WATERFALL)
+  currentStage        Stage        @default(BRD)
+  currentProcessGroup ProcessGroup @default(INITIATING)
+  stageStartDate      DateTime
+  stageExpectedDate   DateTime
+  lastUpdated         DateTime
+  notes               String       @default("")
+  delayed             Boolean      @default(false)
+  delaySource         DelaySource?
+
+  committedMonth String? // "YYYY-MM" for monthly-commitment tracking
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  stages           WaterfallStage[]
+  knowledgeAreas   KnowledgeArea[]
+  risks            Risk[]
+  stakeholders     Stakeholder[]
+  valueRealization BusinessValueRealization?
+  history          HistoryLog[]
+  epics            Epic[]
+  sprints          Sprint[]
+  stories          Story[]
+
+  @@index([verticalHeadName])
+  @@index([currentStage])
+  @@index([type])
+}
+
+model WaterfallStage {
+  id            String       @id @default(cuid())
+  initiative    Initiative   @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId  String
+  stage         Stage
+  processGroup  ProcessGroup
+  expectedDate  DateTime
+  startedDate   DateTime?
+  completedDate DateTime?
+  daysInStage   Int? // snapshot only; live value computed at render
+  delayFlag     Boolean      @default(false)
+  delaySource   DelaySource?
+
+  @@unique([initiativeId, stage])
+  @@index([initiativeId])
+}
+
+// ---------- Governance (delivery health areas) ----------
+model KnowledgeArea {
+  id           String            @id @default(cuid())
+  initiative   Initiative        @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId String
+  name         KnowledgeAreaName
+  status       KAStatus          @default(GREEN)
+  notes        String            @default("")
+  updatedAt    DateTime          @updatedAt
+
+  @@unique([initiativeId, name])
+}
+
+model Risk {
+  id           String     @id @default(cuid())
+  initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId String
+  description  String
+  probability  Int // 1..5
+  impact       Int // 1..5
+  response     String
+  owner        String
+  createdAt    DateTime   @default(now())
+
+  @@index([initiativeId])
+}
+
+model Stakeholder {
+  id           String     @id @default(cuid())
+  initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId String
+  name         String
+  role         String
+  influence    Int // 1..5
+  interest     Int // 1..5
+
+  @@index([initiativeId])
+}
+
+model BusinessValueRealization {
+  id              String          @id @default(cuid())
+  initiative      Initiative      @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId    String          @unique
+  outcomeAchieved OutcomeAchieved
+  actualResult    String
+  actualMetric    String
+  realizedDate    DateTime?
+  updatedAt       DateTime        @updatedAt
+}
+
+// ---------- Agile ----------
+model Epic {
+  id           String     @id @default(cuid())
+  initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId String
+  title        String
+  description  String     @default("")
+  stories      Story[]
+
+  @@index([initiativeId])
+}
+
+model Sprint {
+  id           String     @id @default(cuid())
+  initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId String
+  number       Int
+  startDate    DateTime
+  endDate      DateTime
+  capacity     Int // story points
+  stories      Story[]
+
+  @@unique([initiativeId, number])
+  @@index([initiativeId])
+}
+
+model Story {
+  id           String      @id @default(cuid())
+  initiative   Initiative  @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId String
+  epic         Epic?       @relation(fields: [epicId], references: [id])
+  epicId       String?
+  sprint       Sprint?     @relation(fields: [sprintId], references: [id])
+  sprintId     String?
+  title        String
+  points       Int         @default(0)
+  status       StoryStatus @default(TODO)
+  createdAt    DateTime    @default(now())
+
+  @@index([initiativeId])
+  @@index([sprintId])
+}
+
+// ---------- Cross-cutting ----------
+model HistoryLog {
+  id           String     @id @default(cuid())
+  initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId String
+  stage        Stage?
+  note         String
+  user         User?      @relation(fields: [userId], references: [id])
+  userId       String?
+  userName     String // denormalized for display stability
+  createdAt    DateTime   @default(now())
+
+  @@index([initiativeId])
+}
+
+model MonthlyReport {
+  id          String   @id @default(cuid())
+  month       Int // 1..12
+  year        Int
+  payload     Json // aggregated snapshot (completed/delayed/missed)
+  narrative   String? // AI-generated narrative (nullable until generated)
+  generatedAt DateTime @default(now())
+
+  @@unique([year, month])
+}

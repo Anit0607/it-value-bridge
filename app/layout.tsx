@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import { SessionProvider } from 'next-auth/react';
 import { RoleProvider } from '@/components/RoleProvider';
-import { StoreProvider } from '@/lib/store';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -19,11 +19,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={inter.variable}>
       <body className="font-sans antialiased">
-        <RoleProvider>
-          <StoreProvider>
+        <SessionProvider>
+          <RoleProvider>
             {children}
-          </StoreProvider>
-        </RoleProvider>
+          </RoleProvider>
+        </SessionProvider>
       </body>
     </html>
   );

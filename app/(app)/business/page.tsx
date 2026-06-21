@@ -1,12 +1,12 @@
-'use client';
+export const dynamic = 'force-dynamic';
 
-import { useMemo } from 'react';
-import Link from 'next/link';
-import { useStore } from '@/lib/store';
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
+import { getInitiativesBySpoc } from '@/lib/actions/initiatives';
 import { computeRAG } from '@/lib/rag';
+import Link from 'next/link';
 import { RagDot } from '@/components/RagBadge';
 import { PageHeader } from '@/components/PageHeader';
-import { useRequireAuth } from '@/components/RoleProvider';
 import { ClipboardCheck, ArrowRight, Inbox } from 'lucide-react';
 
 const ACHIEVED_TONE: Record<string, string> = {
@@ -15,23 +15,21 @@ const ACHIEVED_TONE: Record<string, string> = {
   No: 'text-rose-600',
 };
 
-export default function BusinessSpocView() {
-  const user = useRequireAuth();
-  const { items } = useStore();
+export default async function BusinessSpocView() {
+  const session = await auth();
+  if (!session?.user) redirect('/sign-in');
 
-  const myItems = useMemo(() => items.filter(i => i.businessSpoc === user?.name), [items, user]);
-  const pending = myItems.filter(i => i.currentStage === 'Business Validation' && !i.validation);
-
-  if (!user) return null;
+  const userName = session.user.name;
+  const items = await getInitiativesBySpoc(userName);
+  const pending = items.filter(i => i.currentStage === 'Business Validation' && !i.validation);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="My Items"
-        subtitle={`Items where you are the Business SPOC · ${myItems.length} total`}
+        subtitle={`Items where you are the Business SPOC · ${items.length} total`}
       />
 
-      {/* Action required */}
       {pending.length > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-800">
@@ -68,12 +66,11 @@ export default function BusinessSpocView() {
         </div>
       )}
 
-      {/* All my items */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
         <div className="border-b border-slate-100 px-5 py-3.5">
           <h2 className="text-sm font-semibold text-slate-800">All My Items</h2>
         </div>
-        {myItems.length === 0 ? (
+        {items.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400">
               <Inbox className="h-5 w-5" />
@@ -95,7 +92,7 @@ export default function BusinessSpocView() {
                 </tr>
               </thead>
               <tbody>
-                {myItems.map((i, idx) => {
+                {items.map((i, idx) => {
                   const rag = computeRAG(i);
                   return (
                     <tr key={i.id} className={`border-t border-slate-100 transition-colors hover:bg-brand-50/40 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>

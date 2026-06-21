@@ -1,7 +1,8 @@
-'use client';
+export const dynamic = 'force-dynamic';
 
-import { useStore } from '@/lib/store';
-import { useRequireAuth } from '@/components/RoleProvider';
+import { listInitiativesAsItems } from '@/lib/actions/initiatives';
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import type { DelaySource } from '@/lib/types';
 import Link from 'next/link';
@@ -13,9 +14,11 @@ const ACHIEVED_TONE: Record<string, string> = {
   No: 'bg-rose-50 text-rose-700 ring-rose-600/20',
 };
 
-export default function ReportPage() {
-  const user = useRequireAuth();
-  const { items } = useStore();
+export default async function ReportPage() {
+  const session = await auth();
+  if (!session?.user) redirect('/sign-in');
+
+  const items = await listInitiativesAsItems();
 
   const now = new Date();
   const currentMonth = now.toISOString().slice(0, 7);
@@ -38,21 +41,20 @@ export default function ReportPage() {
 
   const topSource = Object.entries(delaySources).sort(([, a], [, b]) => b - a)[0]?.[0] ?? 'IT';
 
-  if (!user) return null;
-
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader title="Monthly Report" subtitle={monthLabel}>
-        <button
-          onClick={() => window.print()}
-          className="no-print inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-        >
-          <Printer className="h-4 w-4" />
-          Export as PDF
-        </button>
+        <form action="javascript:window.print()">
+          <button
+            type="submit"
+            className="no-print inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+          >
+            <Printer className="h-4 w-4" />
+            Export as PDF
+          </button>
+        </form>
       </PageHeader>
 
-      {/* Summary */}
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: 'Committed', value: committed.length, bar: 'bg-brand-500', tone: 'text-slate-900' },
@@ -67,7 +69,6 @@ export default function ReportPage() {
         ))}
       </div>
 
-      {/* Completed with outcomes */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
         <div className="border-b border-slate-100 px-5 py-3.5">
           <h2 className="text-sm font-semibold text-slate-800">
@@ -90,9 +91,7 @@ export default function ReportPage() {
                       {i.outcomeCategory} · {i.verticalHead}
                     </p>
                   </div>
-                  <span
-                    className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${ACHIEVED_TONE[i.validation!.outcomeAchieved]}`}
-                  >
+                  <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${ACHIEVED_TONE[i.validation!.outcomeAchieved]}`}>
                     {i.validation!.outcomeAchieved}
                   </span>
                 </div>
@@ -116,7 +115,6 @@ export default function ReportPage() {
         )}
       </div>
 
-      {/* Delayed breakdown */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
         <div className="border-b border-slate-100 px-5 py-3.5">
           <h2 className="text-sm font-semibold text-slate-800">
@@ -154,7 +152,6 @@ export default function ReportPage() {
         )}
       </div>
 
-      {/* Missed items */}
       {missed.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-rose-200 bg-white shadow-card">
           <div className="border-b border-rose-100 px-5 py-3.5">
@@ -177,7 +174,6 @@ export default function ReportPage() {
         </div>
       )}
 
-      {/* AI narrative */}
       <div className="rounded-xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-5 shadow-card">
         <div className="flex items-start gap-3">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
@@ -187,7 +183,7 @@ export default function ReportPage() {
             <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-brand-800">
               AI Narrative
               <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-medium text-brand-700">
-                Claude API · Coming Soon
+                Coming Soon
               </span>
             </h2>
             <p className="text-sm leading-relaxed text-slate-600">
@@ -203,7 +199,7 @@ export default function ReportPage() {
               </em>
             </p>
             <p className="mt-2 text-xs text-brand-400">
-              This narrative will be auto-generated using the Claude API once connected.
+              Auto-generated narrative will be available when the Claude API is connected.
             </p>
           </div>
         </div>

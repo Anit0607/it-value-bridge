@@ -1,9 +1,10 @@
 'use client';
 
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useRole } from './RoleProvider';
 import type { Role } from '@/lib/types';
+import type { LucideIcon } from 'lucide-react';
 import {
   LayoutDashboard,
   ClipboardList,
@@ -13,7 +14,6 @@ import {
   FileBarChart,
   LogOut,
   Layers,
-  type LucideIcon,
 } from 'lucide-react';
 
 interface NavItem {
@@ -24,19 +24,19 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/cio', label: 'Dashboard', icon: LayoutDashboard, roles: ['cio'] },
-  { href: '/pmo', label: 'Portfolio', icon: ClipboardList, roles: ['pmo'] },
-  { href: '/pmo/new', label: 'New Item', icon: PlusCircle, roles: ['pmo'] },
-  { href: '/vertical-head', label: 'My Portfolio', icon: Briefcase, roles: ['vh'] },
-  { href: '/business', label: 'My Items', icon: CheckSquare, roles: ['business'] },
-  { href: '/report', label: 'Monthly Report', icon: FileBarChart, roles: ['cio', 'pmo'] },
+  { href: '/cio', label: 'Dashboard', icon: LayoutDashboard, roles: ['CIO'] },
+  { href: '/pmo', label: 'Portfolio', icon: ClipboardList, roles: ['PMO'] },
+  { href: '/pmo/new', label: 'New Item', icon: PlusCircle, roles: ['PMO'] },
+  { href: '/vertical-head', label: 'My Portfolio', icon: Briefcase, roles: ['VERTICAL_HEAD'] },
+  { href: '/business', label: 'My Items', icon: CheckSquare, roles: ['BUSINESS'] },
+  { href: '/report', label: 'Monthly Report', icon: FileBarChart, roles: ['CIO', 'PMO'] },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
-  cio: 'Chief Information Officer',
-  pmo: 'PMO Manager',
-  vh: 'Vertical Head',
-  business: 'Business SPOC',
+  CIO: 'Chief Information Officer',
+  PMO: 'PMO Manager',
+  VERTICAL_HEAD: 'Vertical Head',
+  BUSINESS: 'Business SPOC',
 };
 
 export function Sidebar({
@@ -48,16 +48,10 @@ export function Sidebar({
 }) {
   const { user, logout } = useRole();
   const pathname = usePathname();
-  const router = useRouter();
 
   if (!user) return null;
 
   const visibleItems = NAV_ITEMS.filter(n => n.roles.includes(user.role));
-
-  const handleLogout = () => {
-    logout();
-    router.push('/');
-  };
 
   const initials = user.name
     .split(' ')
@@ -119,7 +113,7 @@ export function Sidebar({
         </div>
       </nav>
 
-      {/* User profile pinned at bottom */}
+      {/* User profile */}
       <div className="border-t border-white/5 p-3">
         <div className="flex items-center gap-3 rounded-lg px-2 py-2">
           <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-brand-500 to-brand-700 text-xs font-semibold text-white">
@@ -130,7 +124,7 @@ export function Sidebar({
             <div className="truncate text-[11px] text-slate-400">{ROLE_LABEL[user.role]}</div>
           </div>
           <button
-            onClick={handleLogout}
+            onClick={logout}
             title="Sign out"
             className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
           >

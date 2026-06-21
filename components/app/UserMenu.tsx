@@ -7,10 +7,10 @@ import { useRole } from '@/components/RoleProvider';
 import type { Role } from '@/lib/types';
 
 const ROLE_LABEL: Record<Role, string> = {
-  cio: 'Chief Information Officer',
-  pmo: 'PMO Manager',
-  vh: 'Vertical Head',
-  business: 'Business SPOC',
+  CIO: 'Chief Information Officer',
+  PMO: 'PMO Manager',
+  VERTICAL_HEAD: 'Vertical Head',
+  BUSINESS: 'Business SPOC',
 };
 
 export function UserMenu() {

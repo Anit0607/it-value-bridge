@@ -68,7 +68,14 @@
       "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:63677/)",
       "Bash(curl -s http://localhost:63677/)",
       "Bash(curl -s --max-time 90 -o /dev/null -w \"%{http_code}\\\\n\" http://localhost:63677/)",
-      "Bash(curl -s --max-time 60 http://localhost:63677/)"
+      "Bash(curl -s --max-time 60 http://localhost:63677/)",
+      "Bash(cat \"C:\\\\Users\\\\ANITBO~1\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\D--Claude-Project-Tracker\\\\78a3af37-88fe-4132-b353-3a728825d8b0\\\\tasks\\\\bc8rwj3cw.output\")",
+      "PowerShell(Set-Location \"D:\\\\Claude_Project Tracker\"; $env:DATABASE_URL = \"postgresql://itvb:itvb@localhost:5432/itvb\"; npx prisma migrate dev --name init 2>&1)",
+      "Bash(node -e \"const p = require\\('./node_modules/next-auth/package.json'\\); console.log\\(JSON.stringify\\(p.exports, null, 2\\)\\)\")",
+      "PowerShell(Get-Content *)",
+      "PowerShell(Start-Sleep -Seconds 3; $r = [System.Net.WebRequest]::Create\\(\"http://localhost:3000/sign-in\"\\); $r.Timeout = 10000; try { $resp = $r.GetResponse\\(\\); Write-Host \"Status: $\\($resp.StatusCode\\)\"; $resp.Close\\(\\) } catch [System.Net.WebException] { Write-Host \"WebEx: $\\($_.Exception.Status\\) - $\\($_.Exception.Message\\)\" })",
+      "Bash(grep -E \"\\\\.env$\")",
+      "Bash(git commit -m ' *)"
     ]
   }
 }

@@ -68,13 +68,15 @@ export interface Item {
   createdAt: string;
 }
 
-export type Role = 'cio' | 'pmo' | 'vh' | 'business';
+// Role type matching Prisma enum (was lowercase in prototype)
+export type Role = 'CIO' | 'PMO' | 'VERTICAL_HEAD' | 'BUSINESS';
 
 export interface AuthUser {
+  id?: string;
   email: string;
   role: Role;
   name: string;
-  verticalHead?: string;
+  verticalHead?: string | null;
 }
 
 export const VERTICAL_HEADS = [

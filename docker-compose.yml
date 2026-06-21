@@ -1,0 +1,33 @@
+# IT Value Bridge — local PostgreSQL for development.
+# Data lives in a named Docker volume on THIS host — nothing leaves the machine
+# (Indian banking data-residency requirement).
+#
+#   Start the dev database:   docker compose up -d
+#   Stop it:                  docker compose down        (data is kept in the volume)
+#   Wipe the data:            docker compose down -v     (deletes the volume)
+#
+# During development the Next.js app runs via `npm run dev` against localhost:5432.
+# A bundled `app` service (built from the Dockerfile) for the full self-hosted
+# bank deployment is added in a later phase.
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: itvb-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: itvb
+      POSTGRES_PASSWORD: itvb # dev only — change for any real deployment
+      POSTGRES_DB: itvb
+    ports:
+      - "5432:5432"
+    volumes:
+      - itvb-db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U itvb -d itvb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  itvb-db-data:

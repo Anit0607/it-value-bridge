@@ -1,15 +1,13 @@
-'use client';
+export const dynamic = 'force-dynamic';
 
-import { useMemo } from 'react';
 import Link from 'next/link';
-import { useStore } from '@/lib/store';
-import { computeRAG, ragCounts } from '@/lib/rag';
+import { listInitiativesAsItems } from '@/lib/actions/initiatives';
+import { computeRAG, ragCounts, daysFromNow } from '@/lib/rag';
 import { STAGES } from '@/lib/types';
 import { KpiCard } from '@/components/KpiCard';
 import { PageHeader } from '@/components/PageHeader';
 import { StageFunnel } from '@/components/StageFunnel';
 import { RagDot } from '@/components/RagBadge';
-import { useRequireAuth } from '@/components/RoleProvider';
 import {
   Activity,
   CheckCircle2,
@@ -19,42 +17,37 @@ import {
   CalendarClock,
 } from 'lucide-react';
 
-export default function CioDashboard() {
-  const user = useRequireAuth();
-  const { items } = useStore();
+export default async function CioDashboard() {
+  const items = await listInitiativesAsItems();
 
   const currentMonth = new Date().toISOString().slice(0, 7);
   const monthLabel = new Date().toLocaleString('en-IN', { month: 'long', year: 'numeric' });
 
-  const itemsWithRag = useMemo(() => items.map(i => ({ ...i, rag: computeRAG(i) })), [items]);
+  const itemsWithRag = items.map(i => ({ ...i, rag: computeRAG(i) }));
   const active = itemsWithRag.filter(i => i.currentStage !== 'Closed');
   const counts = ragCounts(active.map(i => i.rag));
   const total = active.length;
   const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
 
-  const pipelineByStage = useMemo(
-    () => STAGES.map(s => ({ stage: s, count: items.filter(i => i.currentStage === s).length })),
-    [items],
-  );
+  const pipelineByStage = STAGES.map(s => ({
+    stage: s,
+    count: items.filter(i => i.currentStage === s).length,
+  }));
 
-  const vhSummary = useMemo(() => {
-    const activeVHs = [...new Set(items.map(i => i.verticalHead))].sort();
-    return activeVHs
-      .map(vh => {
-        const vhItems = itemsWithRag.filter(i => i.verticalHead === vh);
-        const c = ragCounts(vhItems.map(i => i.rag));
-        const lastUpdated = vhItems.map(i => i.lastUpdated).sort().reverse()[0] ?? '—';
-        return { vh, total: vhItems.length, ...c, lastUpdated };
-      })
-      .sort((a, b) => b.red - a.red || b.amber - a.amber);
-  }, [itemsWithRag, items]);
+  const activeVHs = [...new Set(items.map(i => i.verticalHead))].sort();
+  const vhSummary = activeVHs
+    .map(vh => {
+      const vhItems = itemsWithRag.filter(i => i.verticalHead === vh);
+      const c = ragCounts(vhItems.map(i => i.rag));
+      const lastUpdated = vhItems.map(i => i.lastUpdated).sort().reverse()[0] ?? '—';
+      return { vh, total: vhItems.length, ...c, lastUpdated };
+    })
+    .sort((a, b) => b.red - a.red || b.amber - a.amber);
 
   const monthlyCommitted = items.filter(i => i.committedMonth === currentMonth);
   const delivered = monthlyCommitted.filter(i => i.currentStage === 'Closed');
   const today = new Date().toISOString().slice(0, 10);
   const missed = monthlyCommitted.filter(i => i.currentStage !== 'Closed' && i.goLiveDate < today);
-
-  if (!user) return null;
 
   return (
     <div className="space-y-6">
@@ -68,7 +61,6 @@ export default function CioDashboard() {
         </Link>
       </PageHeader>
 
-      {/* KPI cards */}
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="Active Items" value={total} sub={`of ${items.length} total`} icon={Activity} accent="brand" />
         <KpiCard label="On Track" value={counts.green} sub={`${pct(counts.green)}%`} icon={CheckCircle2} accent="emerald" />
@@ -77,7 +69,6 @@ export default function CioDashboard() {
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Pipeline funnel */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card lg:col-span-2">
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-sm font-semibold text-slate-800">Pipeline by Stage</h2>
@@ -86,7 +77,6 @@ export default function CioDashboard() {
           <StageFunnel counts={pipelineByStage} />
         </div>
 
-        {/* This month */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
           <div className="mb-4 flex items-center gap-2">
             <CalendarClock className="h-4 w-4 text-slate-400" />
@@ -125,7 +115,6 @@ export default function CioDashboard() {
         </div>
       </div>
 
-      {/* VH summary table */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
           <h2 className="text-sm font-semibold text-slate-800">Vertical Head Summary</h2>
