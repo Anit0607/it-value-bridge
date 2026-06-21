@@ -46,6 +46,10 @@ export default auth(req => {
   ) {
     return NextResponse.redirect(new URL(getRoleHome(role), req.url));
   }
+  // Dependency view is for delivery owners (CIO + PMO + Vertical Head), not business.
+  if (pathname.startsWith('/dependencies') && role === 'BUSINESS') {
+    return NextResponse.redirect(new URL(getRoleHome(role), req.url));
+  }
 
   return NextResponse.next();
 });

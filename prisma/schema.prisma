@@ -200,6 +200,8 @@ model Initiative {
   benefitClaims    BenefitClaim[]
   okrLinks         InitiativeOkr[]
   originDemand     Demand?          @relation("DemandInitiative")
+  dependsOn        Dependency[]     @relation("Dependent")
+  blocking         Dependency[]     @relation("Blocker")
 
   @@index([verticalHeadName])
   @@index([currentStage])
@@ -437,4 +439,22 @@ model Demand {
   benefitClaims BenefitClaim[]
 
   @@index([status])
+}
+
+// ---------- Cross-system dependencies ----------
+// "dependent depends on blocker" (i.e. blocker blocks dependent). Optional
+// systemLabel names the shared system/interface (e.g. "CBS Loans API").
+model Dependency {
+  id          String     @id @default(cuid())
+  dependent   Initiative @relation("Dependent", fields: [dependentId], references: [id], onDelete: Cascade)
+  dependentId String
+  blocker     Initiative @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blockerId   String
+  systemLabel String?
+  note        String     @default("")
+  createdAt   DateTime   @default(now())
+
+  @@unique([dependentId, blockerId])
+  @@index([dependentId])
+  @@index([blockerId])
 }

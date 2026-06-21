@@ -126,6 +126,7 @@ async function main() {
   console.log('Seeded 4 users:', cio.email, pmo.email, vh.email, business.email);
 
   // --- Clean value-layer data (safe FK order) before re-seeding ---
+  await prisma.dependency.deleteMany();
   await prisma.valueMeasurement.deleteMany();
   await prisma.benefitClaim.deleteMany();
   await prisma.initiativeOkr.deleteMany();
@@ -700,6 +701,7 @@ async function main() {
   ];
 
   let count = 0;
+  const idByTitle: Record<string, string> = {};
   for (const seed of initiatives) {
     const existing = await prisma.initiative.findFirst({ where: { title: seed.title } });
     if (existing) {
@@ -765,6 +767,8 @@ async function main() {
           : undefined,
       },
     });
+
+    idByTitle[seed.title] = initiative.id;
 
     // Waterfall stage records
     for (const h of seed.history) {
@@ -921,6 +925,27 @@ async function main() {
   }
 
   console.log(`Seeded ${demands.length} demands`);
+
+  // --- Cross-system dependencies (dependent depends on blocker) ---
+  const deps: { dependent: string; blocker: string; system: string; note: string }[] = [
+    { dependent: 'UPI Enhancement v2.0', blocker: 'CBS Core Integration', system: 'CBS Payments API', note: 'AutoPay mandates need the new CBS posting API.' },
+    { dependent: 'Customer 360 Dashboard', blocker: 'CBS Core Integration', system: 'CBS Customer API', note: 'Unified view consumes CBS customer master.' },
+    { dependent: 'Mobile Banking App Upgrade', blocker: 'UPI Enhancement v2.0', system: 'UPI 2.0 module', note: 'App UPI screens depend on the UPI 2.0 services.' },
+    { dependent: 'BBPS Bill Payment Integration', blocker: 'Payment Gateway Upgrade', system: 'Payment Gateway', note: 'Bill payments route through the upgraded gateway.' },
+    { dependent: 'Retail Loan Origination Portal', blocker: 'Loan Account Statement API', system: 'AA framework', note: 'Underwriting pulls statements via the AA API.' },
+  ];
+
+  let depCount = 0;
+  for (const dp of deps) {
+    const dependentId = idByTitle[dp.dependent];
+    const blockerId = idByTitle[dp.blocker];
+    if (!dependentId || !blockerId) continue;
+    await prisma.dependency.create({
+      data: { dependentId, blockerId, systemLabel: dp.system, note: dp.note },
+    });
+    depCount++;
+  }
+  console.log(`Seeded ${depCount} dependencies`);
 }
 
 main()

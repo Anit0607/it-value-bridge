@@ -16,6 +16,7 @@ import {
   Lightbulb,
   Target,
   Upload,
+  Link2,
   LogOut,
   Layers,
 } from 'lucide-react';
@@ -35,6 +36,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/business', label: 'My Items', icon: CheckSquare, roles: ['BUSINESS'] },
   { href: '/demands', label: 'Demands', icon: Lightbulb, roles: ['CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS'] },
   { href: '/value', label: 'Value Board', icon: TrendingUp, roles: ['CIO', 'PMO'] },
+  { href: '/dependencies', label: 'Dependencies', icon: Link2, roles: ['CIO', 'PMO', 'VERTICAL_HEAD'] },
   { href: '/okrs', label: 'Strategic OKRs', icon: Target, roles: ['CIO', 'PMO'] },
   { href: '/import', label: 'Import', icon: Upload, roles: ['PMO'] },
   { href: '/report', label: 'Monthly Report', icon: FileBarChart, roles: ['CIO', 'PMO'] },
