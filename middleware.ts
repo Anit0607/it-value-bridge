@@ -38,6 +38,10 @@ export default auth(req => {
   if (pathname.startsWith('/business') && role !== 'BUSINESS') {
     return NextResponse.redirect(new URL(getRoleHome(role), req.url));
   }
+  // Board value dashboard is leadership-only (CIO + PMO).
+  if (pathname.startsWith('/value') && role !== 'CIO' && role !== 'PMO') {
+    return NextResponse.redirect(new URL(getRoleHome(role), req.url));
+  }
 
   return NextResponse.next();
 });

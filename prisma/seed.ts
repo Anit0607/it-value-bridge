@@ -1,6 +1,16 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
-import type { Stage, ProcessGroup, BenefitCategory, InitiativeType, DelaySource } from '@prisma/client';
+import type {
+  Stage,
+  ProcessGroup,
+  BenefitCategory,
+  InitiativeType,
+  DelaySource,
+  BenefitUnit,
+  Confidence,
+  DemandStatus,
+  DemandPriority,
+} from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -16,6 +26,67 @@ const STAGE_TO_PG: Record<Stage, ProcessGroup> = {
   GO_LIVE: 'EXECUTING',
   BUSINESS_VALIDATION: 'MONITORING_CONTROLLING',
   CLOSED: 'CLOSING',
+};
+
+const STAGE_ORDER: Stage[] = [
+  'BRD', 'FSD', 'COMMERCIAL', 'DEVELOPMENT', 'SIT', 'UAT',
+  'APPSEC', 'CAB_APPROVAL', 'GO_LIVE', 'BUSINESS_VALIDATION', 'CLOSED',
+];
+const stageIdx = (s: Stage) => STAGE_ORDER.indexOf(s);
+
+const CR = 10_000_000; // ₹1 crore in rupees
+
+// Estimated annual ₹ value per initiative (primary benefit), in rupees.
+const VALUE_BY_TITLE: Record<string, number> = {
+  'Mobile Banking App Upgrade': 12 * CR,
+  'UPI Enhancement v2.0': 50 * CR,
+  'CBS Core Integration': 8 * CR,
+  'KYC Automation System': 6 * CR,
+  'Payment Gateway Upgrade': 15 * CR,
+  'NACH Mandate Processing': 2 * CR,
+  'Retail Loan Origination Portal': 40 * CR,
+  'Trade Finance Digitisation': 10 * CR,
+  'Customer 360 Dashboard': 9 * CR,
+  'SWIFT Message Automation': 3 * CR,
+  'BBPS Bill Payment Integration': 3 * CR,
+  'AML Transaction Monitoring': 7 * CR,
+  'Digital Onboarding Revamp': 14 * CR,
+  'Debit Card Management System': 2.5 * CR,
+  'Forex Rate Feed Integration': 5 * CR,
+  'Mobile POS Merchant App': 8 * CR,
+  'Loan Account Statement API': 1.5 * CR,
+  'Treasury Management System Upgrade': 6 * CR,
+  'Customer Grievance Portal': 2 * CR,
+  'IMPS Real-time Settlement Upgrade': 4 * CR,
+};
+
+// A handful of initiatives carry a second quantified benefit (multi-benefit demo).
+const EXTRA_BENEFITS: Record<string, { category: BenefitCategory; metricName: string; unit: BenefitUnit; value: number; narrative: string }[]> = {
+  'Mobile Banking App Upgrade': [
+    { category: 'EFFICIENCY', metricName: 'Branch footfall reduction', unit: 'PERCENT', value: 3 * CR, narrative: 'Shift routine servicing to app, cutting branch load ~20%.' },
+  ],
+  'UPI Enhancement v2.0': [
+    { category: 'CUSTOMER_EXPERIENCE', metricName: 'Payment success rate', unit: 'PERCENT', value: 5 * CR, narrative: 'Higher AutoPay success lifts retention of recurring billers.' },
+  ],
+  'Digital Onboarding Revamp': [
+    { category: 'COST_SAVING', metricName: 'Cost per account opened', unit: 'INR', value: 4 * CR, narrative: 'Straight-through e-KYC removes manual data-entry cost.' },
+  ],
+};
+
+const UNIT_BY_CATEGORY: Record<BenefitCategory, BenefitUnit> = {
+  REVENUE: 'INR',
+  COST_SAVING: 'INR',
+  CUSTOMER_EXPERIENCE: 'PERCENT',
+  COMPLIANCE: 'PERCENT',
+  EFFICIENCY: 'PERCENT',
+  RISK_REDUCTION: 'PERCENT',
+};
+
+const confidenceForStage = (s: Stage): Confidence => {
+  const i = stageIdx(s);
+  if (i >= 8) return 'HIGH';     // Go Live onwards
+  if (i >= 3) return 'MEDIUM';   // Development onwards
+  return 'LOW';
 };
 
 async function main() {
@@ -53,6 +124,32 @@ async function main() {
   });
 
   console.log('Seeded 4 users:', cio.email, pmo.email, vh.email, business.email);
+
+  // --- Clean value-layer data (safe FK order) before re-seeding ---
+  await prisma.valueMeasurement.deleteMany();
+  await prisma.benefitClaim.deleteMany();
+  await prisma.initiativeOkr.deleteMany();
+  await prisma.demand.deleteMany();
+  await prisma.okr.deleteMany();
+
+  // --- OKR catalog ---
+  const OKR_DEFS: { name: string; category: BenefitCategory; owner: string; targetStatement: string; description: string }[] = [
+    { name: 'Grow digital transaction revenue', category: 'REVENUE', owner: 'Deepak Mehta', targetStatement: '+₹150Cr digital revenue in FY27', description: 'Increase fee and float income from digital channels.' },
+    { name: 'Reduce cost-to-serve', category: 'COST_SAVING', owner: 'Anita Desai', targetStatement: 'Cut operating cost by 15%', description: 'Lower per-transaction and per-account servicing cost.' },
+    { name: 'Elevate customer experience & retention', category: 'CUSTOMER_EXPERIENCE', owner: 'Geeta Krishnan', targetStatement: 'NPS 45+, churn -10%', description: 'Improve journeys, ratings and stickiness.' },
+    { name: 'Achieve regulatory compliance', category: 'COMPLIANCE', owner: 'Ramesh Jain', targetStatement: '100% RBI/NPCI deadlines met', description: 'Meet every regulatory mandate on time.' },
+    { name: 'Drive operational efficiency', category: 'EFFICIENCY', owner: 'Sunil Agarwal', targetStatement: 'Automate 80% of manual ops', description: 'Remove manual effort and processing lag.' },
+    { name: 'Strengthen risk & control posture', category: 'RISK_REDUCTION', owner: 'Arvind Nair', targetStatement: 'Cut key risk exposure by 50%', description: 'Reduce financial, operational and compliance risk.' },
+  ];
+
+  const categoryToOkrId: Partial<Record<BenefitCategory, string>> = {};
+  for (const o of OKR_DEFS) {
+    const okr = await prisma.okr.create({
+      data: { name: o.name, category: o.category, owner: o.owner, targetStatement: o.targetStatement, description: o.description },
+    });
+    categoryToOkrId[o.category] = okr.id;
+  }
+  console.log(`Seeded ${OKR_DEFS.length} OKRs`);
 
   // --- Initiatives ---
   type InitiativeSeed = {
@@ -609,6 +706,32 @@ async function main() {
       await prisma.initiative.delete({ where: { id: existing.id } });
     }
 
+    const primaryValue = VALUE_BY_TITLE[seed.title] ?? 1 * CR;
+    const signedOff = stageIdx(seed.currentStage) >= 3; // Development onwards
+    const estimatedCost = Math.round(primaryValue * 0.3);
+    const isClosed = seed.currentStage === 'CLOSED';
+
+    const benefitCreates = [
+      {
+        category: seed.benefitCategory,
+        metricName: seed.targetMetric,
+        unit: UNIT_BY_CATEGORY[seed.benefitCategory],
+        estimatedAnnualValueInr: primaryValue,
+        confidence: confidenceForStage(seed.currentStage),
+        realizationHorizonMonths: 12,
+        narrative: seed.outcomeDescription,
+      },
+      ...(EXTRA_BENEFITS[seed.title] ?? []).map(e => ({
+        category: e.category,
+        metricName: e.metricName,
+        unit: e.unit,
+        estimatedAnnualValueInr: e.value,
+        confidence: confidenceForStage(seed.currentStage),
+        realizationHorizonMonths: 12,
+        narrative: e.narrative,
+      })),
+    ];
+
     const initiative = await prisma.initiative.create({
       data: {
         title: seed.title,
@@ -631,6 +754,15 @@ async function main() {
         delayed: seed.delayed,
         delaySource: seed.delaySource ?? null,
         committedMonth: seed.committedMonth ?? null,
+        estimatedCostInr: estimatedCost,
+        actualCostInr: isClosed ? Math.round(primaryValue * 0.28) : null,
+        valueSignedOff: signedOff,
+        valueSignOffBy: signedOff ? seed.businessSponsor : null,
+        valueSignOffAt: signedOff ? seed.stageStartDate : null,
+        benefitClaims: { create: benefitCreates },
+        okrLinks: categoryToOkrId[seed.benefitCategory]
+          ? { create: { okrId: categoryToOkrId[seed.benefitCategory]! } }
+          : undefined,
       },
     });
 
@@ -676,10 +808,119 @@ async function main() {
       });
     }
 
+    // Realized-value reading for closed initiatives (projected vs realized demo)
+    if (isClosed) {
+      const claim = await prisma.benefitClaim.findFirst({ where: { initiativeId: initiative.id } });
+      if (claim) {
+        await prisma.valueMeasurement.create({
+          data: {
+            benefitClaimId: claim.id,
+            horizonLabel: '+3m',
+            actualValue: 2500,
+            realizedInr: Math.round(primaryValue * 0.25),
+            note: '2,500 of 10,000 merchants onboarded in first 2 weeks — tracking to plan.',
+            recordedByName: seed.businessSpoc,
+            measuredAt: d('2026-06-01'),
+          },
+        });
+      }
+    }
+
     count++;
   }
 
   console.log(`Seeded ${count} initiatives`);
+
+  // --- Demand funnel ---
+  type DemandSeed = {
+    title: string;
+    requirement: string;
+    raisedByName: string;
+    status: DemandStatus;
+    priority: DemandPriority;
+    reviewNote?: string;
+    benefits: { category: BenefitCategory; metricName: string; unit: BenefitUnit; value: number; narrative: string }[];
+  };
+
+  const demands: DemandSeed[] = [
+    {
+      title: 'WhatsApp Banking for account queries',
+      requirement: 'Enable balance, mini-statement and cheque-status enquiry over WhatsApp Business API to deflect routine calls.',
+      raisedByName: 'Anil Kumar',
+      status: 'RAISED',
+      priority: 'HIGH',
+      benefits: [
+        { category: 'CUSTOMER_EXPERIENCE', metricName: 'Call-centre call deflection', unit: 'PERCENT', value: 3 * CR, narrative: 'Deflect ~25% of balance-enquiry calls to self-service WhatsApp.' },
+      ],
+    },
+    {
+      title: 'Pre-approved loan offers on net banking',
+      requirement: 'Surface pre-approved personal loan offers to eligible customers on the net banking landing page with one-click apply.',
+      raisedByName: 'Meena Gupta',
+      status: 'UNDER_REVIEW',
+      priority: 'HIGH',
+      benefits: [
+        { category: 'REVENUE', metricName: 'Incremental loan disbursal', unit: 'INR', value: 25 * CR, narrative: '₹25Cr incremental disbursal via digital pre-approved offers in FY27.' },
+      ],
+    },
+    {
+      title: 'Automated GST reconciliation for current accounts',
+      requirement: 'Auto-reconcile GST payments against current-account statements and provide downloadable GST reports.',
+      raisedByName: 'Rakesh Joshi',
+      status: 'RAISED',
+      priority: 'MEDIUM',
+      benefits: [
+        { category: 'EFFICIENCY', metricName: 'Manual reconciliation effort', unit: 'PERCENT', value: 2 * CR, narrative: 'Save ~300 man-hours/month across operations.' },
+      ],
+    },
+    {
+      title: 'Video-KYC for NRI onboarding',
+      requirement: 'Extend video-KYC to NRI account opening with time-zone-aware scheduling and passport OCR.',
+      raisedByName: 'Suman Bose',
+      status: 'ON_HOLD',
+      priority: 'MEDIUM',
+      reviewNote: 'On hold pending FEMA legal review.',
+      benefits: [
+        { category: 'COMPLIANCE', metricName: 'NRI onboarding TAT', unit: 'DAYS', value: 1.5 * CR, narrative: 'Cut NRI onboarding from ~10 days to 2.' },
+      ],
+    },
+    {
+      title: 'Crypto-exposure monitoring dashboard',
+      requirement: 'Build a dashboard to monitor customer transaction exposure to crypto exchanges.',
+      raisedByName: 'Priti Sharma',
+      status: 'REJECTED',
+      priority: 'LOW',
+      reviewNote: 'Rejected — outside current regulatory mandate; revisit if RBI guidance changes.',
+      benefits: [
+        { category: 'RISK_REDUCTION', metricName: 'Flagged exposure coverage', unit: 'PERCENT', value: 0, narrative: 'Monitor crypto-linked transaction exposure across the book.' },
+      ],
+    },
+  ];
+
+  for (const dem of demands) {
+    await prisma.demand.create({
+      data: {
+        title: dem.title,
+        requirement: dem.requirement,
+        raisedByName: dem.raisedByName,
+        raisedById: dem.raisedByName === 'Anil Kumar' ? business.id : null,
+        status: dem.status,
+        priority: dem.priority,
+        reviewNote: dem.reviewNote ?? '',
+        benefitClaims: {
+          create: dem.benefits.map(b => ({
+            category: b.category,
+            metricName: b.metricName,
+            unit: b.unit,
+            estimatedAnnualValueInr: b.value,
+            narrative: b.narrative,
+          })),
+        },
+      },
+    });
+  }
+
+  console.log(`Seeded ${demands.length} demands`);
 }
 
 main()

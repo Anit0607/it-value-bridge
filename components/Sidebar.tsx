@@ -12,6 +12,7 @@ import {
   Briefcase,
   CheckSquare,
   FileBarChart,
+  TrendingUp,
   LogOut,
   Layers,
 } from 'lucide-react';
@@ -29,6 +30,7 @@ const NAV_ITEMS: NavItem[] = [
   { href: '/pmo/new', label: 'New Item', icon: PlusCircle, roles: ['PMO'] },
   { href: '/vertical-head', label: 'My Portfolio', icon: Briefcase, roles: ['VERTICAL_HEAD'] },
   { href: '/business', label: 'My Items', icon: CheckSquare, roles: ['BUSINESS'] },
+  { href: '/value', label: 'Value Board', icon: TrendingUp, roles: ['CIO', 'PMO'] },
   { href: '/report', label: 'Monthly Report', icon: FileBarChart, roles: ['CIO', 'PMO'] },
 ];
 

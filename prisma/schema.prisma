@@ -96,6 +96,37 @@ enum StoryStatus {
   DONE
 }
 
+// ---------- Value realization ----------
+enum BenefitUnit {
+  INR
+  PERCENT
+  DAYS
+  HOURS
+  COUNT
+  RATIO
+}
+
+enum Confidence {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum DemandStatus {
+  RAISED
+  UNDER_REVIEW
+  APPROVED
+  REJECTED
+  ON_HOLD
+}
+
+enum DemandPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 // ---------- Auth / Users ----------
 model User {
   id           String   @id @default(cuid())
@@ -111,6 +142,7 @@ model User {
 
   ownedInitiatives Initiative[] @relation("VerticalHeadInitiatives")
   historyEntries   HistoryLog[]
+  raisedDemands    Demand[]     @relation("RaisedDemands")
 }
 
 // ---------- Core ----------
@@ -127,11 +159,19 @@ model Initiative {
   businessSponsor  String
   description      String
 
-  // business value (intent)
+  // business value (intent) — benefitCategory/outcomeDescription/targetMetric
+  // are the legacy single-benefit summary; structured value lives in BenefitClaim[].
   benefitCategory    BenefitCategory
   outcomeDescription String
   targetMetric       String
   expectedGoLiveDate  DateTime
+
+  // value governance / cost (Value Realization Layer)
+  estimatedCostInr Float?
+  actualCostInr    Float?
+  valueSignedOff   Boolean   @default(false)
+  valueSignOffBy   String?
+  valueSignOffAt   DateTime?
 
   // waterfall current-state (only meaningful when methodology = WATERFALL)
   currentStage        Stage        @default(BRD)
@@ -157,6 +197,9 @@ model Initiative {
   epics            Epic[]
   sprints          Sprint[]
   stories          Story[]
+  benefitClaims    BenefitClaim[]
+  okrLinks         InitiativeOkr[]
+  originDemand     Demand?          @relation("DemandInitiative")
 
   @@index([verticalHeadName])
   @@index([currentStage])
@@ -297,4 +340,101 @@ model MonthlyReport {
   generatedAt DateTime @default(now())
 
   @@unique([year, month])
+}
+
+// ---------- Value Realization Layer ----------
+
+// A single quantified benefit claimed by an initiative or a demand.
+// One initiative/demand can carry several (multi-benefit). RAG/value totals
+// are computed at render; the ₹ figure (estimatedAnnualValueInr) is what rolls
+// up into board dashboards once the parent initiative's value is signed off.
+model BenefitClaim {
+  id           String      @id @default(cuid())
+  initiative   Initiative? @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId String?
+  demand       Demand?     @relation(fields: [demandId], references: [id], onDelete: Cascade)
+  demandId     String?
+
+  category                BenefitCategory
+  metricName              String // e.g. "UPI transaction drop rate"
+  baselineValue           Float?
+  targetValue             Float?
+  unit                    BenefitUnit @default(INR)
+  estimatedAnnualValueInr Float       @default(0) // ₹ value for board rollups
+  confidence              Confidence  @default(MEDIUM)
+  realizationHorizonMonths Int        @default(12)
+  narrative               String      @default("")
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  measurements ValueMeasurement[]
+
+  @@index([initiativeId])
+  @@index([demandId])
+}
+
+// A point-in-time reading of realized value for a benefit claim (+3/+6/+12mo).
+model ValueMeasurement {
+  id             String       @id @default(cuid())
+  benefitClaim   BenefitClaim @relation(fields: [benefitClaimId], references: [id], onDelete: Cascade)
+  benefitClaimId String
+  measuredAt     DateTime     @default(now())
+  horizonLabel   String // "+3m", "+6m", "+12m"
+  actualValue    Float?
+  realizedInr    Float?
+  note           String       @default("")
+  recordedByName String?
+
+  @@index([benefitClaimId])
+}
+
+// Bank strategic metric / OKR catalog. Initiatives map to one or more.
+model Okr {
+  id              String           @id @default(cuid())
+  name            String
+  description     String           @default("")
+  category        BenefitCategory?
+  owner           String           @default("")
+  targetStatement String           @default("")
+  active          Boolean          @default(true)
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  links           InitiativeOkr[]
+}
+
+model InitiativeOkr {
+  id               String     @id @default(cuid())
+  initiative       Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId     String
+  okr              Okr        @relation(fields: [okrId], references: [id], onDelete: Cascade)
+  okrId            String
+  contributionNote String     @default("")
+
+  @@unique([initiativeId, okrId])
+  @@index([initiativeId])
+  @@index([okrId])
+}
+
+// Demand-management funnel: business raises a need with quantified benefit(s),
+// PMO triages, and on approval it converts into an Initiative.
+model Demand {
+  id           String         @id @default(cuid())
+  title        String
+  requirement  String
+  raisedBy     User?          @relation("RaisedDemands", fields: [raisedById], references: [id])
+  raisedById   String?
+  raisedByName String
+  verticalHeadName String?
+  status       DemandStatus   @default(RAISED)
+  priority     DemandPriority @default(MEDIUM)
+  reviewNote   String         @default("")
+
+  convertedInitiative   Initiative? @relation("DemandInitiative", fields: [convertedInitiativeId], references: [id])
+  convertedInitiativeId String?     @unique
+
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  benefitClaims BenefitClaim[]
+
+  @@index([status])
 }
