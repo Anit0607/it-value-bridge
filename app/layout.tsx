@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import { SessionProvider } from 'next-auth/react';
 import { RoleProvider } from '@/components/RoleProvider';
+import { DemoBanner } from '@/components/DemoBanner';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -24,6 +25,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </RoleProvider>
         </SessionProvider>
+        {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && <DemoBanner />}
       </body>
     </html>
   );
