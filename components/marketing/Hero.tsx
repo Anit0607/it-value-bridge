@@ -3,7 +3,7 @@
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 import { motion, useReducedMotion } from 'framer-motion';
-import { ArrowRight, ShieldCheck, Activity, CheckCircle2, AlertTriangle, AlertOctagon } from 'lucide-react';
+import { ArrowRight, ShieldCheck, TrendingUp, BadgeCheck, Coins, Scale } from 'lucide-react';
 
 export function Hero() {
   const reduce = useReducedMotion();
@@ -72,7 +72,7 @@ export function Hero() {
             </motion.div>
 
             <motion.p {...rise(0.3)} className="mt-4 text-xs text-slate-500">
-              Four leadership views · 11-stage delivery pipeline · seeded with 20 realistic items
+              Four leadership views · demand-to-value funnel · board-ready ROI in ₹
             </motion.p>
           </div>
 
@@ -125,18 +125,19 @@ function CountUp({ to, reduce, delay = 0 }: { to: number; reduce: boolean; delay
 }
 
 const KPIS = [
-  { label: 'Active', value: 19, icon: Activity, accent: 'bg-brand-500', tint: 'bg-brand-50 text-brand-600' },
-  { label: 'On Track', value: 11, icon: CheckCircle2, accent: 'bg-emerald-500', tint: 'bg-emerald-50 text-emerald-600' },
-  { label: 'At Risk', value: 5, icon: AlertTriangle, accent: 'bg-amber-500', tint: 'bg-amber-50 text-amber-600' },
-  { label: 'Delayed', value: 3, icon: AlertOctagon, accent: 'bg-rose-500', tint: 'bg-rose-50 text-rose-600' },
+  { label: 'Projected Value', value: 220, prefix: '₹', suffix: ' Cr', display: '', icon: TrendingUp, accent: 'bg-brand-500', tint: 'bg-brand-50 text-brand-600' },
+  { label: 'Signed-off', value: 160, prefix: '₹', suffix: ' Cr', display: '', icon: BadgeCheck, accent: 'bg-emerald-500', tint: 'bg-emerald-50 text-emerald-600' },
+  { label: 'Realized (FY)', value: 2, prefix: '₹', suffix: ' Cr', display: '', icon: Coins, accent: 'bg-amber-500', tint: 'bg-amber-50 text-amber-600' },
+  { label: 'Value vs Cost', value: 0, prefix: '', suffix: '', display: '2.6x', icon: Scale, accent: 'bg-brand-500', tint: 'bg-brand-50 text-brand-600' },
 ];
 
-const FUNNEL = [
-  { stage: 'BRD', w: '92%', c: 'bg-brand-300' },
-  { stage: 'Development', w: '70%', c: 'bg-brand-500' },
-  { stage: 'UAT', w: '48%', c: 'bg-brand-600' },
-  { stage: 'Go Live', w: '30%', c: 'bg-brand-700' },
-  { stage: 'Closed', w: '18%', c: 'bg-slate-400' },
+// Value contributed by benefit category — widths ∝ ₹ (Revenue is the max).
+const VALUE_BY_CATEGORY = [
+  { label: 'Revenue', w: '100%', c: 'bg-emerald-500', amt: '₹116 Cr' },
+  { label: 'Customer Exp.', w: '37%', c: 'bg-violet-500', amt: '₹42.5 Cr' },
+  { label: 'Efficiency', w: '24%', c: 'bg-brand-500', amt: '₹28 Cr' },
+  { label: 'Risk Reduction', w: '16%', c: 'bg-rose-500', amt: '₹18 Cr' },
+  { label: 'Compliance', w: '8%', c: 'bg-amber-500', amt: '₹9.5 Cr' },
 ];
 
 function HeroPreview({ reduce }: { reduce: boolean }) {
@@ -148,7 +149,7 @@ function HeroPreview({ reduce }: { reduce: boolean }) {
           <span className="h-2.5 w-2.5 rounded-full bg-rose-300" />
           <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
-          <span className="ml-3 text-[11px] font-medium text-slate-400">CIO Dashboard</span>
+          <span className="ml-3 text-[11px] font-medium text-slate-400">Board-Ready Value</span>
           <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
             <motion.span
               className="h-1.5 w-1.5 rounded-full bg-emerald-500"
@@ -179,7 +180,15 @@ function HeroPreview({ reduce }: { reduce: boolean }) {
                   className="mt-2 text-xl font-semibold text-slate-900"
                   style={{ fontVariantNumeric: 'tabular-nums' }}
                 >
-                  <CountUp to={k.value} reduce={reduce} delay={0.4 + i * 0.08} />
+                  {k.display ? (
+                    k.display
+                  ) : (
+                    <>
+                      {k.prefix}
+                      <CountUp to={k.value} reduce={reduce} delay={0.4 + i * 0.08} />
+                      {k.suffix}
+                    </>
+                  )}
                 </div>
                 <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{k.label}</div>
               </motion.div>
@@ -187,13 +196,16 @@ function HeroPreview({ reduce }: { reduce: boolean }) {
           })}
         </div>
 
-        {/* mini funnel */}
+        {/* value by category */}
         <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
-          <div className="mb-2 text-[11px] font-semibold text-slate-500">Pipeline by stage</div>
+          <div className="mb-2 flex items-center justify-between">
+            <span className="text-[11px] font-semibold text-slate-500">Value by benefit category</span>
+            <span className="text-[10px] text-slate-400">projected annual ₹</span>
+          </div>
           <div className="space-y-1.5">
-            {FUNNEL.map((r, i) => (
-              <div key={r.stage} className="flex items-center gap-2">
-                <span className="w-20 shrink-0 text-[10px] text-slate-500">{r.stage}</span>
+            {VALUE_BY_CATEGORY.map((r, i) => (
+              <div key={r.label} className="flex items-center gap-2">
+                <span className="w-24 shrink-0 text-[10px] text-slate-500">{r.label}</span>
                 <span className="h-2.5 flex-1 overflow-hidden rounded-full bg-slate-100">
                   <motion.span
                     className={`block h-full rounded-full ${r.c}`}
@@ -202,6 +214,7 @@ function HeroPreview({ reduce }: { reduce: boolean }) {
                     transition={reduce ? {} : { duration: 0.9, delay: 0.5 + i * 0.1, ease: [0.16, 1, 0.3, 1] }}
                   />
                 </span>
+                <span className="w-14 shrink-0 text-right text-[10px] font-semibold text-slate-700" style={{ fontVariantNumeric: 'tabular-nums' }}>{r.amt}</span>
               </div>
             ))}
           </div>
