@@ -64,6 +64,12 @@ export interface Item {
 
   validation?: BusinessValidation;
   committedMonth?: string;
+
+  // regulatory / compliance criticality
+  isRegulatory: boolean;
+  regulatoryBody?: string | null;
+  regulatoryDueDate?: string | null; // ISO date
+
   history: HistoryEntry[];
   createdAt: string;
 }

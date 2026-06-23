@@ -17,6 +17,7 @@ import {
   ClipboardCheck,
   CheckCircle2,
   BadgeCheck,
+  ShieldAlert,
   ArrowRight,
   History as HistoryIcon,
 } from 'lucide-react';
@@ -111,6 +112,12 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
               {item.type}
             </span>
             <RagBadge rag={rag} />
+            {item.isRegulatory && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                <ShieldAlert className="h-3.5 w-3.5" />
+                Regulatory{item.regulatoryBody ? ` · ${item.regulatoryBody}` : ''}
+              </span>
+            )}
           </div>
           <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">{item.title}</h1>
         </div>

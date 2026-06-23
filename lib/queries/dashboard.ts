@@ -40,6 +40,7 @@ export interface CioSummary {
     delivered: EnrichedItem[];
     missed: EnrichedItem[];
   };
+  regulatory: EnrichedItem[];
 }
 
 /** Everything the CIO dashboard needs, aggregated in one place. */
@@ -71,6 +72,16 @@ export async function getCioSummary(): Promise<CioSummary> {
   const delivered = committed.filter(i => i.currentStage === 'Closed');
   const missed = committed.filter(i => i.currentStage !== 'Closed' && i.goLiveDate < today);
 
+  // Regulatory commitments, open ones first, soonest external deadline first.
+  const regulatory = items
+    .filter(i => i.isRegulatory)
+    .sort((a, b) => {
+      const ac = a.currentStage === 'Closed' ? 1 : 0;
+      const bc = b.currentStage === 'Closed' ? 1 : 0;
+      if (ac !== bc) return ac - bc;
+      return (a.regulatoryDueDate ?? '9999').localeCompare(b.regulatoryDueDate ?? '9999');
+    });
+
   return {
     items,
     totalCount: items.length,
@@ -81,6 +92,7 @@ export async function getCioSummary(): Promise<CioSummary> {
     vhSummary,
     monthLabel,
     monthly: { committed, delivered, missed },
+    regulatory,
   };
 }
 

@@ -7,6 +7,7 @@ import { getInitiativeDependencies, listLinkableInitiatives } from '@/lib/action
 import { ItemDetailClient } from './ItemDetailClient';
 import { ValueRealizationPanel } from '@/components/value/ValueRealizationPanel';
 import { DependencyPanel } from '@/components/dependencies/DependencyPanel';
+import { RegulatoryControl } from '@/components/RegulatoryControl';
 
 export default async function ItemDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
@@ -27,6 +28,15 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
   return (
     <div className="space-y-4">
       <ItemDetailClient item={item} value={value} />
+      <div className="mx-auto max-w-5xl">
+        <RegulatoryControl
+          initiativeId={params.id}
+          isRegulatory={item.isRegulatory}
+          regulatoryBody={item.regulatoryBody}
+          regulatoryDueDate={item.regulatoryDueDate}
+          canEdit={canRecord}
+        />
+      </div>
       {value && value.benefitClaims.length > 0 && (
         <div className="mx-auto max-w-5xl">
           <ValueRealizationPanel initiativeId={params.id} value={value} canRecord={canRecord} />

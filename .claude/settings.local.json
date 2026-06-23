@@ -78,7 +78,12 @@
       "Bash(git commit -m ' *)",
       "Bash(ls -la .env*)",
       "Bash(cat .env.local)",
-      "Bash(xxd)"
+      "Bash(xxd)",
+      "Bash(git remote *)",
+      "Bash(git branch *)",
+      "Bash(git push *)",
+      "Bash(openssl rand *)",
+      "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('base64'\\)\\)\")"
     ]
   }
 }

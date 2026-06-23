@@ -41,6 +41,10 @@ export default async function ReportPage() {
 
   const topSource = Object.entries(delaySources).sort(([, a], [, b]) => b - a)[0]?.[0] ?? 'IT';
 
+  const regulatory = items
+    .filter(i => i.isRegulatory)
+    .sort((a, b) => (a.regulatoryDueDate ?? '9999').localeCompare(b.regulatoryDueDate ?? '9999'));
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
       <PageHeader title="Monthly Report" subtitle={monthLabel}>
@@ -170,6 +174,42 @@ export default async function ReportPage() {
                 </div>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {regulatory.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
+          <div className="border-b border-slate-100 px-5 py-3.5">
+            <h2 className="text-sm font-semibold text-slate-800">
+              Regulatory Commitments <span className="text-slate-400">({regulatory.length})</span>
+            </h2>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {regulatory.map(i => {
+              const overdue = i.regulatoryDueDate ? i.regulatoryDueDate < today && i.currentStage !== 'Closed' : false;
+              return (
+                <div key={i.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                  <div className="min-w-0">
+                    <Link href={`/items/${i.id}`} className="text-sm font-medium text-slate-700 hover:text-brand-700">
+                      {i.title}
+                    </Link>
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      {i.regulatoryBody ?? 'Regulatory'} · {i.currentStage}
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 text-right text-xs">
+                    {i.regulatoryDueDate ? (
+                      <span className={overdue ? 'font-semibold text-rose-600' : 'text-slate-600'}>
+                        due {i.regulatoryDueDate}{overdue ? ' · overdue' : ''}
+                      </span>
+                    ) : (
+                      <span className="text-slate-400">no fixed date</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       )}

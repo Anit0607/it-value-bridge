@@ -82,6 +82,16 @@ const UNIT_BY_CATEGORY: Record<BenefitCategory, BenefitUnit> = {
   RISK_REDUCTION: 'PERCENT',
 };
 
+// Regulator-mandated initiatives with externally-fixed deadlines.
+const REGULATORY_BY_TITLE: Record<string, { body: string; due: string }> = {
+  'KYC Automation System': { body: 'RBI', due: '2026-09-30' },
+  'AML Transaction Monitoring': { body: 'RBI', due: '2026-11-30' },
+  'Loan Account Statement API': { body: 'RBI', due: '2026-08-31' },
+  'Treasury Management System Upgrade': { body: 'RBI', due: '2026-10-31' },
+  'Customer Grievance Portal': { body: 'RBI', due: '2026-10-31' },
+  'UPI Enhancement v2.0': { body: 'NPCI', due: '2026-07-15' },
+};
+
 const confidenceForStage = (s: Stage): Confidence => {
   const i = stageIdx(s);
   if (i >= 8) return 'HIGH';     // Go Live onwards
@@ -712,6 +722,7 @@ async function main() {
     const signedOff = stageIdx(seed.currentStage) >= 3; // Development onwards
     const estimatedCost = Math.round(primaryValue * 0.3);
     const isClosed = seed.currentStage === 'CLOSED';
+    const reg = REGULATORY_BY_TITLE[seed.title];
 
     const benefitCreates = [
       {
@@ -761,6 +772,9 @@ async function main() {
         valueSignedOff: signedOff,
         valueSignOffBy: signedOff ? seed.businessSponsor : null,
         valueSignOffAt: signedOff ? seed.stageStartDate : null,
+        isRegulatory: !!reg,
+        regulatoryBody: reg?.body ?? null,
+        regulatoryDueDate: reg ? d(reg.due) : null,
         benefitClaims: { create: benefitCreates },
         okrLinks: categoryToOkrId[seed.benefitCategory]
           ? { create: { okrId: categoryToOkrId[seed.benefitCategory]! } }

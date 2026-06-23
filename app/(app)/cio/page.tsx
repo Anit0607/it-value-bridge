@@ -7,6 +7,7 @@ import { KpiCard } from '@/components/KpiCard';
 import { PageHeader } from '@/components/PageHeader';
 import { StageFunnel } from '@/components/StageFunnel';
 import { RagDot } from '@/components/RagBadge';
+import { computeRAG } from '@/lib/rag';
 import {
   Activity,
   CheckCircle2,
@@ -14,6 +15,7 @@ import {
   AlertOctagon,
   FileBarChart,
   CalendarClock,
+  ShieldAlert,
 } from 'lucide-react';
 
 export default async function CioDashboard() {
@@ -26,7 +28,10 @@ export default async function CioDashboard() {
     vhSummary,
     monthLabel,
     monthly: { committed: monthlyCommitted, delivered, missed },
+    regulatory,
   } = await getCioSummary();
+
+  const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="space-y-6">
@@ -93,6 +98,51 @@ export default async function CioDashboard() {
           )}
         </div>
       </div>
+
+      {regulatory.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-rose-200 bg-white shadow-card">
+          <div className="flex items-center justify-between border-b border-rose-100 px-5 py-3.5">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-rose-800">
+              <ShieldAlert className="h-4 w-4 text-rose-500" />
+              Regulatory Watch
+              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">
+                {regulatory.length}
+              </span>
+            </h2>
+            <span className="text-xs text-slate-400">Externally-mandated deadlines</span>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {regulatory.map(i => {
+              const rag = computeRAG(i);
+              const overdue = i.regulatoryDueDate ? i.regulatoryDueDate < todayIso && i.currentStage !== 'Closed' : false;
+              return (
+                <div key={i.id} className="flex items-center justify-between gap-3 px-5 py-2.5">
+                  <div className="min-w-0">
+                    <Link href={`/items/${i.id}`} className="truncate text-sm font-medium text-slate-800 hover:text-brand-700">
+                      {i.title}
+                    </Link>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                      {i.regulatoryBody && <span className="rounded bg-rose-50 px-1.5 py-0.5 font-medium text-rose-700">{i.regulatoryBody}</span>}
+                      <span>{i.currentStage}</span>
+                      <span className="inline-flex items-center gap-1"><RagDot rag={rag} size="sm" />{rag}</span>
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 text-right">
+                    {i.regulatoryDueDate ? (
+                      <>
+                        <div className={`tabular text-xs font-semibold ${overdue ? 'text-rose-600' : 'text-slate-700'}`}>{i.regulatoryDueDate}</div>
+                        <div className="text-[11px] text-slate-400">{i.currentStage === 'Closed' ? 'delivered' : overdue ? 'overdue' : 'due'}</div>
+                      </>
+                    ) : (
+                      <span className="text-[11px] text-slate-400">no fixed date</span>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">

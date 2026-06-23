@@ -173,6 +173,11 @@ model Initiative {
   valueSignOffBy   String?
   valueSignOffAt   DateTime?
 
+  // regulatory / compliance criticality (e.g. RBI/NPCI-mandated, externally-fixed deadline)
+  isRegulatory      Boolean   @default(false)
+  regulatoryBody    String?
+  regulatoryDueDate DateTime?
+
   // waterfall current-state (only meaningful when methodology = WATERFALL)
   currentStage        Stage        @default(BRD)
   currentProcessGroup ProcessGroup @default(INITIATING)

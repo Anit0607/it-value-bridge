@@ -29,6 +29,9 @@ export default function NewItemPage() {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState('');
   const [benefits, setBenefits] = useState<BenefitDraft[]>([]);
+  const [isRegulatory, setIsRegulatory] = useState(false);
+  const [regBody, setRegBody] = useState('');
+  const [regDue, setRegDue] = useState('');
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -56,6 +59,9 @@ export default function NewItemPage() {
       requirement: String(fd.get('requirement') ?? ''),
       goLiveDate: String(fd.get('goLiveDate') ?? ''),
       benefits,
+      isRegulatory,
+      regulatoryBody: regBody,
+      regulatoryDueDate: regDue || undefined,
     };
 
     startTransition(async () => {
@@ -109,6 +115,30 @@ export default function NewItemPage() {
           <Field label="Expected Go Live Date" required>
             <input type="date" name="goLiveDate" className={inputCls} required />
           </Field>
+
+          <div className="rounded-lg border border-slate-200 p-3">
+            <label className="flex items-center gap-2.5">
+              <input
+                type="checkbox"
+                checked={isRegulatory}
+                onChange={e => setIsRegulatory(e.target.checked)}
+                className="h-4 w-4 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
+              />
+              <span className="text-sm font-medium text-slate-800">Regulatory / compliance-mandated</span>
+            </label>
+            {isRegulatory && (
+              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Regulator / body</label>
+                  <input value={regBody} onChange={e => setRegBody(e.target.value)} className={inputCls} placeholder="e.g. RBI, NPCI, SEBI" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Mandated due date</label>
+                  <input type="date" value={regDue} onChange={e => setRegDue(e.target.value)} className={inputCls} />
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-card">

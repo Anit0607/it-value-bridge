@@ -52,6 +52,9 @@ function toItem(i: InitiativeWithRelations): Item {
     delayed: i.delayed,
     delaySource: i.delaySource as DelaySource | undefined,
     committedMonth: i.committedMonth ?? undefined,
+    isRegulatory: i.isRegulatory,
+    regulatoryBody: i.regulatoryBody,
+    regulatoryDueDate: i.regulatoryDueDate ? iso(i.regulatoryDueDate) : null,
     validation: i.valueRealization
       ? {
           outcomeAchieved:
@@ -138,6 +141,9 @@ const CreateSchema = z.object({
   requirement: z.string().min(1),
   goLiveDate: z.string().min(1),
   benefits: z.array(BenefitInput).min(1, 'Define at least one quantified benefit'),
+  isRegulatory: z.boolean().optional(),
+  regulatoryBody: z.string().optional(),
+  regulatoryDueDate: z.string().optional(),
 });
 
 export type CreateInitiativeInput = z.infer<typeof CreateSchema>;
@@ -179,6 +185,9 @@ export async function createInitiative(input: CreateInitiativeInput) {
       delayed: false,
       estimatedCostInr: Math.round(totalValue * 0.3),
       valueSignedOff: false,
+      isRegulatory: parsed.isRegulatory ?? false,
+      regulatoryBody: parsed.isRegulatory ? (parsed.regulatoryBody?.trim() || null) : null,
+      regulatoryDueDate: parsed.isRegulatory && parsed.regulatoryDueDate ? new Date(parsed.regulatoryDueDate) : null,
       benefitClaims: {
         create: parsed.benefits.map(b => ({
           category: b.category,
@@ -374,4 +383,29 @@ export async function signOffValue(id: string) {
   });
   revalidatePath(`/items/${id}`);
   revalidatePath('/value');
+}
+
+const RegulatoryInput = z.object({
+  isRegulatory: z.boolean(),
+  regulatoryBody: z.string().optional(),
+  regulatoryDueDate: z.string().optional(),
+});
+
+export type SetRegulatoryInput = z.infer<typeof RegulatoryInput>;
+
+export async function setRegulatory(id: string, input: SetRegulatoryInput) {
+  await requireRole('PMO', 'CIO');
+  const parsed = RegulatoryInput.parse(input);
+  await prisma.initiative.update({
+    where: { id },
+    data: {
+      isRegulatory: parsed.isRegulatory,
+      regulatoryBody: parsed.isRegulatory ? (parsed.regulatoryBody?.trim() || null) : null,
+      regulatoryDueDate:
+        parsed.isRegulatory && parsed.regulatoryDueDate ? new Date(parsed.regulatoryDueDate) : null,
+    },
+  });
+  revalidatePath(`/items/${id}`);
+  revalidatePath('/cio');
+  revalidatePath('/report');
 }
