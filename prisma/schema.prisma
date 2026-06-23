@@ -187,6 +187,7 @@ model Initiative {
   notes               String       @default("")
   delayed             Boolean      @default(false)
   delaySource         DelaySource?
+  delayReason         String?
 
   committedMonth String? // "YYYY-MM" for monthly-commitment tracking
 

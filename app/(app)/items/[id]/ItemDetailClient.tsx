@@ -60,6 +60,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const [localNotes, setLocalNotes] = useState<string | null>(null);
   const [localDelayed, setLocalDelayed] = useState<boolean | null>(null);
   const [localDelaySource, setLocalDelaySource] = useState<DelaySource | undefined>(undefined);
+  const [localDelayReason, setLocalDelayReason] = useState<string | null>(null);
 
   const rag = computeRAG(item);
   const days = daysInStage(item.stageStartDate);
@@ -70,8 +71,10 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const currentNotes = localNotes ?? item.notes;
   const currentDelayed = localDelayed ?? item.delayed;
   const currentDelaySource = localDelaySource ?? item.delaySource;
+  const currentDelayReason = localDelayReason ?? item.delayReason ?? '';
   const back = user ? (ROLE_BACK[user.role] ?? ROLE_BACK.PMO) : ROLE_BACK.PMO;
-  const isDirty = localNotes !== null || localDelayed !== null || localDelaySource !== undefined;
+  const isDirty =
+    localNotes !== null || localDelayed !== null || localDelaySource !== undefined || localDelayReason !== null;
 
   const handleComplete = () => {
     if (!user) return;
@@ -85,10 +88,11 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const handleSaveNotes = () => {
     if (!user) return;
     startTransition(async () => {
-      await updateNotes(item.id, currentNotes, currentDelayed, currentDelaySource);
+      await updateNotes(item.id, currentNotes, currentDelayed, currentDelaySource, currentDelayReason);
       setLocalNotes(null);
       setLocalDelayed(null);
       setLocalDelaySource(undefined);
+      setLocalDelayReason(null);
       router.refresh();
     });
   };
@@ -291,16 +295,25 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                   <label htmlFor="delayed" className="text-sm text-slate-700">Mark as delayed</label>
                 </div>
                 {currentDelayed && (
-                  <select
-                    className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none"
-                    value={currentDelaySource ?? ''}
-                    onChange={e => setLocalDelaySource(e.target.value as DelaySource)}
-                  >
-                    <option value="">Select delay source…</option>
-                    {DELAY_SOURCES.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                  <>
+                    <select
+                      className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none"
+                      value={currentDelaySource ?? ''}
+                      onChange={e => setLocalDelaySource(e.target.value as DelaySource)}
+                    >
+                      <option value="">Delay owner / source…</option>
+                      {DELAY_SOURCES.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                    <input
+                      type="text"
+                      value={currentDelayReason}
+                      onChange={e => setLocalDelayReason(e.target.value)}
+                      placeholder="Reason for delay…"
+                      className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+                    />
+                  </>
                 )}
 
                 {isDirty && (

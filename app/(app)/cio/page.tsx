@@ -29,6 +29,7 @@ export default async function CioDashboard() {
     monthLabel,
     monthly: { committed: monthlyCommitted, delivered, missed },
     regulatory,
+    delays,
   } = await getCioSummary();
 
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -98,6 +99,42 @@ export default async function CioDashboard() {
           )}
         </div>
       </div>
+
+      {delays.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
+          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+              <AlertOctagon className="h-4 w-4 text-rose-500" />
+              Delays Needing Attention
+              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">{delays.length}</span>
+            </h2>
+            <span className="text-xs text-slate-400">Worst slip first</span>
+          </div>
+          <div className="divide-y divide-slate-100">
+            {delays.slice(0, 6).map(i => {
+              const slip = i.etaDays < 0 ? -i.etaDays : i.staleDays;
+              return (
+                <div key={i.id} className="flex items-center justify-between gap-3 px-5 py-2.5">
+                  <div className="min-w-0">
+                    <Link href={`/items/${i.id}`} className="truncate text-sm font-medium text-slate-800 hover:text-brand-700">
+                      {i.title}
+                    </Link>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
+                      <span>{i.currentStage}</span>
+                      {i.delaySource && <span className="rounded bg-rose-50 px-1.5 py-0.5 font-medium text-rose-700">{i.delaySource}</span>}
+                      {i.delayReason && <span className="truncate">· {i.delayReason}</span>}
+                    </div>
+                  </div>
+                  <div className="flex-shrink-0 text-right">
+                    <div className="tabular text-sm font-semibold text-rose-600">{slip}d</div>
+                    <div className="text-[11px] text-slate-400">slipped</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {regulatory.length > 0 && (
         <div className="overflow-hidden rounded-xl border border-rose-200 bg-white shadow-card">

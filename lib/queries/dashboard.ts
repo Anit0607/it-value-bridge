@@ -41,6 +41,7 @@ export interface CioSummary {
     missed: EnrichedItem[];
   };
   regulatory: EnrichedItem[];
+  delays: EnrichedItem[];
 }
 
 /** Everything the CIO dashboard needs, aggregated in one place. */
@@ -82,6 +83,12 @@ export async function getCioSummary(): Promise<CioSummary> {
       return (a.regulatoryDueDate ?? '9999').localeCompare(b.regulatoryDueDate ?? '9999');
     });
 
+  // Delays flagged on active items, worst slip first.
+  const slip = (i: EnrichedItem) => (i.etaDays < 0 ? -i.etaDays : i.staleDays);
+  const delays = items
+    .filter(i => i.delayed && i.currentStage !== 'Closed')
+    .sort((a, b) => slip(b) - slip(a));
+
   return {
     items,
     totalCount: items.length,
@@ -93,6 +100,7 @@ export async function getCioSummary(): Promise<CioSummary> {
     monthLabel,
     monthly: { committed, delivered, missed },
     regulatory,
+    delays,
   };
 }
 

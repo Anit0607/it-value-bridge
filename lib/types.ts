@@ -61,6 +61,7 @@ export interface Item {
   notes: string;
   delayed: boolean;
   delaySource?: DelaySource;
+  delayReason?: string | null;
 
   validation?: BusinessValidation;
   committedMonth?: string;

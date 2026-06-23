@@ -181,6 +181,7 @@ async function main() {
     notes: string;
     delayed: boolean;
     delaySource?: DelaySource;
+    delayReason?: string;
     committedMonth?: string;
     history: { stage: Stage; date: Date; user: string; note: string }[];
     validation?: { outcomeAchieved: 'YES' | 'PARTIALLY' | 'NO'; actualResult: string; actualMetric: string };
@@ -257,6 +258,7 @@ async function main() {
       notes: 'Loan module integration blocked on CBS vendor API documentation. Escalated.',
       delayed: true,
       delaySource: 'VENDOR',
+      delayReason: 'CBS vendor has not delivered the Loan-module API documentation; escalated to vendor management.',
       history: [
         { stage: 'BRD', date: d('2026-02-10'), user: 'Anita Desai', note: 'BRD finalized' },
         { stage: 'FSD', date: d('2026-03-01'), user: 'Anita Desai', note: 'FSD approved' },
@@ -380,6 +382,7 @@ async function main() {
       notes: 'Vendor evaluation ongoing. Awaiting business sign-off on commercials.',
       delayed: true,
       delaySource: 'BUSINESS',
+      delayReason: 'Awaiting business sign-off on vendor commercials before the RFP can close.',
       history: [
         { stage: 'BRD', date: d('2026-04-01'), user: 'Anita Desai', note: 'BRD approved' },
         { stage: 'FSD', date: d('2026-05-01'), user: 'Anita Desai', note: 'FSD approved' },
@@ -456,6 +459,7 @@ async function main() {
       notes: 'UAT defects delayed by business testing team resource constraints.',
       delayed: true,
       delaySource: 'IT',
+      delayReason: 'UAT slipped — business testing team short on resources for defect verification.',
       committedMonth: '2026-06',
       history: [
         { stage: 'BRD', date: d('2026-03-01'), user: 'Anita Desai', note: 'BRD approved' },
@@ -628,6 +632,7 @@ async function main() {
       notes: 'Commercial negotiations delayed due to AA aggregator pricing dispute.',
       delayed: true,
       delaySource: 'EXTERNAL',
+      delayReason: 'AA aggregator pricing dispute is holding up commercial closure.',
       history: [
         { stage: 'BRD', date: d('2026-04-20'), user: 'Anita Desai', note: 'BRD approved' },
         { stage: 'FSD', date: d('2026-05-10'), user: 'Anita Desai', note: 'FSD approved' },
@@ -766,6 +771,7 @@ async function main() {
         notes: seed.notes,
         delayed: seed.delayed,
         delaySource: seed.delaySource ?? null,
+        delayReason: seed.delayReason ?? null,
         committedMonth: seed.committedMonth ?? null,
         estimatedCostInr: estimatedCost,
         actualCostInr: isClosed ? Math.round(primaryValue * 0.28) : null,

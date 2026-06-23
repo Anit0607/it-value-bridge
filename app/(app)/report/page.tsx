@@ -5,6 +5,7 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import type { DelaySource } from '@/lib/types';
+import { daysFromNow, daysSinceUpdate } from '@/lib/rag';
 import Link from 'next/link';
 import { Printer, Sparkles } from 'lucide-react';
 
@@ -122,7 +123,7 @@ export default async function ReportPage() {
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
         <div className="border-b border-slate-100 px-5 py-3.5">
           <h2 className="text-sm font-semibold text-slate-800">
-            Delayed Items by Source <span className="text-slate-400">({delayed.length})</span>
+            Delay Accountability <span className="text-slate-400">({delayed.length})</span>
           </h2>
         </div>
         <div className="grid grid-cols-4 gap-3 px-5 py-4">
@@ -134,24 +135,45 @@ export default async function ReportPage() {
           ))}
         </div>
         {delayed.length > 0 && (
-          <div className="border-t border-slate-100 px-5 py-4">
-            <div className="space-y-2">
-              {delayed.map(i => (
-                <div key={i.id} className="flex items-center justify-between text-sm">
-                  <Link href={`/items/${i.id}`} className="font-medium text-slate-700 hover:text-brand-700">
-                    {i.title}
-                  </Link>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-400">{i.currentStage}</span>
-                    {i.delaySource && (
-                      <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[11px] font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20">
-                        {i.delaySource}
-                      </span>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+          <div className="overflow-x-auto border-t border-slate-100">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="bg-slate-50/60">
+                  <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Initiative</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Stage</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Owner / Source</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">Days slipped</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Reason</th>
+                </tr>
+              </thead>
+              <tbody>
+                {delayed.map((i, idx) => {
+                  const overdueDays = daysFromNow(i.stageExpectedDate) < 0
+                    ? Math.abs(daysFromNow(i.stageExpectedDate))
+                    : daysSinceUpdate(i.lastUpdated);
+                  return (
+                    <tr key={i.id} className={`border-t border-slate-100 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
+                      <td className="px-5 py-2.5">
+                        <Link href={`/items/${i.id}`} className="font-medium text-slate-700 hover:text-brand-700">{i.title}</Link>
+                        <div className="text-[11px] text-slate-400">{i.verticalHead}</div>
+                      </td>
+                      <td className="px-4 py-2.5 text-slate-600">{i.currentStage}</td>
+                      <td className="px-4 py-2.5">
+                        {i.delaySource ? (
+                          <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[11px] font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                            {i.delaySource}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-4 py-2.5 text-right tabular font-semibold text-rose-600">{overdueDays}d</td>
+                      <td className="px-4 py-2.5 text-slate-600">{i.delayReason || <span className="text-slate-400">—</span>}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>

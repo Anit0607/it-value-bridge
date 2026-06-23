@@ -51,6 +51,7 @@ function toItem(i: InitiativeWithRelations): Item {
     notes: i.notes,
     delayed: i.delayed,
     delaySource: i.delaySource as DelaySource | undefined,
+    delayReason: i.delayReason,
     committedMonth: i.committedMonth ?? undefined,
     isRegulatory: i.isRegulatory,
     regulatoryBody: i.regulatoryBody,
@@ -261,6 +262,7 @@ export async function updateNotes(
   notes: string,
   delayed: boolean,
   delaySource: string | undefined,
+  delayReason?: string,
 ) {
   await requireRole('PMO', 'CIO', 'VERTICAL_HEAD');
   const today = new Date();
@@ -270,11 +272,14 @@ export async function updateNotes(
       notes,
       delayed,
       delaySource: delayed && delaySource ? (delaySource as any) : null,
+      delayReason: delayed ? (delayReason?.trim() || null) : null,
       lastUpdated: today,
     },
   });
 
   revalidatePath(`/items/${id}`);
+  revalidatePath('/cio');
+  revalidatePath('/report');
 }
 
 export async function saveValidation(id: string, validation: BusinessValidation) {
