@@ -85,7 +85,8 @@
       "Bash(openssl rand *)",
       "Bash(node -e \"console.log\\(require\\('crypto'\\).randomBytes\\(32\\).toString\\('base64'\\)\\)\")",
       "PowerShell($c = Get-NetTCPConnection -LocalPort 3000 -State Listen -ErrorAction SilentlyContinue; if \\($c\\) { Stop-Process -Id $c[0].OwningProcess -Force; \"stopped\" } else { \"none\" }; cd \"D:\\\\Claude_Project Tracker\"; npm run build 2>&1 | Select-Object -Last 10)",
-      "PowerShell(docker start itvb-db 2>&1)"
+      "PowerShell(docker start itvb-db 2>&1)",
+      "PowerShell(cd \"D:\\\\Claude_Project Tracker\"; $env:DATABASE_URL = \"postgresql://neondb_owner:npg_QlKYAWj7gLx9@ep-icy-shadow-ao98surv.c-2.ap-southeast-1.aws.neon.tech/neondb?sslmode=require\"; npx prisma migrate deploy 2>&1 | Select-Object -Last 12)"
     ]
   }
 }

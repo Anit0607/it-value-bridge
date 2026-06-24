@@ -58,6 +58,7 @@ const VALUE_BY_TITLE: Record<string, number> = {
   'Treasury Management System Upgrade': 6 * CR,
   'Customer Grievance Portal': 2 * CR,
   'IMPS Real-time Settlement Upgrade': 4 * CR,
+  'Net Banking 2FA Hardening': 6 * CR,
 };
 
 // A handful of initiatives carry a second quantified benefit (multi-benefit demo).
@@ -712,6 +713,39 @@ async function main() {
         { stage: 'APPSEC', date: d('2026-05-28'), user: 'Vikram Singh', note: 'AppSec cleared' },
         { stage: 'CAB_APPROVAL', date: d('2026-05-30'), user: 'Vikram Singh', note: 'Submitted to CAB — no update since' },
       ],
+    },
+    {
+      title: 'Net Banking 2FA Hardening',
+      type: 'CHANGE_REQUEST',
+      verticalHeadName: 'Vikram Singh',
+      businessSpoc: 'Priti Sharma',
+      businessSponsor: 'Arvind Nair',
+      description: 'Risk-based two-factor authentication and device binding for net banking logins.',
+      benefitCategory: 'RISK_REDUCTION',
+      outcomeDescription: 'Cut account-takeover (ATO) fraud on net banking by 60%.',
+      targetMetric: 'Reduce ATO fraud incidents by 60%',
+      expectedGoLiveDate: d('2025-04-15'),
+      currentStage: 'CLOSED',
+      stageStartDate: d('2025-05-01'),
+      stageExpectedDate: d('2025-05-01'),
+      lastUpdated: d('2025-05-05'),
+      notes: 'Delivered and closed last year; benefit-realization review was never completed.',
+      delayed: false,
+      committedMonth: '2025-04',
+      history: [
+        { stage: 'BRD', date: d('2024-12-01'), user: 'Anita Desai', note: 'BRD approved' },
+        { stage: 'FSD', date: d('2025-01-10'), user: 'Anita Desai', note: 'FSD approved' },
+        { stage: 'COMMERCIAL', date: d('2025-01-25'), user: 'Anita Desai', note: 'In-house development' },
+        { stage: 'DEVELOPMENT', date: d('2025-02-15'), user: 'Vikram Singh', note: 'Dev complete' },
+        { stage: 'SIT', date: d('2025-03-10'), user: 'Vikram Singh', note: 'SIT passed' },
+        { stage: 'UAT', date: d('2025-03-25'), user: 'Vikram Singh', note: 'UAT signed off' },
+        { stage: 'APPSEC', date: d('2025-04-02'), user: 'Vikram Singh', note: 'AppSec cleared' },
+        { stage: 'CAB_APPROVAL', date: d('2025-04-08'), user: 'Vikram Singh', note: 'CAB approved' },
+        { stage: 'GO_LIVE', date: d('2025-04-15'), user: 'Vikram Singh', note: 'Deployed to production' },
+        { stage: 'BUSINESS_VALIDATION', date: d('2025-04-25'), user: 'Priti Sharma', note: 'Business validation done' },
+        { stage: 'CLOSED', date: d('2025-05-01'), user: 'Anita Desai', note: 'Closed' },
+      ],
+      // intentionally NO validation / value measurement → benefit realization OVERDUE
     },
   ];
 
