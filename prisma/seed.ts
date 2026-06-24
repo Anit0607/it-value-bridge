@@ -866,8 +866,9 @@ async function main() {
       });
     }
 
-    // Realized-value reading for closed initiatives (projected vs realized demo)
-    if (isClosed) {
+    // Realized-value reading only for closed items that were actually validated.
+    // (A closed item with no validation demonstrates an OVERDUE benefit realization.)
+    if (isClosed && seed.validation) {
       const claim = await prisma.benefitClaim.findFirst({ where: { initiativeId: initiative.id } });
       if (claim) {
         await prisma.valueMeasurement.create({
