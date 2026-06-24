@@ -3,10 +3,17 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { addValueMeasurement } from '@/lib/actions/value';
-import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE, BENEFIT_UNIT_LABEL } from '@/lib/value';
+import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE, BENEFIT_UNIT_LABEL, type RealizationStatus } from '@/lib/value';
 import type { InitiativeValue } from '@/lib/actions/initiatives';
 import type { BenefitCategory, BenefitUnit } from '@prisma/client';
-import { LineChart, Plus } from 'lucide-react';
+import { LineChart, Plus, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+
+const REALIZATION_BADGE: Record<RealizationStatus, { label: string; cls: string; Icon: typeof Clock } | null> = {
+  realized: { label: 'Realized', cls: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20', Icon: CheckCircle2 },
+  pending: { label: 'Realization pending', cls: 'bg-amber-50 text-amber-700 ring-amber-600/20', Icon: Clock },
+  overdue: { label: 'Realization overdue', cls: 'bg-rose-50 text-rose-700 ring-rose-600/20', Icon: AlertTriangle },
+  na: null,
+};
 
 const HORIZONS = ['+3m', '+6m', '+12m'] as const;
 
@@ -23,10 +30,12 @@ export function ValueRealizationPanel({
   initiativeId,
   value,
   canRecord,
+  realization,
 }: {
   initiativeId: string;
   value: InitiativeValue;
   canRecord: boolean;
+  realization?: { status: RealizationStatus; dueIso: string | null };
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -40,6 +49,9 @@ export function ValueRealizationPanel({
   const totalProjected = claims.reduce((s, c) => s + c.estimatedAnnualValueInr, 0);
   const totalRealized = claims.reduce((s, c) => s + latestRealized(c.measurements), 0);
   const realizationPct = totalProjected > 0 ? Math.round((totalRealized / totalProjected) * 100) : 0;
+
+  const badge = realization && realization.status !== 'na' ? REALIZATION_BADGE[realization.status] : null;
+  const BadgeIcon = badge?.Icon;
 
   const submit = (claimId: string) => {
     setError('');
@@ -70,11 +82,20 @@ export function ValueRealizationPanel({
 
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-      <div className="mb-4 flex items-center justify-between">
-        <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-          <LineChart className="h-3.5 w-3.5" />
-          Value Realization
-        </h2>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+            <LineChart className="h-3.5 w-3.5" />
+            Value Realization
+          </h2>
+          {badge && BadgeIcon && (
+            <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset ${badge.cls}`}>
+              <BadgeIcon className="h-3 w-3" />
+              {badge.label}
+              {realization?.dueIso && realization.status !== 'realized' ? ` · due ${realization.dueIso}` : ''}
+            </span>
+          )}
+        </div>
         <span className="text-xs text-slate-400">
           Realized <span className="tabular font-semibold text-emerald-600">{formatInr(totalRealized)}</span>
           {' '}of {formatInr(totalProjected)} ({realizationPct}%)

@@ -77,3 +77,39 @@ export function fyBounds(ref: Date = new Date()): { start: Date; end: Date; labe
   const label = `FY${String(y % 100).padStart(2, '0')}-${String((y + 1) % 100).padStart(2, '0')}`;
   return { start, end, label };
 }
+
+// ---- Benefit-realization lifecycle ----
+
+export type RealizationStatus = 'realized' | 'pending' | 'overdue' | 'na';
+
+export const REALIZATION_LABEL: Record<RealizationStatus, string> = {
+  realized: 'Realized',
+  pending: 'Pending',
+  overdue: 'Overdue',
+  na: 'Not yet live',
+};
+
+/** Add whole months to an ISO date, returning an ISO date string. */
+export function addMonthsIso(iso: string, months: number): string {
+  const d = new Date(iso);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Realization status, computed at render. A benefit is "due" `horizonMonths`
+ * after go-live; once that window passes without a confirmed reading it is
+ * Overdue, otherwise Pending. Confirmed → Realized. Not live yet → na.
+ */
+export function realizationStatus(opts: {
+  isLiveOrClosed: boolean;
+  confirmed: boolean;
+  dueIso: string | null;
+  todayIso?: string;
+}): RealizationStatus {
+  if (!opts.isLiveOrClosed) return 'na';
+  if (opts.confirmed) return 'realized';
+  const today = opts.todayIso ?? new Date().toISOString().slice(0, 10);
+  if (opts.dueIso && opts.dueIso < today) return 'overdue';
+  return 'pending';
+}

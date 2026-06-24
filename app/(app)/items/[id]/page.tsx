@@ -8,6 +8,7 @@ import { ItemDetailClient } from './ItemDetailClient';
 import { ValueRealizationPanel } from '@/components/value/ValueRealizationPanel';
 import { DependencyPanel } from '@/components/dependencies/DependencyPanel';
 import { RegulatoryControl } from '@/components/RegulatoryControl';
+import { addMonthsIso, realizationStatus } from '@/lib/value';
 
 export default async function ItemDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
@@ -25,6 +26,22 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
   const canRecord = role === 'PMO' || role === 'CIO';
   const canEditDeps = role === 'PMO' || role === 'CIO' || role === 'VERTICAL_HEAD';
 
+  // Benefit-realization status for the value panel (computed at render).
+  const goLive = item.history.find(h => h.stage === 'Go Live') ?? item.history.find(h => h.stage === 'Closed');
+  const goLiveIso = goLive?.date ?? null;
+  const realizationDueIso = goLiveIso ? addMonthsIso(goLiveIso, 12) : null;
+  const realizationConfirmed =
+    !!item.validation ||
+    !!value?.benefitClaims.some(c => c.measurements.some(m => m.realizedInr != null));
+  const realization = {
+    status: realizationStatus({
+      isLiveOrClosed: ['Go Live', 'Business Validation', 'Closed'].includes(item.currentStage),
+      confirmed: realizationConfirmed,
+      dueIso: realizationDueIso,
+    }),
+    dueIso: realizationDueIso,
+  };
+
   return (
     <div className="space-y-4">
       <ItemDetailClient item={item} value={value} />
@@ -39,7 +56,7 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
       </div>
       {value && value.benefitClaims.length > 0 && (
         <div className="mx-auto max-w-5xl">
-          <ValueRealizationPanel initiativeId={params.id} value={value} canRecord={canRecord} />
+          <ValueRealizationPanel initiativeId={params.id} value={value} canRecord={canRecord} realization={realization} />
         </div>
       )}
       <div className="mx-auto max-w-5xl">

@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { fyBounds } from '@/lib/value';
+import { fyBounds, addMonthsIso, realizationStatus, type RealizationStatus } from '@/lib/value';
 import type { BenefitCategory, Stage } from '@prisma/client';
 
 export interface BoardCategoryRow {
@@ -49,7 +49,22 @@ export interface BoardSummary {
   byOkr: BoardOkrRow[];
   byVertical: BoardVerticalRow[];
   topInitiatives: BoardInitiativeRow[];
+  realization: {
+    realizedCount: number;
+    pendingCount: number;
+    overdueCount: number;
+    unconfirmedValueInr: number; // projected ₹ of live/closed items not yet confirmed
+    rows: {
+      id: string;
+      title: string;
+      status: RealizationStatus;
+      dueIso: string | null;
+      projected: number;
+    }[];
+  };
 }
+
+const LIVE_OR_CLOSED: Stage[] = ['GO_LIVE', 'BUSINESS_VALIDATION', 'CLOSED'];
 
 /** Latest realized ₹ across a claim's measurements (max by measuredAt). */
 function latestRealized(measurements: { measuredAt: Date; realizedInr: number | null }[]): number {
@@ -61,10 +76,17 @@ function latestRealized(measurements: { measuredAt: Date; realizedInr: number | 
 export async function getBoardSummary(): Promise<BoardSummary> {
   const { start, end, label } = fyBounds();
 
+  const todayIso = new Date().toISOString().slice(0, 10);
   const initiatives = await prisma.initiative.findMany({
     include: {
       benefitClaims: { include: { measurements: true } },
       okrLinks: { include: { okr: true } },
+      valueRealization: { select: { id: true } },
+      history: {
+        where: { stage: { in: ['GO_LIVE', 'CLOSED'] } },
+        orderBy: { createdAt: 'asc' },
+        select: { stage: true, createdAt: true },
+      },
     },
   });
 
@@ -76,6 +98,11 @@ export async function getBoardSummary(): Promise<BoardSummary> {
   let signedOffCount = 0;
   let realizedThisFy = 0;
   let deliveredCount = 0;
+  let realizedCount = 0;
+  let pendingCount = 0;
+  let overdueCount = 0;
+  let unconfirmedValueInr = 0;
+  const realizationRows: BoardSummary['realization']['rows'] = [];
 
   const catMap = new Map<BenefitCategory, BoardCategoryRow>();
   const okrMap = new Map<string, BoardOkrRow>();
@@ -95,6 +122,28 @@ export async function getBoardSummary(): Promise<BoardSummary> {
     const initRealized = i.benefitClaims.reduce((s, c) => s + latestRealized(c.measurements), 0);
     realized += initRealized;
     if (i.currentStage === 'CLOSED' && i.updatedAt >= start && i.updatedAt <= end) deliveredCount++;
+
+    // Benefit-realization lifecycle (computed at render)
+    const goLiveEntry = i.history.find(h => h.stage === 'GO_LIVE') ?? i.history.find(h => h.stage === 'CLOSED');
+    const goLiveIso = goLiveEntry ? goLiveEntry.createdAt.toISOString().slice(0, 10) : null;
+    const horizon = i.benefitClaims.length
+      ? Math.min(...i.benefitClaims.map(c => c.realizationHorizonMonths))
+      : 12;
+    const dueIso = goLiveIso ? addMonthsIso(goLiveIso, horizon) : null;
+    const confirmed =
+      !!i.valueRealization || i.benefitClaims.some(c => c.measurements.some(m => m.realizedInr != null));
+    const rStatus = realizationStatus({
+      isLiveOrClosed: LIVE_OR_CLOSED.includes(i.currentStage),
+      confirmed,
+      dueIso,
+      todayIso,
+    });
+    if (rStatus !== 'na' && initProjected > 0) {
+      if (rStatus === 'realized') realizedCount++;
+      else if (rStatus === 'overdue') { overdueCount++; unconfirmedValueInr += initProjected; }
+      else { pendingCount++; unconfirmedValueInr += initProjected; }
+      realizationRows.push({ id: i.id, title: i.title, status: rStatus, dueIso, projected: initProjected });
+    }
 
     // per-category rollup (claim-level)
     for (const c of i.benefitClaims) {
@@ -160,5 +209,15 @@ export async function getBoardSummary(): Promise<BoardSummary> {
     byOkr: [...okrMap.values()].sort((a, b) => b.projected - a.projected),
     byVertical: [...vhMap.values()].sort((a, b) => b.projected - a.projected),
     topInitiatives: initRows.sort((a, b) => b.projected - a.projected).slice(0, 8),
+    realization: {
+      realizedCount,
+      pendingCount,
+      overdueCount,
+      unconfirmedValueInr,
+      rows: realizationRows.sort((a, b) => {
+        const order: Record<RealizationStatus, number> = { overdue: 0, pending: 1, realized: 2, na: 3 };
+        return order[a.status] - order[b.status] || (a.dueIso ?? '').localeCompare(b.dueIso ?? '');
+      }),
+    },
   };
 }

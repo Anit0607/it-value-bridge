@@ -6,7 +6,7 @@ import { STAGE_LABEL } from '@/lib/stage-map';
 import { PageHeader } from '@/components/PageHeader';
 import { KpiCard } from '@/components/KpiCard';
 import Link from 'next/link';
-import { TrendingUp, BadgeCheck, Coins, Scale, Target, Building2, Printer } from 'lucide-react';
+import { TrendingUp, BadgeCheck, Coins, Scale, Target, Building2, Printer, LineChart, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 
 export default async function ValueDashboard() {
   const s = await getBoardSummary();
@@ -62,6 +62,56 @@ export default async function ValueDashboard() {
           accent="slate"
         />
       </div>
+
+      {/* Benefit realization lifecycle */}
+      {s.realization.rows.length > 0 && (
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+              <LineChart className="h-4 w-4 text-slate-400" />
+              Benefit Realization
+            </h2>
+            {s.realization.unconfirmedValueInr > 0 && (
+              <span className="text-xs text-slate-500">
+                <span className="tabular font-semibold text-amber-600">{formatInr(s.realization.unconfirmedValueInr)}</span> delivered, awaiting confirmation
+              </span>
+            )}
+          </div>
+
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-lg bg-emerald-50 py-3 text-center">
+              <div className="tabular text-2xl font-semibold text-emerald-600">{s.realization.realizedCount}</div>
+              <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-emerald-700"><CheckCircle2 className="h-3 w-3" /> Realized</div>
+            </div>
+            <div className="rounded-lg bg-amber-50 py-3 text-center">
+              <div className="tabular text-2xl font-semibold text-amber-600">{s.realization.pendingCount}</div>
+              <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-amber-700"><Clock className="h-3 w-3" /> Pending</div>
+            </div>
+            <div className="rounded-lg bg-rose-50 py-3 text-center">
+              <div className="tabular text-2xl font-semibold text-rose-600">{s.realization.overdueCount}</div>
+              <div className="mt-0.5 inline-flex items-center gap-1 text-[11px] font-medium text-rose-700"><AlertTriangle className="h-3 w-3" /> Overdue</div>
+            </div>
+          </div>
+
+          {s.realization.rows.filter(r => r.status !== 'realized').length > 0 && (
+            <div className="mt-4 space-y-1.5 border-t border-slate-100 pt-3">
+              <p className="mb-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Awaiting confirmation</p>
+              {s.realization.rows.filter(r => r.status !== 'realized').map(r => (
+                <div key={r.id} className="flex items-center justify-between gap-3 text-sm">
+                  <Link href={`/items/${r.id}`} className="truncate font-medium text-slate-700 hover:text-brand-700">{r.title}</Link>
+                  <div className="flex flex-shrink-0 items-center gap-2 text-xs">
+                    <span className={`rounded px-1.5 py-0.5 font-medium ${r.status === 'overdue' ? 'bg-rose-50 text-rose-700' : 'bg-amber-50 text-amber-700'}`}>
+                      {r.status === 'overdue' ? 'overdue' : 'pending'}
+                    </span>
+                    {r.dueIso && <span className="tabular text-slate-400">due {r.dueIso}</span>}
+                    <span className="tabular font-semibold text-slate-700">{formatInr(r.projected)}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Value by category */}
