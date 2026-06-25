@@ -7,7 +7,7 @@ import { CTASection } from '@/components/marketing/CTASection';
 export const metadata: Metadata = {
   title: 'IT Value Bridge — IT Business Value Intelligence Platform for Banking',
   description:
-    'IT Business Value Intelligence Platform for banking technology teams. Track every IT initiative from BRD to business validation, surface ₹ ROI to the board, and connect delivery to outcomes — self-hosted, air-gapped, RBI-compliant.',
+    'IT Value Bridge helps banking IT leaders convert project delivery, CR progress, RAG risks, and business outcomes into board-ready value intelligence. Self-hosted, air-gapped, RBI-compliant.',
 };
 
 export default function LandingPage() {

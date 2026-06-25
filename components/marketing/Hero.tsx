@@ -43,16 +43,16 @@ export function Hero() {
               {...rise(0.08)}
               className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-slate-900 sm:text-5xl"
             >
-              Translate IT delivery into business value leadership can read.
+              Turn IT delivery into business value leadership can act on.
             </motion.h1>
 
             <motion.p
               {...rise(0.16)}
               className="mt-5 max-w-xl text-lg leading-relaxed text-slate-600"
             >
-              Track every Change Request and Project from BRD to business validation — across
-              Waterfall and Agile — with live RAG health, governance tracking, and executive
-              reporting that connects delivery to outcomes.
+              IT Value Bridge helps banking IT leaders convert project delivery, CR progress, RAG
+              risks, and business outcomes into board-ready value intelligence — from demand intake
+              to ₹ ROI the board can read, fund, and govern.
             </motion.p>
 
             <motion.div {...rise(0.24)} className="mt-8 flex flex-col gap-3 sm:flex-row">
