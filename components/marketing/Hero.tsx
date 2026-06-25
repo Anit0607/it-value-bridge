@@ -36,7 +36,7 @@ export function Hero() {
               className="inline-flex items-center gap-1.5 rounded-full border border-brand-100 bg-brand-50 px-3 py-1 text-xs font-medium text-brand-700"
             >
               <ShieldCheck className="h-3.5 w-3.5" strokeWidth={2.25} />
-              Built for banking IT portfolios
+              IT Business Value Intelligence Platform
             </motion.span>
 
             <motion.h1

@@ -56,14 +56,14 @@ export function FeatureGrid() {
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Reveal className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">
-            One system, end to end
+            IT Business Value Intelligence
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-            Everything PMO and leadership need in one place
+            The intelligence layer between IT delivery and business value
           </h2>
           <p className="mt-4 text-lg leading-relaxed text-slate-600">
-            From intake to business validation — methodology, health, risk and reporting on a
-            single, consistent surface.
+            From demand intake to board-ready ROI — methodology, health, risk and value realization
+            on a single, consistent surface built for banking.
           </p>
         </Reveal>
 
