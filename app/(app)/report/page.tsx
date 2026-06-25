@@ -6,6 +6,8 @@ import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
 import type { DelaySource } from '@/lib/types';
 import { daysFromNow, daysSinceUpdate } from '@/lib/rag';
+import { resolvePeriod, inPeriod, onOrBeforeEnd } from '@/lib/period';
+import { PeriodPicker } from '@/components/PeriodPicker';
 import Link from 'next/link';
 import { Printer, Sparkles } from 'lucide-react';
 
@@ -15,23 +17,34 @@ const ACHIEVED_TONE: Record<string, string> = {
   No: 'bg-rose-50 text-rose-700 ring-rose-600/20',
 };
 
-export default async function ReportPage() {
+export default async function ReportPage({
+  searchParams,
+}: {
+  searchParams: { period?: string; from?: string; to?: string };
+}) {
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
 
   const items = await listInitiativesAsItems();
+  const period = resolvePeriod(searchParams);
+  const today = new Date().toISOString().slice(0, 10);
 
-  const now = new Date();
-  const currentMonth = now.toISOString().slice(0, 7);
-  const monthLabel = now.toLocaleString('en-IN', { month: 'long', year: 'numeric' });
+  const closureDate = (i: (typeof items)[number]) => i.history.find(h => h.stage === 'Closed')?.date ?? null;
 
-  const committed = items.filter(i => i.committedMonth === currentMonth);
-  const delivered = committed.filter(i => i.currentStage === 'Closed');
-  const today = now.toISOString().slice(0, 10);
-  const missed = committed.filter(i => i.currentStage !== 'Closed' && i.goLiveDate < today);
+  // Promised to go live within the window; delivered = closed by the window's end;
+  // missed = promised in the window but not delivered by its end.
+  const committed = items.filter(i => inPeriod(i.goLiveDate, period));
+  const delivered = committed.filter(i => {
+    const cd = closureDate(i);
+    return !!cd && onOrBeforeEnd(cd, period);
+  });
+  const missed = committed.filter(i => {
+    const cd = closureDate(i);
+    return !cd || !onOrBeforeEnd(cd, period);
+  });
 
   const completedWithOutcome = items.filter(
-    i => i.currentStage === 'Closed' && i.validation && i.lastUpdated >= `${currentMonth}-01`,
+    i => i.currentStage === 'Closed' && i.validation && inPeriod(closureDate(i) ?? i.lastUpdated, period),
   );
 
   const delayed = items.filter(i => i.delayed && i.currentStage !== 'Closed');
@@ -48,21 +61,24 @@ export default async function ReportPage() {
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <PageHeader title="Monthly Report" subtitle={monthLabel}>
-        <form action="javascript:window.print()">
-          <button
-            type="submit"
-            className="no-print inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-          >
-            <Printer className="h-4 w-4" />
-            Export as PDF
-          </button>
-        </form>
+      <PageHeader title="Delivery & Value Report" subtitle={`Period: ${period.label}`}>
+        <div className="flex flex-wrap items-center gap-2">
+          <PeriodPicker />
+          <form action="javascript:window.print()">
+            <button
+              type="submit"
+              className="no-print inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            >
+              <Printer className="h-4 w-4" />
+              Export as PDF
+            </button>
+          </form>
+        </div>
       </PageHeader>
 
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Committed', value: committed.length, bar: 'bg-brand-500', tone: 'text-slate-900' },
+          { label: 'Promised', value: committed.length, bar: 'bg-brand-500', tone: 'text-slate-900' },
           { label: 'Delivered', value: delivered.length, bar: 'bg-emerald-500', tone: 'text-emerald-600' },
           { label: 'Missed', value: missed.length, bar: 'bg-rose-500', tone: 'text-rose-600' },
         ].map(c => (
@@ -77,12 +93,12 @@ export default async function ReportPage() {
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
         <div className="border-b border-slate-100 px-5 py-3.5">
           <h2 className="text-sm font-semibold text-slate-800">
-            Completed This Month with Business Outcomes{' '}
+            Outcomes Realized — {period.label}{' '}
             <span className="text-slate-400">({completedWithOutcome.length})</span>
           </h2>
         </div>
         {completedWithOutcome.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-slate-500">No items closed with validation this month.</p>
+          <p className="px-5 py-6 text-sm text-slate-500">No items closed with validation in this period.</p>
         ) : (
           <div className="divide-y divide-slate-100">
             {completedWithOutcome.map(i => (
@@ -250,9 +266,9 @@ export default async function ReportPage() {
             </h2>
             <p className="text-sm leading-relaxed text-slate-600">
               <em>
-                &ldquo;In {monthLabel}, the IT portfolio demonstrated strong execution with{' '}
+                &ldquo;In {period.label}, the IT portfolio demonstrated strong execution with{' '}
                 {delivered.length} item{delivered.length !== 1 ? 's' : ''} delivered against a
-                commitment of {committed.length}. Key risks this month include {delayed.length} items
+                commitment of {committed.length}. Key risks include {delayed.length} items
                 with active delay flags, predominantly driven by {topSource} dependencies. Priority
                 escalation is recommended for the items flagged above. Overall portfolio health is{' '}
                 {committed.length > 0 && missed.length / committed.length < 0.2 ? 'good' : 'at risk'},

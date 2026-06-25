@@ -4,11 +4,9 @@ import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { computeRAG, daysSinceUpdate, daysFromNow } from '@/lib/rag';
 import { ItemTable } from '@/components/ItemTable';
-import { FilterBar, type Filters } from '@/components/FilterBar';
+import { FilterBar, EMPTY_FILTERS, type Filters } from '@/components/FilterBar';
 import type { Item } from '@/lib/types';
 import { AlertOctagon, ArrowRight } from 'lucide-react';
-
-const EMPTY_FILTERS: Filters = { stage: '', rag: '', verticalHead: '', type: '', search: '' };
 
 export function PmoDashboardClient({ items }: { items: Item[] }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -25,6 +23,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
       if (filters.rag && rag !== filters.rag) return false;
       if (filters.verticalHead && i.verticalHead !== filters.verticalHead) return false;
       if (filters.type && i.type !== filters.type) return false;
+      if (filters.regulatory && !i.isRegulatory) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
         if (!i.title.toLowerCase().includes(q) && !i.verticalHead.toLowerCase().includes(q)) return false;

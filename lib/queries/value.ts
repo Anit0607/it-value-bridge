@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/db';
-import { fyBounds, addMonthsIso, realizationStatus, type RealizationStatus } from '@/lib/value';
+import { addMonthsIso, realizationStatus, type RealizationStatus } from '@/lib/value';
+import { inPeriod, type Period } from '@/lib/period';
 import type { BenefitCategory, Stage } from '@prisma/client';
 
 export interface BoardCategoryRow {
@@ -33,7 +34,6 @@ export interface BoardInitiativeRow {
 }
 
 export interface BoardSummary {
-  fyLabel: string;
   totals: {
     projected: number;
     signedOff: number;
@@ -43,8 +43,9 @@ export interface BoardSummary {
     initiativesWithValue: number;
     signedOffCount: number;
   };
-  realizedThisFy: number;
-  deliveredCount: number;
+  periodLabel: string;
+  realizedInPeriod: number;
+  deliveredInPeriod: number;
   byCategory: BoardCategoryRow[];
   byOkr: BoardOkrRow[];
   byVertical: BoardVerticalRow[];
@@ -73,9 +74,7 @@ function latestRealized(measurements: { measuredAt: Date; realizedInr: number | 
   return latest.realizedInr ?? 0;
 }
 
-export async function getBoardSummary(): Promise<BoardSummary> {
-  const { start, end, label } = fyBounds();
-
+export async function getBoardSummary(period: Period): Promise<BoardSummary> {
   const todayIso = new Date().toISOString().slice(0, 10);
   const initiatives = await prisma.initiative.findMany({
     include: {
@@ -96,8 +95,8 @@ export async function getBoardSummary(): Promise<BoardSummary> {
   let cost = 0;
   let initiativesWithValue = 0;
   let signedOffCount = 0;
-  let realizedThisFy = 0;
-  let deliveredCount = 0;
+  let realizedInPeriod = 0;
+  let deliveredInPeriod = 0;
   let realizedCount = 0;
   let pendingCount = 0;
   let overdueCount = 0;
@@ -121,7 +120,9 @@ export async function getBoardSummary(): Promise<BoardSummary> {
 
     const initRealized = i.benefitClaims.reduce((s, c) => s + latestRealized(c.measurements), 0);
     realized += initRealized;
-    if (i.currentStage === 'CLOSED' && i.updatedAt >= start && i.updatedAt <= end) deliveredCount++;
+    const closedEntry = i.history.find(h => h.stage === 'CLOSED');
+    const closedIso = closedEntry ? closedEntry.createdAt.toISOString().slice(0, 10) : null;
+    if (i.currentStage === 'CLOSED' && inPeriod(closedIso, period)) deliveredInPeriod++;
 
     // Benefit-realization lifecycle (computed at render)
     const goLiveEntry = i.history.find(h => h.stage === 'GO_LIVE') ?? i.history.find(h => h.stage === 'CLOSED');
@@ -153,9 +154,9 @@ export async function getBoardSummary(): Promise<BoardSummary> {
       row.count += 1;
       catMap.set(c.category, row);
 
-      // realized within FY (measurement-level)
+      // realized within the selected period (measurement-level)
       for (const m of c.measurements) {
-        if (m.measuredAt >= start && m.measuredAt <= end) realizedThisFy += m.realizedInr ?? 0;
+        if (inPeriod(m.measuredAt.toISOString().slice(0, 10), period)) realizedInPeriod += m.realizedInr ?? 0;
       }
     }
 
@@ -193,7 +194,7 @@ export async function getBoardSummary(): Promise<BoardSummary> {
   }
 
   return {
-    fyLabel: label,
+    periodLabel: period.label,
     totals: {
       projected,
       signedOff,
@@ -203,8 +204,8 @@ export async function getBoardSummary(): Promise<BoardSummary> {
       initiativesWithValue,
       signedOffCount,
     },
-    realizedThisFy,
-    deliveredCount,
+    realizedInPeriod,
+    deliveredInPeriod,
     byCategory: [...catMap.values()].sort((a, b) => b.projected - a.projected),
     byOkr: [...okrMap.values()].sort((a, b) => b.projected - a.projected),
     byVertical: [...vhMap.values()].sort((a, b) => b.projected - a.projected),

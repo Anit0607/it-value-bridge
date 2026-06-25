@@ -3,8 +3,10 @@ export const dynamic = 'force-dynamic';
 import Link from 'next/link';
 import { getCioSummary } from '@/lib/queries/dashboard';
 import { STAGES } from '@/lib/types';
+import { resolvePeriod } from '@/lib/period';
 import { KpiCard } from '@/components/KpiCard';
 import { PageHeader } from '@/components/PageHeader';
+import { PeriodPicker } from '@/components/PeriodPicker';
 import { StageFunnel } from '@/components/StageFunnel';
 import { RagDot } from '@/components/RagBadge';
 import { computeRAG } from '@/lib/rag';
@@ -18,7 +20,12 @@ import {
   ShieldAlert,
 } from 'lucide-react';
 
-export default async function CioDashboard() {
+export default async function CioDashboard({
+  searchParams,
+}: {
+  searchParams: { period?: string; from?: string; to?: string };
+}) {
+  const period = resolvePeriod(searchParams);
   const {
     totalCount,
     activeCount: total,
@@ -26,24 +33,27 @@ export default async function CioDashboard() {
     pct,
     pipelineByStage,
     vhSummary,
-    monthLabel,
+    periodLabel,
     monthly: { committed: monthlyCommitted, delivered, missed },
     regulatory,
     delays,
-  } = await getCioSummary();
+  } = await getCioSummary(period);
 
   const todayIso = new Date().toISOString().slice(0, 10);
 
   return (
     <div className="space-y-6">
       <PageHeader title="CIO Dashboard" subtitle="Portfolio health across all verticals — real-time view">
-        <Link
-          href="/report"
-          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
-        >
-          <FileBarChart className="h-4 w-4" />
-          Generate Monthly Report
-        </Link>
+        <div className="flex flex-wrap items-center gap-2">
+          <PeriodPicker />
+          <Link
+            href="/report"
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
+          >
+            <FileBarChart className="h-4 w-4" />
+            Generate Monthly Report
+          </Link>
+        </div>
       </PageHeader>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
@@ -65,13 +75,13 @@ export default async function CioDashboard() {
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
           <div className="mb-4 flex items-center gap-2">
             <CalendarClock className="h-4 w-4 text-slate-400" />
-            <h2 className="text-sm font-semibold text-slate-800">This Month</h2>
-            <span className="text-xs text-slate-400">· {monthLabel}</span>
+            <h2 className="text-sm font-semibold text-slate-800">Delivery</h2>
+            <span className="text-xs text-slate-400">· {periodLabel}</span>
           </div>
           <div className="grid grid-cols-3 gap-2 text-center">
             <div className="rounded-lg bg-slate-50 py-3">
               <div className="tabular text-2xl font-semibold text-slate-900">{monthlyCommitted.length}</div>
-              <div className="mt-0.5 text-[11px] font-medium text-slate-500">Committed</div>
+              <div className="mt-0.5 text-[11px] font-medium text-slate-500">Promised</div>
             </div>
             <div className="rounded-lg bg-emerald-50 py-3">
               <div className="tabular text-2xl font-semibold text-emerald-600">{delivered.length}</div>

@@ -5,17 +5,10 @@ import {
 } from '@/lib/actions/initiatives';
 import { ragCounts } from '@/lib/rag';
 import { STAGES, type Stage } from '@/lib/types';
+import { inPeriod, onOrBeforeEnd, type Period } from '@/lib/period';
 import { enrichAll, type EnrichedItem } from './enrich';
 
-/** Current month as "YYYY-MM" and a human label, derived once per request. */
-function monthContext() {
-  const now = new Date();
-  return {
-    currentMonth: now.toISOString().slice(0, 10).slice(0, 7),
-    today: now.toISOString().slice(0, 10),
-    monthLabel: now.toLocaleString('en-IN', { month: 'long', year: 'numeric' }),
-  };
-}
+const closureDate = (i: EnrichedItem) => i.history.find(h => h.stage === 'Closed')?.date ?? null;
 
 export interface VhSummaryRow {
   vh: string;
@@ -34,7 +27,7 @@ export interface CioSummary {
   pct: (n: number) => number;
   pipelineByStage: { stage: Stage; count: number }[];
   vhSummary: VhSummaryRow[];
-  monthLabel: string;
+  periodLabel: string;
   monthly: {
     committed: EnrichedItem[];
     delivered: EnrichedItem[];
@@ -45,9 +38,8 @@ export interface CioSummary {
 }
 
 /** Everything the CIO dashboard needs, aggregated in one place. */
-export async function getCioSummary(): Promise<CioSummary> {
+export async function getCioSummary(period: Period): Promise<CioSummary> {
   const items = enrichAll(await listInitiativesAsItems());
-  const { currentMonth, today, monthLabel } = monthContext();
 
   const active = items.filter(i => i.currentStage !== 'Closed');
   const counts = ragCounts(active.map(i => i.rag));
@@ -69,9 +61,16 @@ export async function getCioSummary(): Promise<CioSummary> {
     })
     .sort((a, b) => b.red - a.red || b.amber - a.amber);
 
-  const committed = items.filter(i => i.committedMonth === currentMonth);
-  const delivered = committed.filter(i => i.currentStage === 'Closed');
-  const missed = committed.filter(i => i.currentStage !== 'Closed' && i.goLiveDate < today);
+  // Promised to go live in the window; delivered = closed by the window's end.
+  const committed = items.filter(i => inPeriod(i.goLiveDate, period));
+  const delivered = committed.filter(i => {
+    const cd = closureDate(i);
+    return !!cd && onOrBeforeEnd(cd, period);
+  });
+  const missed = committed.filter(i => {
+    const cd = closureDate(i);
+    return !cd || !onOrBeforeEnd(cd, period);
+  });
 
   // Regulatory commitments, open ones first, soonest external deadline first.
   const regulatory = items
@@ -97,7 +96,7 @@ export async function getCioSummary(): Promise<CioSummary> {
     pct,
     pipelineByStage,
     vhSummary,
-    monthLabel,
+    periodLabel: period.label,
     monthly: { committed, delivered, missed },
     regulatory,
     delays,

@@ -2,14 +2,20 @@ export const dynamic = 'force-dynamic';
 
 import { getBoardSummary } from '@/lib/queries/value';
 import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE } from '@/lib/value';
+import { resolvePeriod } from '@/lib/period';
 import { STAGE_LABEL } from '@/lib/stage-map';
 import { PageHeader } from '@/components/PageHeader';
+import { PeriodPicker } from '@/components/PeriodPicker';
 import { KpiCard } from '@/components/KpiCard';
 import Link from 'next/link';
 import { TrendingUp, BadgeCheck, Coins, Scale, Target, Building2, Printer, LineChart, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 
-export default async function ValueDashboard() {
-  const s = await getBoardSummary();
+export default async function ValueDashboard({
+  searchParams,
+}: {
+  searchParams: { period?: string; from?: string; to?: string };
+}) {
+  const s = await getBoardSummary(resolvePeriod(searchParams));
   const maxCat = s.byCategory[0]?.projected ?? 1;
   const maxVh = s.byVertical[0]?.projected ?? 1;
   const maxOkr = s.byOkr[0]?.projected ?? 1;
@@ -18,17 +24,20 @@ export default async function ValueDashboard() {
     <div className="space-y-6">
       <PageHeader
         title="Board-Ready Value Dashboard"
-        subtitle={`Value delivered, not effort expended · ${s.fyLabel}`}
+        subtitle={`Value delivered, not effort expended · ${s.periodLabel}`}
       >
-        <form action="javascript:window.print()">
-          <button
-            type="submit"
-            className="no-print inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-          >
-            <Printer className="h-4 w-4" />
-            Export board deck
-          </button>
-        </form>
+        <div className="flex flex-wrap items-center gap-2">
+          <PeriodPicker />
+          <form action="javascript:window.print()">
+            <button
+              type="submit"
+              className="no-print inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+            >
+              <Printer className="h-4 w-4" />
+              Export board deck
+            </button>
+          </form>
+        </div>
       </PageHeader>
 
       {/* Hero value KPIs */}
@@ -48,9 +57,9 @@ export default async function ValueDashboard() {
           accent="emerald"
         />
         <KpiCard
-          label={`Realized (${s.fyLabel})`}
-          value={formatInr(s.realizedThisFy)}
-          sub={`${s.deliveredCount} delivered`}
+          label={`Realized (${s.periodLabel})`}
+          value={formatInr(s.realizedInPeriod)}
+          sub={`${s.deliveredInPeriod} delivered`}
           icon={Coins}
           accent="amber"
         />

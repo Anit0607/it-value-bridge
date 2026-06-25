@@ -10,7 +10,12 @@ export interface Filters {
   verticalHead: string;
   type: ItemType | '';
   search: string;
+  regulatory: boolean;
 }
+
+export const EMPTY_FILTERS: Filters = {
+  stage: '', rag: '', verticalHead: '', type: '', search: '', regulatory: false,
+};
 
 interface Props {
   filters: Filters;
@@ -27,7 +32,7 @@ export function FilterBar({ filters, onChange }: Props) {
       onChange({ ...filters, [key]: e.target.value });
 
   const hasFilters =
-    filters.stage || filters.rag || filters.verticalHead || filters.type || filters.search;
+    filters.stage || filters.rag || filters.verticalHead || filters.type || filters.search || filters.regulatory;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -68,9 +73,18 @@ export function FilterBar({ filters, onChange }: Props) {
         <option value="Change Request">Change Request</option>
         <option value="Project">Project</option>
       </select>
+      <label className={`inline-flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-2 text-sm font-medium shadow-sm transition-colors ${filters.regulatory ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-300 bg-white text-slate-600 hover:border-slate-400'}`}>
+        <input
+          type="checkbox"
+          checked={filters.regulatory}
+          onChange={e => onChange({ ...filters, regulatory: e.target.checked })}
+          className="h-3.5 w-3.5 rounded border-slate-300 text-rose-600 focus:ring-rose-500"
+        />
+        Regulatory only
+      </label>
       {hasFilters && (
         <button
-          onClick={() => onChange({ stage: '', rag: '', verticalHead: '', type: '', search: '' })}
+          onClick={() => onChange(EMPTY_FILTERS)}
           className="inline-flex items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm font-medium text-slate-600 shadow-sm transition-colors hover:bg-slate-50"
         >
           <X className="h-3.5 w-3.5" />
