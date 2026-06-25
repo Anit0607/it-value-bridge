@@ -59,6 +59,7 @@ const VALUE_BY_TITLE: Record<string, number> = {
   'Customer Grievance Portal': 2 * CR,
   'IMPS Real-time Settlement Upgrade': 4 * CR,
   'Net Banking 2FA Hardening': 6 * CR,
+  'Cheque Truncation System (CTS) Upgrade': 5 * CR,
 };
 
 // A handful of initiatives carry a second quantified benefit (multi-benefit demo).
@@ -746,6 +747,35 @@ async function main() {
         { stage: 'CLOSED', date: d('2025-05-01'), user: 'Anita Desai', note: 'Closed' },
       ],
       // intentionally NO validation / value measurement → benefit realization OVERDUE
+    },
+    {
+      title: 'Cheque Truncation System (CTS) Upgrade',
+      type: 'PROJECT',
+      verticalHeadName: 'Amit Patel',
+      businessSpoc: 'Rakesh Joshi',
+      businessSponsor: 'Sunil Agarwal',
+      description: 'Upgrade CTS for grayscale image clearing and higher daily cheque volumes.',
+      benefitCategory: 'EFFICIENCY',
+      outcomeDescription: 'Faster cheque clearing; cut clearing TAT by one day.',
+      targetMetric: 'Reduce cheque clearing TAT by 1 day',
+      expectedGoLiveDate: d('2026-03-20'),
+      currentStage: 'UAT',
+      stageStartDate: d('2026-03-25'),
+      stageExpectedDate: d('2026-04-30'),
+      lastUpdated: d('2026-06-18'),
+      notes: 'Go-live slipped past the March commitment; UAT defects pending.',
+      delayed: true,
+      delaySource: 'IT',
+      delayReason: 'UAT defects in image-quality validation pushed go-live past the March commitment.',
+      committedMonth: '2026-03',
+      history: [
+        { stage: 'BRD', date: d('2025-11-01'), user: 'Anita Desai', note: 'BRD approved' },
+        { stage: 'FSD', date: d('2025-12-05'), user: 'Anita Desai', note: 'FSD approved' },
+        { stage: 'COMMERCIAL', date: d('2025-12-20'), user: 'Anita Desai', note: 'Vendor PO issued' },
+        { stage: 'DEVELOPMENT', date: d('2026-01-15'), user: 'Amit Patel', note: 'Dev complete' },
+        { stage: 'SIT', date: d('2026-02-20'), user: 'Amit Patel', note: 'SIT passed' },
+        { stage: 'UAT', date: d('2026-03-25'), user: 'Amit Patel', note: 'UAT started — defects holding go-live' },
+      ],
     },
   ];
 
