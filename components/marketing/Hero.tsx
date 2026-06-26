@@ -223,7 +223,7 @@ function HeroPreview({ reduce }: { reduce: boolean }) {
       </div>
     </div>
     <p className="mt-2.5 text-center text-[11px] text-slate-400">
-      Sample portfolio data shown for demo purposes.
+      {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && 'Sample banking IT portfolio data · for evaluation purposes only'}
     </p>
     </>
   );

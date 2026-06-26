@@ -49,7 +49,7 @@ export function MarketingNav() {
             href="/sign-in"
             className="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
           >
-            View Demo
+            Get Started
           </Link>
         </div>
 
@@ -88,7 +88,7 @@ export function MarketingNav() {
                 href="/sign-in"
                 className="rounded-lg bg-brand-600 px-3 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-700"
               >
-                View Demo
+                Get Started
               </Link>
             </div>
           </div>

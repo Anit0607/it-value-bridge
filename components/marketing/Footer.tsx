@@ -74,7 +74,7 @@ export function Footer() {
 
         <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-100 pt-8 sm:flex-row">
           <p className="text-xs text-slate-400">
-            © {new Date().getFullYear()} IT Value Bridge. Prototype build.
+            © {new Date().getFullYear()} IT Value Bridge. All rights reserved.
           </p>
           <p className="text-xs text-slate-400">IT value intelligence for banking IT leadership.</p>
         </div>

@@ -33,7 +33,7 @@ export function CTASection() {
                 Stop reporting effort. Start communicating value.
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-slate-600">
-                See how banking IT delivery becomes board-ready value intelligence. Sign in with a demo role and explore the full portfolio in under a minute.
+                See how banking IT delivery becomes board-ready value intelligence. Sign in and explore the full portfolio in under a minute.
               </p>
 
               <div className="mt-8 flex justify-center">
