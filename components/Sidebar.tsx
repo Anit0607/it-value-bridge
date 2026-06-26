@@ -68,10 +68,17 @@ const NAV_GROUPS: NavGroup[] = [
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
-  CIO: 'Chief Information Officer',
-  PMO: 'PMO Manager',
+  CIO: 'CIO',
+  PMO: 'PMO',
   VERTICAL_HEAD: 'Vertical Head',
   BUSINESS: 'Business SPOC',
+};
+
+const ROLE_ACCESS: Record<Role, string> = {
+  CIO: 'Executive Value Command Center',
+  PMO: 'PMO Governance Control Tower',
+  VERTICAL_HEAD: 'Delivery Ownership Workspace',
+  BUSINESS: 'Business Value Validation',
 };
 
 export function Sidebar({
@@ -162,7 +169,10 @@ export function Sidebar({
           </div>
           <div className="min-w-0 flex-1 leading-tight">
             <div className="truncate text-sm font-medium text-white">{user.name}</div>
-            <div className="truncate text-[11px] text-slate-400">{ROLE_LABEL[user.role]}</div>
+            <div className="text-[11px] text-slate-400">
+              <span className="text-slate-500">Role:</span> {ROLE_LABEL[user.role]}
+            </div>
+            <div className="truncate text-[10px] text-slate-500">{ROLE_ACCESS[user.role]}</div>
           </div>
           <button
             onClick={logout}
