@@ -143,7 +143,7 @@ const VALUE_BY_CATEGORY = [
 function HeroPreview({ reduce }: { reduce: boolean }) {
   return (
     <>
-    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-card-hover">
+    <div className="rounded-2xl border border-white/60 bg-white/80 p-3 shadow-card-hover backdrop-blur-xl ring-1 ring-slate-200/60">
       <div className="rounded-xl bg-slate-50 p-4">
         {/* window chrome */}
         <div className="mb-4 flex items-center gap-1.5">

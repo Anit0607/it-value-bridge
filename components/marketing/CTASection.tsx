@@ -15,7 +15,7 @@ export function CTASection() {
     <section id="reports" className="bg-slate-50 py-20 lg:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Reveal>
-          <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white px-6 py-14 text-center shadow-card sm:px-12 lg:py-20">
+          <div className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/80 px-6 py-14 text-center shadow-card-hover backdrop-blur-xl ring-1 ring-slate-200/60 sm:px-12 lg:py-20">
             {/* soft indigo wash — same treatment as the hero, never navy */}
             <div
               className="pointer-events-none absolute inset-0"
