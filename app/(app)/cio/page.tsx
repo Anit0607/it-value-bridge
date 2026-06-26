@@ -78,42 +78,37 @@ export default async function CioDashboard({
         </div>
 
         {/* Delivery commitments */}
-        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-        <div className="mb-4 flex items-center gap-2">
-          <CalendarClock className="h-4 w-4 text-slate-400" />
-          <h2 className="text-sm font-semibold text-slate-800">Delivery Commitments</h2>
-          <span className="text-xs text-slate-400">· {periodLabel}</span>
-        </div>
-        <div className="grid grid-cols-3 gap-3 text-center">
-          <div className="rounded-lg bg-slate-50 py-4">
-            <div className="tabular text-3xl font-semibold text-slate-900">{monthlyCommitted.length}</div>
-            <div className="mt-1 text-[11px] font-medium text-slate-500">Promised</div>
+        <SectionCard title="Delivery Commitments" subtitle={periodLabel} icon={CalendarClock} tone="default">
+          <div className="grid grid-cols-3 gap-3 text-center">
+            <div className="rounded-lg bg-slate-50 py-4">
+              <div className="tabular text-3xl font-semibold text-slate-900">{monthlyCommitted.length}</div>
+              <div className="mt-1 text-[11px] font-medium text-slate-500">Promised</div>
+            </div>
+            <div className="rounded-lg bg-emerald-50 py-4">
+              <div className="tabular text-3xl font-semibold text-emerald-700">{delivered.length}</div>
+              <div className="mt-1 text-[11px] font-medium text-emerald-700">Value Delivered</div>
+            </div>
+            <div className="rounded-lg bg-rose-50 py-4">
+              <div className="tabular text-3xl font-semibold text-rose-700">{missed.length}</div>
+              <div className="mt-1 text-[11px] font-medium text-rose-700">Commitment Slippage</div>
+            </div>
           </div>
-          <div className="rounded-lg bg-emerald-50 py-4">
-            <div className="tabular text-3xl font-semibold text-emerald-600">{delivered.length}</div>
-            <div className="mt-1 text-[11px] font-medium text-emerald-700">Value Delivered</div>
-          </div>
-          <div className="rounded-lg bg-rose-50 py-4">
-            <div className="tabular text-3xl font-semibold text-rose-600">{missed.length}</div>
-            <div className="mt-1 text-[11px] font-medium text-rose-700">Commitment Slippage</div>
-          </div>
-        </div>
-        {missed.length > 0 && (
-          <div className="mt-4 border-t border-slate-100 pt-3">
-            <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-rose-600">Commitment Slippage</p>
-            <ul className="space-y-1.5">
-              {missed.map(i => (
-                <li key={i.id} className="flex items-center justify-between gap-2 text-xs">
-                  <Link href={`/items/${i.id}`} className="truncate font-medium text-slate-700 hover:text-brand-700">
-                    {i.title}
-                  </Link>
-                  <span className="flex-shrink-0 tabular text-slate-400">{i.goLiveDate.slice(5)}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        )}
-        </div>
+          {missed.length > 0 && (
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-rose-600">Commitment Slippage</p>
+              <ul className="space-y-1.5">
+                {missed.map(i => (
+                  <li key={i.id} className="flex items-center justify-between gap-2 text-xs">
+                    <Link href={`/items/${i.id}`} className="truncate font-medium text-slate-700 hover:text-brand-700">
+                      {i.title}
+                    </Link>
+                    <span className="flex-shrink-0 tabular text-slate-400">{i.goLiveDate.slice(5)}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </SectionCard>
       </div>
       {/* ── End Executive Summary Zone ── */}
 
