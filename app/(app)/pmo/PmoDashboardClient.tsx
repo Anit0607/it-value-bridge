@@ -231,6 +231,25 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
     setFilters(f => chip.active(f) ? chip.clear(f) : chip.apply(f));
   };
 
+  const emptyContext = useMemo(() => {
+    if (filters.rag === 'Red')            return { title: 'No red initiatives found.', sub: 'All currently visible initiatives are outside critical risk.' };
+    if (filters.rag === 'Amber')          return { title: 'No amber initiatives found.', sub: 'All active initiatives are either on track or need escalation.' };
+    if (filters.staleOnly)                return { title: 'No stale initiatives found.', sub: 'All initiatives have been updated within the last 7 days.' };
+    if (filters.dueThisWeek)              return { title: 'No initiatives due this week.', sub: 'No stage deadlines fall within the next 7 days.' };
+    if (filters.regulatory)               return { title: 'No regulatory initiatives found.', sub: 'No active initiatives are flagged as regulatory.' };
+    if (filters.delaySource === 'Business') return { title: 'No business delays found.', sub: 'No active initiatives are currently awaiting business action.' };
+    if (filters.delaySource === 'Vendor')  return { title: 'No vendor delays found.', sub: 'No active initiatives are currently blocked by vendors.' };
+    if (filters.goLiveThisMonth)          return { title: 'No go-lives this month.', sub: 'No initiatives are scheduled to go live in this period.' };
+    if (filters.stage === 'AppSec')       return { title: 'No AppSec reviews pending.', sub: 'No initiatives are currently in security review.' };
+    if (filters.stage === 'UAT')          return { title: 'No UAT pending.', sub: 'No initiatives are currently in user acceptance testing.' };
+    if (filters.search)                   return { title: `No results for "${filters.search}".`, sub: 'Try a different search term or clear your filters.' };
+    if (activeView) {
+      const v = SAVED_VIEWS.find(sv => sv.key === activeView);
+      if (v) return { title: `No items in "${v.label}".`, sub: 'This saved view returned no results for the current portfolio.' };
+    }
+    return { title: 'No initiatives match the current filters.', sub: 'Try clearing a filter or adjusting your selection.' };
+  }, [filters, activeView]);
+
   const insight = useMemo(() => {
     const active = items.filter(i => i.currentStage !== 'Closed');
     const overdue  = active.filter(i => daysFromNow(i.stageExpectedDate) < 0).length;
@@ -387,7 +406,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
           <span className="font-semibold">Portfolio insight: </span>{insight}
         </div>
 
-        <ItemTable items={filtered} />
+        <ItemTable items={filtered} emptyHint={emptyContext.title} emptySubhint={emptyContext.sub} />
       </div>
     </>
   );

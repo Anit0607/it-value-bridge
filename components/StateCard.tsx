@@ -5,6 +5,7 @@ type Variant = 'empty' | 'no-data' | 'error' | 'no-access';
 interface Props {
   variant: Variant;
   message?: string;
+  sub?: string;
   onRetry?: () => void;
 }
 
@@ -39,7 +40,7 @@ const DEFAULTS: Record<Variant, { icon: React.ElementType; title: string; sub: s
   },
 };
 
-export function StateCard({ variant, message, onRetry }: Props) {
+export function StateCard({ variant, message, sub, onRetry }: Props) {
   const d = DEFAULTS[variant];
   const Icon = d.icon;
   return (
@@ -48,7 +49,7 @@ export function StateCard({ variant, message, onRetry }: Props) {
         <Icon className={`h-5 w-5 ${d.iconCls}`} strokeWidth={1.75} />
       </div>
       <p className="text-sm font-semibold text-slate-800">{message ?? d.title}</p>
-      <p className="mt-1 max-w-xs text-xs leading-relaxed text-slate-500">{d.sub}</p>
+      <p className="mt-1 max-w-xs text-xs leading-relaxed text-slate-500">{sub ?? d.sub}</p>
       {variant === 'error' && onRetry && (
         <button
           onClick={onRetry}

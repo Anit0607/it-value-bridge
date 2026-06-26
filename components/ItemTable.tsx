@@ -13,6 +13,7 @@ interface Props {
   items: Item[];
   showVerticalHead?: boolean;
   emptyHint?: string;
+  emptySubhint?: string;
 }
 
 type SortKey = 'title' | 'type' | 'outcome' | 'verticalHead' | 'stage' | 'rag' | 'eta' | 'days';
@@ -48,7 +49,7 @@ function getNextAction(item: Item, rag: RAG): string {
   return 'On track';
 }
 
-export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) {
+export function ItemTable({ items, showVerticalHead = true, emptyHint, emptySubhint }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('rag');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -115,7 +116,7 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) 
   };
 
   if (items.length === 0) {
-    return <StateCard variant="empty" message={emptyHint} />;
+    return <StateCard variant="empty" message={emptyHint} sub={emptySubhint} />;
   }
 
   const SortHeader = ({
