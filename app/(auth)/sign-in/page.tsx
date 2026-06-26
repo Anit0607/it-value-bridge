@@ -89,6 +89,35 @@ export default function SignInPage() {
             translate delivery progress, risks, delays, and outcomes into leadership-ready
             business value.
           </p>
+
+          <div className="mt-8 space-y-4 border-t border-white/10 pt-7">
+            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Demo walkthrough</p>
+            {[
+              {
+                n: '01',
+                role: 'Start as CIO',
+                text: 'See how many initiatives are active, where delivery risk exists, what is delayed, and which outcomes are expected this period.',
+              },
+              {
+                n: '02',
+                role: 'Switch to PMO',
+                text: 'Drill into ownership, stage movement, delay source, and business validation across the full portfolio.',
+              },
+              {
+                n: '03',
+                role: 'Switch to Business SPOC',
+                text: 'Confirm whether the promised value was actually achieved once an initiative goes live.',
+              },
+            ].map(s => (
+              <div key={s.n} className="flex gap-3">
+                <span className="mt-0.5 font-mono text-xs font-bold text-brand-400">{s.n}</span>
+                <div>
+                  <p className="text-xs font-semibold text-white">{s.role}</p>
+                  <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{s.text}</p>
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
         <Link
           href="/"
@@ -113,11 +142,15 @@ export default function SignInPage() {
           </div>
 
           {/* Demo quick-login */}
-          <div className="mb-5 rounded-xl border border-slate-200 bg-white p-4 shadow-card">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-400">Demo accounts — click to prefill</p>
+          <div className="mb-5 rounded-xl border border-brand-200 bg-white p-4 shadow-card">
+            <div className="mb-3 flex items-start justify-between gap-2">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Follow the demo story</p>
+              <span className="rounded-full bg-brand-50 px-2 py-0.5 text-[10px] font-semibold text-brand-600">Click to prefill</span>
+            </div>
             <div className="space-y-2">
-              {DEMO_ACCOUNTS.map(acc => {
+              {DEMO_ACCOUNTS.map((acc, i) => {
                 const Icon = acc.icon;
+                const step = String(i + 1).padStart(2, '0');
                 return (
                   <button
                     key={acc.email}
@@ -125,6 +158,7 @@ export default function SignInPage() {
                     onClick={() => prefill(acc)}
                     className="group flex w-full items-center gap-3 rounded-lg border border-slate-200 px-3 py-2.5 text-left transition-all hover:border-brand-300 hover:bg-brand-50"
                   >
+                    <span className="font-mono text-[10px] font-bold text-slate-300 group-hover:text-brand-400">{step}</span>
                     <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md bg-brand-50 text-brand-600 transition-colors group-hover:bg-brand-600 group-hover:text-white">
                       <Icon className="h-4 w-4" strokeWidth={2} />
                     </div>
