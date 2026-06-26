@@ -2,11 +2,49 @@
 
 import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
-import { computeRAG, daysSinceUpdate, daysFromNow } from '@/lib/rag';
+import { computeRAG, daysSinceUpdate, daysFromNow, daysInStage } from '@/lib/rag';
 import { ItemTable } from '@/components/ItemTable';
 import { FilterBar, EMPTY_FILTERS, type Filters } from '@/components/FilterBar';
 import type { Item, DelaySource, Stage } from '@/lib/types';
-import { AlertOctagon, ArrowRight } from 'lucide-react';
+import { AlertOctagon, ArrowRight, Download } from 'lucide-react';
+
+function exportCsv(items: Item[]) {
+  const CSV_HEADERS = [
+    'Initiative', 'Type', 'Business Outcome', 'Vertical Head',
+    'Stage', 'Confidence', 'ETA', 'Days in Stage',
+    'Delay Source', 'Delayed', 'Last Updated', 'Regulatory',
+  ];
+
+  const esc = (v: string | number | boolean) =>
+    `"${String(v).replace(/"/g, '""')}"`;
+
+  const rows = items.map(i => {
+    const rag = computeRAG(i);
+    const daysToEta = daysFromNow(i.stageExpectedDate);
+    const eta = i.currentStage === 'Closed'
+      ? 'Closed'
+      : daysToEta < 0 ? `${Math.abs(daysToEta)}d overdue` : i.stageExpectedDate.slice(5);
+    const stale = daysSinceUpdate(i.lastUpdated);
+    return [
+      i.title, i.type, i.outcomeCategory ?? '', i.verticalHead,
+      i.currentStage, rag, eta, daysInStage(i.stageStartDate),
+      i.delaySource ?? '', i.delayed ? 'Yes' : 'No',
+      stale === 0 ? 'Today' : `${stale}d ago`,
+      i.isRegulatory ? 'Yes' : 'No',
+    ].map(esc).join(',');
+  });
+
+  const csv = [CSV_HEADERS.map(esc).join(','), ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `pmo-governance-${new Date().toISOString().slice(0, 10)}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
 
 interface Chip {
   key: string;
@@ -391,11 +429,22 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
         </div>
 
         {/* Full filter bar */}
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <FilterBar filters={filters} onChange={handleFilterChange} />
-          <span className="hidden flex-shrink-0 text-xs text-slate-400 sm:block">
-            {filtered.length} of {items.length}
-          </span>
+          <div className="flex flex-shrink-0 items-center gap-3">
+            <span className="hidden text-xs text-slate-400 sm:block">
+              {filtered.length} of {items.length}
+            </span>
+            <button
+              type="button"
+              onClick={() => exportCsv(filtered)}
+              disabled={filtered.length === 0}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Export CSV
+            </button>
+          </div>
         </div>
         {/* Portfolio insight */}
         <div className={`rounded-lg border px-4 py-2.5 text-xs font-medium ${
