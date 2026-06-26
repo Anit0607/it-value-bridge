@@ -12,13 +12,13 @@ export default async function PmoDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Governance Control Tower" subtitle={`${items.length} initiatives translating delivery into business value`}>
+      <PageHeader title="PMO Governance Control Tower" subtitle={`${items.length} initiatives translating delivery into business value`}>
         <Link
           href="/pmo/new"
           className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
         >
           <PlusCircle className="h-4 w-4" />
-          New Item
+          New Initiative
         </Link>
       </PageHeader>
 
@@ -26,7 +26,7 @@ export default async function PmoDashboard() {
         <KpiCard label="Active Items" value={activeCount} sub={`of ${items.length} total`} icon={Layers} accent="brand" />
         <KpiCard label="On Track" value={counts.green} icon={CheckCircle2} accent="emerald" />
         <KpiCard label="At Risk" value={counts.amber} icon={AlertTriangle} accent="amber" />
-        <KpiCard label="Delayed" value={counts.red} icon={AlertOctagon} accent="rose" />
+        <KpiCard label="Value at Risk" value={counts.red} icon={AlertOctagon} accent="rose" />
       </div>
 
       <PmoDashboardClient items={items} />

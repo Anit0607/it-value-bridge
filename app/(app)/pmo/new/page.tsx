@@ -78,7 +78,7 @@ export default function NewItemPage() {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <PageHeader title="Create New Item" subtitle="Add a new Change Request or Project — define its business value up front" />
+      <PageHeader title="Register New IT Initiative" subtitle="Register a new CR or project and define its business value commitment up front" />
 
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 shadow-card">

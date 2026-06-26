@@ -25,10 +25,10 @@ import {
 const DELAY_SOURCES: DelaySource[] = ['IT', 'Business', 'Vendor', 'External'];
 
 const ROLE_BACK: Record<Role, { href: string; label: string }> = {
-  PMO: { href: '/pmo', label: 'Control Tower' },
+  PMO: { href: '/pmo', label: 'PMO Control Tower' },
   CIO: { href: '/cio', label: 'Command Center' },
-  VERTICAL_HEAD: { href: '/vertical-head', label: 'Ownership View' },
-  BUSINESS: { href: '/business', label: 'Impact Validation' },
+  VERTICAL_HEAD: { href: '/vertical-head', label: 'Ownership Workspace' },
+  BUSINESS: { href: '/business', label: 'Value Validation' },
 };
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {

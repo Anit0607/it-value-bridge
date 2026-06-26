@@ -30,16 +30,16 @@ interface NavItem {
 
 const NAV_ITEMS: NavItem[] = [
   { href: '/cio', label: 'Command Center', icon: LayoutDashboard, roles: ['CIO'] },
-  { href: '/pmo', label: 'Control Tower', icon: ClipboardList, roles: ['PMO'] },
-  { href: '/pmo/new', label: 'New Item', icon: PlusCircle, roles: ['PMO'] },
-  { href: '/vertical-head', label: 'Ownership View', icon: Briefcase, roles: ['VERTICAL_HEAD'] },
-  { href: '/business', label: 'Impact Validation', icon: CheckSquare, roles: ['BUSINESS'] },
+  { href: '/pmo', label: 'PMO Control Tower', icon: ClipboardList, roles: ['PMO'] },
+  { href: '/pmo/new', label: 'New Initiative', icon: PlusCircle, roles: ['PMO'] },
+  { href: '/vertical-head', label: 'Ownership Workspace', icon: Briefcase, roles: ['VERTICAL_HEAD'] },
+  { href: '/business', label: 'Value Validation', icon: CheckSquare, roles: ['BUSINESS'] },
   { href: '/demands', label: 'Demands', icon: Lightbulb, roles: ['CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS'] },
   { href: '/value', label: 'Value Board', icon: TrendingUp, roles: ['CIO', 'PMO'] },
   { href: '/dependencies', label: 'Dependencies', icon: Link2, roles: ['CIO', 'PMO', 'VERTICAL_HEAD'] },
   { href: '/okrs', label: 'Strategic OKRs', icon: Target, roles: ['CIO', 'PMO'] },
   { href: '/import', label: 'Import', icon: Upload, roles: ['PMO'] },
-  { href: '/report', label: 'Leadership Summary', icon: FileBarChart, roles: ['CIO', 'PMO'] },
+  { href: '/report', label: 'Value Report', icon: FileBarChart, roles: ['CIO', 'PMO'] },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {

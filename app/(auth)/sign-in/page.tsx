@@ -18,10 +18,10 @@ import {
 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
-  { email: 'cio@bank.com', name: 'Mahesh Iyer', desc: 'Executive overview of portfolio health & value', icon: LayoutDashboard },
-  { email: 'pmo@bank.com', name: 'Anita Desai', desc: 'Full portfolio management & attention flags', icon: ClipboardList },
-  { email: 'vh@bank.com', name: 'Rajesh Kumar', desc: "Your vertical's items, stage & RAG status", icon: Briefcase },
-  { email: 'business@bank.com', name: 'Anil Kumar', desc: 'Items where you are the business SPOC', icon: CheckSquare },
+  { email: 'cio@bank.com', name: 'Mahesh Iyer', desc: 'Executive Value Command Center — portfolio, value board, risk', icon: LayoutDashboard },
+  { email: 'pmo@bank.com', name: 'Anita Desai', desc: 'PMO Governance Control Tower — full portfolio, RAG, delays', icon: ClipboardList },
+  { email: 'vh@bank.com', name: 'Rajesh Kumar', desc: 'Delivery Ownership Workspace — your vertical\'s commitments & Delivery Confidence', icon: Briefcase },
+  { email: 'business@bank.com', name: 'Anil Kumar', desc: 'Business Value Validation — confirm whether IT delivered the promised impact', icon: CheckSquare },
 ];
 
 const DEMO_PASSWORD = 'Demo@1234!';
@@ -85,8 +85,8 @@ export default function SignInPage() {
             Bridge IT delivery to<br />measurable business value.
           </h1>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-400">
-            Track every Change Request and Project from BRD to business validation — with live RAG
-            health, stage pipelines, and outcome reporting for banking IT portfolios.
+            Convert every CR and project from BRD to business impact — with Delivery Confidence,
+            Governance Lifecycle Visibility, and Leadership Value Reports for banking IT.
           </p>
         </div>
         <Link

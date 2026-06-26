@@ -60,7 +60,7 @@ export default async function CioDashboard({
         <KpiCard label="Active Items" value={total} sub={`of ${totalCount} total`} icon={Activity} accent="brand" />
         <KpiCard label="On Track" value={counts.green} sub={`${pct(counts.green)}%`} icon={CheckCircle2} accent="emerald" />
         <KpiCard label="At Risk" value={counts.amber} sub={`${pct(counts.amber)}%`} icon={AlertTriangle} accent="amber" />
-        <KpiCard label="Delayed" value={counts.red} sub={`${pct(counts.red)}%`} icon={AlertOctagon} accent="rose" />
+        <KpiCard label="Value at Risk" value={counts.red} sub={`${pct(counts.red)}%`} icon={AlertOctagon} accent="rose" />
       </div>
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -85,16 +85,16 @@ export default async function CioDashboard({
             </div>
             <div className="rounded-lg bg-emerald-50 py-3">
               <div className="tabular text-2xl font-semibold text-emerald-600">{delivered.length}</div>
-              <div className="mt-0.5 text-[11px] font-medium text-emerald-700">Delivered</div>
+              <div className="mt-0.5 text-[11px] font-medium text-emerald-700">Value Delivered</div>
             </div>
             <div className="rounded-lg bg-rose-50 py-3">
               <div className="tabular text-2xl font-semibold text-rose-600">{missed.length}</div>
-              <div className="mt-0.5 text-[11px] font-medium text-rose-700">Missed</div>
+              <div className="mt-0.5 text-[11px] font-medium text-rose-700">Commitment Slippage</div>
             </div>
           </div>
           {missed.length > 0 && (
             <div className="mt-4 border-t border-slate-100 pt-3">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-rose-600">Missed items</p>
+              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-rose-600">Commitment Slippage</p>
               <ul className="space-y-1.5">
                 {missed.map(i => (
                   <li key={i.id} className="flex items-center justify-between gap-2 text-xs">

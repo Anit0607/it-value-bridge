@@ -131,7 +131,7 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) 
               <SortHeader label="Type" sk="type" />
               {showVerticalHead && <SortHeader label="Vertical Head" sk="verticalHead" />}
               <SortHeader label="Stage" sk="stage" />
-              <SortHeader label="RAG" sk="rag" />
+              <SortHeader label="Confidence" sk="rag" />
               <SortHeader label="ETA" sk="eta" />
               <SortHeader label="In Stage" sk="days" align="right" />
             </tr>

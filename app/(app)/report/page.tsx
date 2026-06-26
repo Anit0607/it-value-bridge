@@ -61,7 +61,7 @@ export default async function ReportPage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <PageHeader title="Leadership Value Summary" subtitle={`Delivery accountability and outcome realization · ${period.label}`}>
+      <PageHeader title="Leadership Value Report" subtitle={`Delivery accountability and outcome realization · ${period.label}`}>
         <div className="flex flex-wrap items-center gap-2">
           <PeriodPicker />
           <form action="javascript:window.print()">
@@ -79,8 +79,8 @@ export default async function ReportPage({
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: 'Promised', value: committed.length, bar: 'bg-brand-500', tone: 'text-slate-900' },
-          { label: 'Delivered', value: delivered.length, bar: 'bg-emerald-500', tone: 'text-emerald-600' },
-          { label: 'Missed', value: missed.length, bar: 'bg-rose-500', tone: 'text-rose-600' },
+          { label: 'Value Delivered', value: delivered.length, bar: 'bg-emerald-500', tone: 'text-emerald-600' },
+          { label: 'Commitment Slippage', value: missed.length, bar: 'bg-rose-500', tone: 'text-rose-600' },
         ].map(c => (
           <div key={c.label} className="relative overflow-hidden rounded-xl border border-slate-200 bg-white p-5 shadow-card">
             <span className={`absolute inset-y-0 left-0 w-1 ${c.bar}`} aria-hidden />
@@ -198,7 +198,7 @@ export default async function ReportPage({
         <div className="overflow-hidden rounded-xl border border-rose-200 bg-white shadow-card">
           <div className="border-b border-rose-100 px-5 py-3.5">
             <h2 className="text-sm font-semibold text-rose-800">
-              Missed — Committed but not Delivered <span className="text-rose-400">({missed.length})</span>
+              Commitment Slippage <span className="text-rose-400">({missed.length})</span>
             </h2>
           </div>
           <div className="divide-y divide-rose-50">

@@ -17,7 +17,7 @@ const ROLES: Role[] = [
     title: 'CIO / CTO / Head of IT',
     tagline: 'Portfolio visibility. Board confidence. Value proof.',
     points: [
-      'Portfolio RAG health across all CRs and projects',
+      'Portfolio Delivery Confidence across all CRs and projects',
       'Board-ready ₹ ROI and value realization reports',
       'Governance confidence — delays, risks, and owners surfaced',
       'MD/Board-ready updates without chasing the PMO',
@@ -30,7 +30,7 @@ const ROLES: Role[] = [
     title: 'PMO / IT Governance Team',
     tagline: 'Track, govern, escalate, report.',
     points: [
-      'CR and project stage movement with live RAG',
+      'CR and project stage movement with live Delivery Confidence',
       'Delay ownership and accountability tracking',
       'Monthly delivery vs committed reporting',
       'Regulatory and compliance watch',

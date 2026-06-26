@@ -55,7 +55,7 @@ export function FilterBar({ filters, onChange }: Props) {
         ))}
       </select>
       <select value={filters.rag} onChange={set('rag')} className={selectCls}>
-        <option value="">All RAG</option>
+        <option value="">Delivery Confidence</option>
         <option value="Green">Green</option>
         <option value="Amber">Amber</option>
         <option value="Red">Red</option>

@@ -7,7 +7,7 @@ import { Reveal } from './Reveal';
 const TRUST = [
   { icon: KeySquare, label: 'Role-based access control' },
   { icon: History, label: 'Full audit history on every change' },
-  { icon: Lock, label: 'Computed RAG — no manual fudging' },
+  { icon: Lock, label: 'Computed Delivery Confidence — no manual fudging' },
 ];
 
 export function CTASection() {

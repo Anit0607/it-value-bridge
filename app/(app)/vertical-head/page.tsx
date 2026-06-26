@@ -17,13 +17,13 @@ export default async function VerticalHeadDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Delivery Ownership View" subtitle={`${verticalHead} · ${items.length} delivery commitments`} />
+      <PageHeader title="Delivery Ownership Workspace" subtitle={`${verticalHead} · ${items.length} delivery commitments`} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="Total Items" value={items.length} icon={Briefcase} accent="brand" />
         <KpiCard label="On Track" value={counts.green} icon={CheckCircle2} accent="emerald" />
         <KpiCard label="At Risk" value={counts.amber} icon={AlertTriangle} accent="amber" />
-        <KpiCard label="Delayed" value={counts.red} icon={AlertOctagon} accent="rose" />
+        <KpiCard label="Value at Risk" value={counts.red} icon={AlertOctagon} accent="rose" />
       </div>
 
       <ItemTable items={items} showVerticalHead={false} emptyHint="No items assigned to your vertical yet." />
