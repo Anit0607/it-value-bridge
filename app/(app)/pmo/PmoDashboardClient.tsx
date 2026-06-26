@@ -49,6 +49,7 @@ function exportCsv(items: Item[]) {
 interface Chip {
   key: string;
   label: string;
+  count: (items: Item[]) => number;
   active: (f: Filters) => boolean;
   apply: (f: Filters) => Filters;
   clear: (f: Filters) => Filters;
@@ -60,6 +61,7 @@ const CHIPS: Chip[] = [
   {
     key: 'red',
     label: 'Red only',
+    count: items => items.filter(i => i.currentStage !== 'Closed' && computeRAG(i) === 'Red').length,
     active: f => f.rag === 'Red',
     apply: f => ({ ...f, rag: 'Red' as const }),
     clear: f => ({ ...f, rag: '' }),
@@ -69,6 +71,7 @@ const CHIPS: Chip[] = [
   {
     key: 'amber',
     label: 'Amber only',
+    count: items => items.filter(i => i.currentStage !== 'Closed' && computeRAG(i) === 'Amber').length,
     active: f => f.rag === 'Amber',
     apply: f => ({ ...f, rag: 'Amber' as const }),
     clear: f => ({ ...f, rag: '' }),
@@ -78,6 +81,7 @@ const CHIPS: Chip[] = [
   {
     key: 'stale',
     label: 'Stale >7d',
+    count: items => items.filter(i => i.currentStage !== 'Closed' && daysSinceUpdate(i.lastUpdated) > 7).length,
     active: f => f.staleOnly,
     apply: f => ({ ...f, staleOnly: true }),
     clear: f => ({ ...f, staleOnly: false }),
@@ -87,6 +91,7 @@ const CHIPS: Chip[] = [
   {
     key: 'due',
     label: 'Due this week',
+    count: items => items.filter(i => { const d = daysFromNow(i.stageExpectedDate); return i.currentStage !== 'Closed' && d >= 0 && d <= 7; }).length,
     active: f => f.dueThisWeek,
     apply: f => ({ ...f, dueThisWeek: true }),
     clear: f => ({ ...f, dueThisWeek: false }),
@@ -96,6 +101,7 @@ const CHIPS: Chip[] = [
   {
     key: 'regulatory',
     label: 'Regulatory',
+    count: items => items.filter(i => i.isRegulatory && i.currentStage !== 'Closed').length,
     active: f => f.regulatory,
     apply: f => ({ ...f, regulatory: true }),
     clear: f => ({ ...f, regulatory: false }),
@@ -105,6 +111,7 @@ const CHIPS: Chip[] = [
   {
     key: 'business',
     label: 'Business delay',
+    count: items => items.filter(i => i.currentStage !== 'Closed' && i.delaySource === 'Business').length,
     active: f => f.delaySource === 'Business',
     apply: f => ({ ...f, delaySource: 'Business' as DelaySource }),
     clear: f => ({ ...f, delaySource: '' }),
@@ -114,6 +121,7 @@ const CHIPS: Chip[] = [
   {
     key: 'vendor',
     label: 'Vendor delay',
+    count: items => items.filter(i => i.currentStage !== 'Closed' && i.delaySource === 'Vendor').length,
     active: f => f.delaySource === 'Vendor',
     apply: f => ({ ...f, delaySource: 'Vendor' as DelaySource }),
     clear: f => ({ ...f, delaySource: '' }),
@@ -123,6 +131,7 @@ const CHIPS: Chip[] = [
   {
     key: 'appsec',
     label: 'AppSec pending',
+    count: items => items.filter(i => i.currentStage === 'AppSec').length,
     active: f => f.stage === 'AppSec',
     apply: f => ({ ...f, stage: 'AppSec' as Stage }),
     clear: f => ({ ...f, stage: '' }),
@@ -132,6 +141,7 @@ const CHIPS: Chip[] = [
   {
     key: 'uat',
     label: 'UAT pending',
+    count: items => items.filter(i => i.currentStage === 'UAT').length,
     active: f => f.stage === 'UAT',
     apply: f => ({ ...f, stage: 'UAT' as Stage }),
     clear: f => ({ ...f, stage: '' }),
@@ -238,6 +248,11 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
 
   const needsAttention = useMemo(
     () => items.filter(i => i.currentStage !== 'Closed' && computeRAG(i) === 'Red'),
+    [items],
+  );
+
+  const chipCounts = useMemo(
+    () => Object.fromEntries(CHIPS.map(c => [c.key, c.count(items)])),
     [items],
   );
 
@@ -413,16 +428,24 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
           </span>
           {CHIPS.map(chip => {
             const isActive = chip.active(filters);
+            const n = chipCounts[chip.key] ?? 0;
             return (
               <button
                 key={chip.key}
                 type="button"
                 onClick={() => toggleChip(chip)}
-                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
                   isActive ? chip.activeTone : chip.tone
                 }`}
               >
                 {chip.label}
+                {n > 0 && (
+                  <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-semibold tabular-nums ${
+                    isActive ? 'bg-white/30 text-inherit' : 'bg-slate-100 text-slate-500'
+                  }`}>
+                    {n}
+                  </span>
+                )}
               </button>
             );
           })}
