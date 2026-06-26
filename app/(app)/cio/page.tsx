@@ -11,6 +11,7 @@ import { StageFunnel } from '@/components/StageFunnel';
 import { RagDot } from '@/components/RagBadge';
 import { TodaysFocus } from '@/components/TodaysFocus';
 import { SectionCard } from '@/components/ui/SectionCard';
+import { Badge } from '@/components/ui/Badge';
 import { computeRAG } from '@/lib/rag';
 import {
   Activity,
@@ -128,7 +129,7 @@ export default async function CioDashboard({
                     </Link>
                     <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                       <span>{i.currentStage}</span>
-                      {i.delaySource && <span className="rounded bg-rose-50 px-1.5 py-0.5 font-medium text-rose-700">{i.delaySource}</span>}
+                      {i.delaySource && <Badge tone="danger" size="sm">{i.delaySource}</Badge>}
                       {i.delayReason && <span className="truncate">· {i.delayReason}</span>}
                     </div>
                   </div>
@@ -156,7 +157,7 @@ export default async function CioDashboard({
                       {i.title}
                     </Link>
                     <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                      {i.regulatoryBody && <span className="rounded bg-rose-50 px-1.5 py-0.5 font-medium text-rose-700">{i.regulatoryBody}</span>}
+                      {i.regulatoryBody && <Badge tone="danger" size="sm">{i.regulatoryBody}</Badge>}
                       <span>{i.currentStage}</span>
                       <span className="inline-flex items-center gap-1"><RagDot rag={rag} size="sm" />{rag}</span>
                     </div>

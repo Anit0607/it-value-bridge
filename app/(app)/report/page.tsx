@@ -4,6 +4,7 @@ import { listInitiativesAsItems } from '@/lib/actions/initiatives';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { PageHeader } from '@/components/PageHeader';
+import { Badge } from '@/components/ui/Badge';
 import type { DelaySource } from '@/lib/types';
 import { daysFromNow, daysSinceUpdate } from '@/lib/rag';
 import { resolvePeriod, inPeriod, onOrBeforeEnd } from '@/lib/period';
@@ -176,9 +177,7 @@ export default async function ReportPage({
                       <td className="px-4 py-2.5 text-slate-600">{i.currentStage}</td>
                       <td className="px-4 py-2.5">
                         {i.delaySource ? (
-                          <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[11px] font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20">
-                            {i.delaySource}
-                          </span>
+                          <Badge tone="danger" size="sm">{i.delaySource}</Badge>
                         ) : (
                           <span className="text-xs text-slate-400">—</span>
                         )}
