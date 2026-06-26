@@ -25,28 +25,28 @@ const FEATURES: Feature[] = [
   },
   {
     icon: Activity,
-    title: 'Portfolio health at a glance',
+    title: 'Delivery Risk Intelligence',
     body: 'Red / Amber / Green is computed at render from real dates — overdue stages and stale updates surface automatically. No manual status-setting, no stale dashboards.',
   },
   {
     icon: FileBarChart,
-    title: 'Board & MD-ready reporting',
-    body: 'One-click period report: promised vs delivered vs missed, delay sources with owner accountability, regulatory commitments, and outcomes realized — exportable for leadership.',
+    title: 'Leadership Value Summary',
+    body: 'One-click period report: promised vs delivered vs missed, delay accountability by owner and source, regulatory commitments, and outcomes realized — exportable for leadership.',
   },
   {
     icon: Users,
-    title: 'Four leadership views, zero noise',
-    body: 'CIO sees the portfolio and value board. PMO tracks stages and delays. Vertical Heads own their commitments. Business SPOCs validate outcomes. Each role sees exactly what matters to them.',
+    title: 'Four Views, One IT Value Portfolio',
+    body: 'Executive Command Center for the CIO, Governance Control Tower for PMO, Delivery Ownership View for Vertical Heads, Business Impact Validation for SPOCs.',
   },
   {
     icon: GitBranch,
-    title: 'Waterfall and Agile in one place',
-    body: 'Run each initiative as Waterfall (11-stage pipeline from BRD to Closed) or Agile (epics, sprints, velocity, burndown). The tracker adapts per initiative.',
+    title: 'Governance Lifecycle Visibility',
+    body: 'Every initiative tracked across 11 governance milestones — BRD through Business Validation to Closed — in Waterfall or Agile. Stage progress, SLA dates, and ownership in one place.',
   },
   {
     icon: ShieldAlert,
-    title: 'Governance and risk registers',
-    body: 'Regulatory compliance flags, delay accountability with owner and reason, cross-system dependency tracking, and full audit history on every change.',
+    title: 'Accountability & Bottleneck Mapping',
+    body: 'Delay source attributed to IT, Business, Vendor, or External. Regulatory flags with due dates. Cross-system dependencies. Full audit history on every change.',
   },
 ];
 

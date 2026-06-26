@@ -24,8 +24,8 @@ export default async function BusinessSpocView() {
   return (
     <div className="space-y-6">
       <PageHeader
-        title="My Items"
-        subtitle={`Your delivery commitments and business impact confirmations · ${items.length} total`}
+        title="Business Impact Validation"
+        subtitle={`Your delivery commitments and outcome confirmations · ${items.length} total`}
       />
 
       {pending.length > 0 && (

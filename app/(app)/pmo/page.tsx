@@ -12,7 +12,7 @@ export default async function PmoDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Portfolio" subtitle={`${items.length} initiatives translating delivery into business value`}>
+      <PageHeader title="Governance Control Tower" subtitle={`${items.length} initiatives translating delivery into business value`}>
         <Link
           href="/pmo/new"
           className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"

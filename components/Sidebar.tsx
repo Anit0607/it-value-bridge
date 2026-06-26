@@ -29,17 +29,17 @@ interface NavItem {
 }
 
 const NAV_ITEMS: NavItem[] = [
-  { href: '/cio', label: 'Dashboard', icon: LayoutDashboard, roles: ['CIO'] },
-  { href: '/pmo', label: 'Portfolio', icon: ClipboardList, roles: ['PMO'] },
+  { href: '/cio', label: 'Command Center', icon: LayoutDashboard, roles: ['CIO'] },
+  { href: '/pmo', label: 'Control Tower', icon: ClipboardList, roles: ['PMO'] },
   { href: '/pmo/new', label: 'New Item', icon: PlusCircle, roles: ['PMO'] },
-  { href: '/vertical-head', label: 'My Portfolio', icon: Briefcase, roles: ['VERTICAL_HEAD'] },
-  { href: '/business', label: 'My Items', icon: CheckSquare, roles: ['BUSINESS'] },
+  { href: '/vertical-head', label: 'Ownership View', icon: Briefcase, roles: ['VERTICAL_HEAD'] },
+  { href: '/business', label: 'Impact Validation', icon: CheckSquare, roles: ['BUSINESS'] },
   { href: '/demands', label: 'Demands', icon: Lightbulb, roles: ['CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS'] },
   { href: '/value', label: 'Value Board', icon: TrendingUp, roles: ['CIO', 'PMO'] },
   { href: '/dependencies', label: 'Dependencies', icon: Link2, roles: ['CIO', 'PMO', 'VERTICAL_HEAD'] },
   { href: '/okrs', label: 'Strategic OKRs', icon: Target, roles: ['CIO', 'PMO'] },
   { href: '/import', label: 'Import', icon: Upload, roles: ['PMO'] },
-  { href: '/report', label: 'Monthly Report', icon: FileBarChart, roles: ['CIO', 'PMO'] },
+  { href: '/report', label: 'Leadership Summary', icon: FileBarChart, roles: ['CIO', 'PMO'] },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -82,7 +82,7 @@ export function Sidebar({
         </div>
         <div className="leading-tight">
           <div className="text-sm font-semibold text-white">IT Value Bridge</div>
-          <div className="text-[11px] text-slate-400">Portfolio Management</div>
+          <div className="text-[11px] text-slate-400">Value Intelligence</div>
         </div>
       </div>
 
