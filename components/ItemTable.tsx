@@ -256,7 +256,7 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint, emptySubh
                   <td className={`py-2 pl-3 pr-4 ${accentBorder}`}>
                     <Link
                       href={`/items/${item.id}`}
-                      className="font-medium text-slate-800 transition-colors hover:text-brand-700 group-hover:text-brand-700"
+                      className="font-semibold text-slate-800 transition-colors hover:text-brand-700 group-hover:text-brand-700"
                     >
                       {item.title}
                     </Link>
