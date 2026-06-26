@@ -43,36 +43,35 @@ export function Hero() {
               {...rise(0.08)}
               className="mt-5 text-4xl font-semibold leading-[1.08] tracking-tight text-slate-900 sm:text-5xl"
             >
-              Turn IT delivery into business value leadership can act on.
+              Turn IT Delivery Into Business Value Leadership Can Act On
             </motion.h1>
 
             <motion.p
               {...rise(0.16)}
               className="mt-5 max-w-xl text-lg leading-relaxed text-slate-600"
             >
-              IT Value Bridge helps banking IT leaders convert project delivery, CR progress, RAG
-              risks, and business outcomes into board-ready value intelligence — from demand intake
-              to ₹ ROI the board can read, fund, and govern.
+              IT Value Bridge helps banking IT, PMO, and governance teams convert CRs, projects,
+              delays, RAG health, and post-go-live outcomes into executive-ready value intelligence.
             </motion.p>
 
             <motion.div {...rise(0.24)} className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/sign-in"
+                href="/cio"
                 className="group inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
               >
-                Get started
+                View CIO Dashboard
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
                 href="/sign-in"
                 className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
               >
-                See a live demo
+                Explore Demo Roles
               </Link>
             </motion.div>
 
             <motion.p {...rise(0.3)} className="mt-4 text-xs text-slate-500">
-              Four leadership views · demand-to-value funnel · board-ready ROI in ₹
+              Built for banking IT governance, portfolio reviews, business validation, and leadership reporting.
             </motion.p>
           </div>
 
