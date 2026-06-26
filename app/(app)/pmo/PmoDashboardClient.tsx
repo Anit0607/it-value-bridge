@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { computeRAG, daysSinceUpdate, daysFromNow } from '@/lib/rag';
 import { ItemTable } from '@/components/ItemTable';
@@ -111,8 +111,41 @@ interface QueueItem {
   countCls: string;
 }
 
+const THIS_MONTH = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+
+interface SavedView {
+  key: string;
+  label: string;
+  preset: Filters;
+}
+
+const SAVED_VIEWS: SavedView[] = [
+  { key: 'escalations', label: "Today's Escalations",    preset: { ...EMPTY_FILTERS, rag: 'Red' as const } },
+  { key: 'regulatory',  label: 'Regulatory Watch',        preset: { ...EMPTY_FILTERS, regulatory: true } },
+  { key: 'business',    label: 'Business Pending',        preset: { ...EMPTY_FILTERS, delaySource: 'Business' as DelaySource } },
+  { key: 'vendor',      label: 'Vendor Pending',          preset: { ...EMPTY_FILTERS, delaySource: 'Vendor' as DelaySource } },
+  { key: 'golive',      label: 'This Month Go-Live',      preset: { ...EMPTY_FILTERS, goLiveThisMonth: true } },
+  { key: 'stale',       label: 'Not Updated in 7 Days',   preset: { ...EMPTY_FILTERS, staleOnly: true } },
+];
+
 export function PmoDashboardClient({ items }: { items: Item[] }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+  const [activeView, setActiveView] = useState<string | null>(null);
+
+  const applyView = useCallback((view: SavedView) => {
+    if (activeView === view.key) {
+      setActiveView(null);
+      setFilters(EMPTY_FILTERS);
+    } else {
+      setActiveView(view.key);
+      setFilters(view.preset);
+    }
+  }, [activeView]);
+
+  const handleFilterChange = useCallback((f: Filters) => {
+    setFilters(f);
+    setActiveView(null);
+  }, []);
 
   const queue = useMemo((): QueueItem[] => [
     {
@@ -184,6 +217,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
         if (i.currentStage === 'Closed' || d < 0 || d > 7) return false;
       }
       if (filters.delaySource && i.delaySource !== filters.delaySource) return false;
+      if (filters.goLiveThisMonth && !i.goLiveDate?.startsWith(THIS_MONTH)) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
         if (!i.title.toLowerCase().includes(q) && !i.verticalHead.toLowerCase().includes(q)) return false;
@@ -192,8 +226,10 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
     });
   }, [items, filters]);
 
-  const toggleChip = (chip: Chip) =>
+  const toggleChip = (chip: Chip) => {
+    setActiveView(null);
     setFilters(f => chip.active(f) ? chip.clear(f) : chip.apply(f));
+  };
 
   return (
     <>
@@ -262,6 +298,27 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
       )}
 
       <div className="space-y-3">
+        {/* Saved Views */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Saved Views
+          </span>
+          {SAVED_VIEWS.map(view => (
+            <button
+              key={view.key}
+              type="button"
+              onClick={() => applyView(view)}
+              className={`rounded-md border px-3 py-1 text-xs font-medium transition-colors ${
+                activeView === view.key
+                  ? 'border-brand-500 bg-brand-600 text-white shadow-sm'
+                  : 'border-slate-200 bg-white text-slate-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700'
+              }`}
+            >
+              {view.label}
+            </button>
+          ))}
+        </div>
+
         {/* Quick filter chips */}
         <div className="flex flex-wrap items-center gap-1.5">
           <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
@@ -286,7 +343,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
 
         {/* Full filter bar */}
         <div className="flex items-center justify-between">
-          <FilterBar filters={filters} onChange={setFilters} />
+          <FilterBar filters={filters} onChange={handleFilterChange} />
           <span className="hidden flex-shrink-0 text-xs text-slate-400 sm:block">
             {filtered.length} of {items.length}
           </span>

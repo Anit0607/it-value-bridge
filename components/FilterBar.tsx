@@ -14,11 +14,13 @@ export interface Filters {
   staleOnly: boolean;
   dueThisWeek: boolean;
   delaySource: DelaySource | '';
+  goLiveThisMonth: boolean;
 }
 
 export const EMPTY_FILTERS: Filters = {
   stage: '', rag: '', verticalHead: '', type: '', search: '',
   regulatory: false, staleOnly: false, dueThisWeek: false, delaySource: '',
+  goLiveThisMonth: false,
 };
 
 interface Props {
@@ -45,7 +47,8 @@ export function FilterBar({ filters, onChange }: Props) {
 
   const hasFilters =
     filters.stage || filters.rag || filters.verticalHead || filters.type || filters.search ||
-    filters.regulatory || filters.staleOnly || filters.dueThisWeek || filters.delaySource;
+    filters.regulatory || filters.staleOnly || filters.dueThisWeek || filters.delaySource ||
+    filters.goLiveThisMonth;
 
   return (
     <div className="space-y-2">
