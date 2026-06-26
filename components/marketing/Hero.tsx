@@ -142,6 +142,7 @@ const VALUE_BY_CATEGORY = [
 
 function HeroPreview({ reduce }: { reduce: boolean }) {
   return (
+    <>
     <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-card-hover">
       <div className="rounded-xl bg-slate-50 p-4">
         {/* window chrome */}
@@ -149,7 +150,7 @@ function HeroPreview({ reduce }: { reduce: boolean }) {
           <span className="h-2.5 w-2.5 rounded-full bg-rose-300" />
           <span className="h-2.5 w-2.5 rounded-full bg-amber-300" />
           <span className="h-2.5 w-2.5 rounded-full bg-emerald-300" />
-          <span className="ml-3 text-[11px] font-medium text-slate-400">Board-Ready Value</span>
+          <span className="ml-3 text-[11px] font-medium text-slate-400">CIO Value Command Preview</span>
           <span className="ml-auto inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide text-emerald-600">
             <motion.span
               className="h-1.5 w-1.5 rounded-full bg-emerald-500"
@@ -221,5 +222,9 @@ function HeroPreview({ reduce }: { reduce: boolean }) {
         </div>
       </div>
     </div>
+    <p className="mt-2.5 text-center text-[11px] text-slate-400">
+      Sample portfolio data shown for demo purposes.
+    </p>
+    </>
   );
 }
