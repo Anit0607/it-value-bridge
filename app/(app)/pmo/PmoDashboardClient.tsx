@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { computeRAG, daysSinceUpdate, daysFromNow } from '@/lib/rag';
 import { ItemTable } from '@/components/ItemTable';
 import { FilterBar, EMPTY_FILTERS, type Filters } from '@/components/FilterBar';
-import type { Item, DelaySource } from '@/lib/types';
+import type { Item, DelaySource, Stage } from '@/lib/types';
 import { AlertOctagon, ArrowRight } from 'lucide-react';
 
 interface Chip {
@@ -81,6 +81,24 @@ const CHIPS: Chip[] = [
     clear: f => ({ ...f, delaySource: '' }),
     tone: 'border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-100 hover:text-slate-800',
     activeTone: 'border-slate-500 bg-slate-100 text-slate-800',
+  },
+  {
+    key: 'appsec',
+    label: 'AppSec pending',
+    active: f => f.stage === 'AppSec',
+    apply: f => ({ ...f, stage: 'AppSec' as Stage }),
+    clear: f => ({ ...f, stage: '' }),
+    tone: 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700',
+    activeTone: 'border-emerald-400 bg-emerald-50 text-emerald-700',
+  },
+  {
+    key: 'uat',
+    label: 'UAT pending',
+    active: f => f.stage === 'UAT',
+    apply: f => ({ ...f, stage: 'UAT' as Stage }),
+    clear: f => ({ ...f, stage: '' }),
+    tone: 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700',
+    activeTone: 'border-sky-400 bg-sky-50 text-sky-700',
   },
 ];
 
