@@ -19,34 +19,34 @@ interface Feature {
 
 const FEATURES: Feature[] = [
   {
-    icon: GitBranch,
-    title: 'Dual methodology',
-    body: 'Run each initiative as Waterfall (11-stage pipeline mapped to delivery phases) or Agile (epics, sprints, velocity, burndown). The tracker adapts per initiative.',
+    icon: Target,
+    title: 'Board-ready value intelligence',
+    body: 'Translate every CR and project into ₹ ROI the board can read. Projected value, signed-off value, and realized benefit — by category, OKR, and vertical — in one dashboard.',
   },
   {
     icon: Activity,
-    title: 'Live RAG portfolio health',
+    title: 'Portfolio health at a glance',
     body: 'Red / Amber / Green is computed at render from real dates — overdue stages and stale updates surface automatically. No manual status-setting, no stale dashboards.',
   },
   {
     icon: FileBarChart,
-    title: 'Executive monthly reporting',
-    body: 'One-click monthly report: committed vs delivered vs missed, delay sources, and business outcomes — with an AI narrative for leadership and PDF export.',
-  },
-  {
-    icon: Target,
-    title: 'Business-value realization',
-    body: 'Capture the intended outcome up front, then validate what was actually achieved against the target metric. Close the loop between IT delivery and business value.',
-  },
-  {
-    icon: ShieldAlert,
-    title: 'Risk & stakeholder registers',
-    body: 'A governance matrix across scope, schedule, cost, quality and risk — plus risk and stakeholder registers on every initiative.',
+    title: 'Board & MD-ready reporting',
+    body: 'One-click period report: promised vs delivered vs missed, delay sources with owner accountability, regulatory commitments, and outcomes realized — exportable for leadership.',
   },
   {
     icon: Users,
-    title: 'Role-based dashboards',
-    body: 'Tailored views for CIO, PMO, Vertical Head and Business SPOC — each role sees exactly the portfolio slice and actions that matter to them.',
+    title: 'Four leadership views, zero noise',
+    body: 'CIO sees the portfolio and value board. PMO tracks stages and delays. Vertical Heads own their commitments. Business SPOCs validate outcomes. Each role sees exactly what matters to them.',
+  },
+  {
+    icon: GitBranch,
+    title: 'Waterfall and Agile in one place',
+    body: 'Run each initiative as Waterfall (11-stage pipeline from BRD to Closed) or Agile (epics, sprints, velocity, burndown). The tracker adapts per initiative.',
+  },
+  {
+    icon: ShieldAlert,
+    title: 'Governance and risk registers',
+    body: 'Regulatory compliance flags, delay accountability with owner and reason, cross-system dependency tracking, and full audit history on every change.',
   },
 ];
 

@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Hero } from '@/components/marketing/Hero';
 import { StatsBand } from '@/components/marketing/StatsBand';
+import { AudienceSection } from '@/components/marketing/AudienceSection';
 import { FeatureGrid } from '@/components/marketing/FeatureGrid';
 import { CTASection } from '@/components/marketing/CTASection';
 
@@ -15,6 +16,7 @@ export default function LandingPage() {
     <>
       <Hero />
       <StatsBand />
+      <AudienceSection />
       <FeatureGrid />
       <CTASection />
     </>
