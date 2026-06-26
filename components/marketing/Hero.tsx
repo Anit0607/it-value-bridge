@@ -50,8 +50,9 @@ export function Hero() {
               {...rise(0.16)}
               className="mt-5 max-w-xl text-lg leading-relaxed text-slate-600"
             >
-              IT Value Bridge helps banking IT, PMO, and governance teams convert CRs, projects,
-              delays, RAG health, and post-go-live outcomes into executive-ready value intelligence.
+              Govern every Change Request and Project from BRD to business validation — across
+              Waterfall and Agile — with live delivery health, accountability tracking, and
+              executive reporting that connects IT work to measurable business outcomes.
             </motion.p>
 
             <motion.div {...rise(0.24)} className="mt-8 flex flex-col gap-3 sm:flex-row">
