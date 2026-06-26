@@ -3,8 +3,9 @@
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
 import { Item, STAGES } from '@/lib/types';
-import { computeRAG, daysInStage, daysFromNow } from '@/lib/rag';
+import { computeRAG, daysInStage, daysFromNow, daysSinceUpdate } from '@/lib/rag';
 import { RagDot } from './RagBadge';
+import type { RAG } from '@/lib/types';
 import { ChevronUp, ChevronDown, ChevronsUpDown, Inbox } from 'lucide-react';
 
 interface Props {
@@ -17,6 +18,25 @@ type SortKey = 'title' | 'type' | 'verticalHead' | 'stage' | 'rag' | 'eta' | 'da
 type SortDir = 'asc' | 'desc';
 
 const RAG_ORDER = { Red: 0, Amber: 1, Green: 2 };
+
+const DELAY_SOURCE_TONE: Record<string, string> = {
+  IT:       'bg-brand-50 text-brand-700 ring-brand-600/20',
+  Business: 'bg-violet-50 text-violet-700 ring-violet-600/20',
+  Vendor:   'bg-amber-50 text-amber-700 ring-amber-600/20',
+  External: 'bg-slate-50 text-slate-600 ring-slate-600/20',
+};
+
+function getNextAction(item: Item, rag: RAG): string {
+  if (item.currentStage === 'Closed') return '—';
+  if (item.currentStage === 'Business Validation') return 'Awaiting business sign-off';
+  if (item.currentStage === 'CAB Approval') return 'Awaiting CAB approval';
+  if (item.currentStage === 'AppSec') return 'Awaiting security clearance';
+  if (rag === 'Red' && item.delayed && item.delaySource) return `Escalate: ${item.delaySource} delay`;
+  if (rag === 'Red') return 'Advance or escalate';
+  if (daysSinceUpdate(item.lastUpdated) > 7) return 'Update required';
+  if (rag === 'Amber') return 'Monitor — at risk';
+  return 'On track';
+}
 
 export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) {
   const [sortKey, setSortKey] = useState<SortKey>('rag');
@@ -134,6 +154,8 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) 
               <SortHeader label="Confidence" sk="rag" />
               <SortHeader label="ETA" sk="eta" />
               <SortHeader label="In Stage" sk="days" align="right" />
+              <th className="sticky top-0 z-10 bg-slate-50/95 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur">Delay Source</th>
+              <th className="sticky top-0 z-10 bg-slate-50/95 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur">Next Action</th>
             </tr>
           </thead>
           <tbody>
@@ -189,6 +211,18 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) 
                   </td>
                   <td className="px-4 py-2.5 text-right tabular text-slate-500">
                     {closed ? <span className="text-slate-300">—</span> : `${days}d`}
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {item.delaySource ? (
+                      <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${DELAY_SOURCE_TONE[item.delaySource]}`}>
+                        {item.delaySource}
+                      </span>
+                    ) : (
+                      <span className="text-slate-300">—</span>
+                    )}
+                  </td>
+                  <td className="px-4 py-2.5 text-xs text-slate-600">
+                    {getNextAction(item, rag)}
                   </td>
                 </tr>
               );
