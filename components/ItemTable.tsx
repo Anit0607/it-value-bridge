@@ -15,10 +15,19 @@ interface Props {
   emptyHint?: string;
 }
 
-type SortKey = 'title' | 'type' | 'verticalHead' | 'stage' | 'rag' | 'eta' | 'days';
+type SortKey = 'title' | 'type' | 'outcome' | 'verticalHead' | 'stage' | 'rag' | 'eta' | 'days';
 type SortDir = 'asc' | 'desc';
 
 const RAG_ORDER = { Red: 0, Amber: 1, Green: 2 };
+
+const OUTCOME_CHIP: Record<string, string> = {
+  'Revenue':              'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+  'Cost Saving':          'bg-brand-50 text-brand-700 ring-brand-600/20',
+  'Customer Experience':  'bg-violet-50 text-violet-700 ring-violet-600/20',
+  'Compliance':           'bg-rose-50 text-rose-700 ring-rose-600/20',
+  'Efficiency':           'bg-blue-50 text-blue-700 ring-blue-600/20',
+  'Risk Reduction':       'bg-amber-50 text-amber-700 ring-amber-600/20',
+};
 
 const DELAY_SOURCE_TONE: Record<string, string> = {
   IT:       'bg-brand-50 text-brand-700 ring-brand-600/20',
@@ -56,6 +65,10 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) 
         case 'type':
           av = a.type;
           bv = b.type;
+          break;
+        case 'outcome':
+          av = (a.outcomeCategory ?? '').toLowerCase();
+          bv = (b.outcomeCategory ?? '').toLowerCase();
           break;
         case 'verticalHead':
           av = a.verticalHead.toLowerCase();
@@ -142,6 +155,7 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) 
             <tr>
               <SortHeader label="Item" sk="title" />
               <SortHeader label="Type" sk="type" />
+              <SortHeader label="Business Outcome" sk="outcome" />
               {showVerticalHead && <SortHeader label="Vertical Head" sk="verticalHead" />}
               <SortHeader label="Stage" sk="stage" />
               <SortHeader label="Confidence" sk="rag" />
@@ -188,6 +202,15 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) 
                     >
                       {item.type === 'Project' ? 'Project' : 'CR'}
                     </span>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {item.outcomeCategory ? (
+                      <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${OUTCOME_CHIP[item.outcomeCategory] ?? 'bg-slate-50 text-slate-600 ring-slate-600/20'}`}>
+                        {item.outcomeCategory}
+                      </span>
+                    ) : (
+                      <span className="text-slate-300">—</span>
+                    )}
                   </td>
                   {showVerticalHead && (
                     <td className="px-4 py-2.5 text-slate-600">{item.verticalHead}</td>
