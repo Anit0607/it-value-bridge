@@ -10,6 +10,7 @@ import { PeriodPicker } from '@/components/PeriodPicker';
 import { StageFunnel } from '@/components/StageFunnel';
 import { RagDot } from '@/components/RagBadge';
 import { TodaysFocus } from '@/components/TodaysFocus';
+import { SectionCard } from '@/components/ui/SectionCard';
 import { computeRAG } from '@/lib/rag';
 import {
   Activity,
@@ -113,16 +114,8 @@ export default async function CioDashboard({
       </div>
 
       {delays.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
-          <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
-              <AlertOctagon className="h-4 w-4 text-rose-500" />
-              Delays Needing Attention
-              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">{delays.length}</span>
-            </h2>
-            <span className="text-xs text-slate-400">Worst slip first</span>
-          </div>
-          <div className="divide-y divide-slate-100">
+        <SectionCard title="Delays Needing Attention" icon={AlertOctagon} tone="risk" count={delays.length} subtitle="Worst slip first" noPad>
+          <div>
             {delays.slice(0, 6).map(i => {
               const slip = i.etaDays < 0 ? -i.etaDays : i.staleDays;
               return (
@@ -145,22 +138,12 @@ export default async function CioDashboard({
               );
             })}
           </div>
-        </div>
+        </SectionCard>
       )}
 
       {regulatory.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-rose-200 bg-white shadow-card">
-          <div className="flex items-center justify-between border-b border-rose-100 px-5 py-3.5">
-            <h2 className="flex items-center gap-2 text-sm font-semibold text-rose-800">
-              <ShieldAlert className="h-4 w-4 text-rose-500" />
-              Regulatory Watch
-              <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">
-                {regulatory.length}
-              </span>
-            </h2>
-            <span className="text-xs text-slate-400">Externally-mandated deadlines</span>
-          </div>
-          <div className="divide-y divide-slate-100">
+        <SectionCard title="Regulatory Watch" icon={ShieldAlert} tone="risk" count={regulatory.length} subtitle="Externally-mandated deadlines" noPad>
+          <div>
             {regulatory.map(i => {
               const rag = computeRAG(i);
               const overdue = i.regulatoryDueDate ? i.regulatoryDueDate < todayIso && i.currentStage !== 'Closed' : false;
@@ -190,14 +173,10 @@ export default async function CioDashboard({
               );
             })}
           </div>
-        </div>
+        </SectionCard>
       )}
 
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-          <h2 className="text-sm font-semibold text-slate-800">Vertical Head Summary</h2>
-          <span className="text-xs text-slate-400">Sorted by risk</span>
-        </div>
+      <SectionCard title="Vertical Head Summary" subtitle="Sorted by risk" noPad>
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -239,18 +218,12 @@ export default async function CioDashboard({
             </tbody>
           </table>
         </div>
-      </div>
+      </SectionCard>
 
       {/* Governance Lifecycle View — context section, last in executive order */}
-      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
-        <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-          <h2 className="text-sm font-semibold text-slate-800">Governance Lifecycle View</h2>
-          <span className="text-xs text-slate-400">{totalCount} items across {STAGES.length} stages</span>
-        </div>
-        <div className="p-5">
-          <StageFunnel counts={pipelineByStage} />
-        </div>
-      </div>
+      <SectionCard title="Governance Lifecycle View" subtitle={`${totalCount} items across ${STAGES.length} stages`}>
+        <StageFunnel counts={pipelineByStage} />
+      </SectionCard>
     </div>
   );
 }
