@@ -125,9 +125,9 @@ function CountUp({ to, reduce, delay = 0 }: { to: number; reduce: boolean; delay
 }
 
 const KPIS = [
-  { label: 'Projected Value', value: 220, prefix: '₹', suffix: ' Cr', display: '', icon: TrendingUp, accent: 'bg-brand-500', tint: 'bg-brand-50 text-brand-600' },
-  { label: 'Signed-off', value: 160, prefix: '₹', suffix: ' Cr', display: '', icon: BadgeCheck, accent: 'bg-emerald-500', tint: 'bg-emerald-50 text-emerald-600' },
-  { label: 'Realized (FY)', value: 2, prefix: '₹', suffix: ' Cr', display: '', icon: Coins, accent: 'bg-amber-500', tint: 'bg-amber-50 text-amber-600' },
+  { label: 'Projected Value', value: 220, prefix: '₹', suffix: ' Cr', display: '₹220 Cr', icon: TrendingUp, accent: 'bg-brand-500', tint: 'bg-brand-50 text-brand-600' },
+  { label: 'Signed-off', value: 160, prefix: '₹', suffix: ' Cr', display: '₹160 Cr', icon: BadgeCheck, accent: 'bg-emerald-500', tint: 'bg-emerald-50 text-emerald-600' },
+  { label: 'Realized (FY)', value: 2, prefix: '₹', suffix: ' Cr', display: '₹2 Cr', icon: Coins, accent: 'bg-amber-500', tint: 'bg-amber-50 text-amber-600' },
   { label: 'Value vs Cost', value: 0, prefix: '', suffix: '', display: '2.6x', icon: Scale, accent: 'bg-brand-500', tint: 'bg-brand-50 text-brand-600' },
 ];
 
