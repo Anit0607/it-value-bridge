@@ -6,6 +6,7 @@ import { Item, STAGES } from '@/lib/types';
 import { computeRAG, daysInStage, daysFromNow, daysSinceUpdate } from '@/lib/rag';
 import { RagDot } from './RagBadge';
 import { StateCard } from './StateCard';
+import { Badge, type BadgeTone } from './ui/Badge';
 import type { RAG } from '@/lib/types';
 import { ChevronUp, ChevronDown, ChevronsUpDown, CheckSquare2, Download, RefreshCw, UserCheck, ClipboardList } from 'lucide-react';
 
@@ -21,20 +22,20 @@ type SortDir = 'asc' | 'desc';
 
 const RAG_ORDER = { Red: 0, Amber: 1, Green: 2 };
 
-const OUTCOME_CHIP: Record<string, string> = {
-  'Revenue':              'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
-  'Cost Saving':          'bg-brand-50 text-brand-700 ring-brand-600/20',
-  'Customer Experience':  'bg-violet-50 text-violet-700 ring-violet-600/20',
-  'Compliance':           'bg-rose-50 text-rose-700 ring-rose-600/20',
-  'Efficiency':           'bg-blue-50 text-blue-700 ring-blue-600/20',
-  'Risk Reduction':       'bg-amber-50 text-amber-700 ring-amber-600/20',
+const OUTCOME_TONE: Record<string, BadgeTone> = {
+  'Revenue':             'success',
+  'Cost Saving':         'brand',
+  'Customer Experience': 'violet',
+  'Compliance':          'danger',
+  'Efficiency':          'sky',
+  'Risk Reduction':      'warning',
 };
 
-const DELAY_SOURCE_TONE: Record<string, string> = {
-  IT:       'bg-brand-50 text-brand-700 ring-brand-600/20',
-  Business: 'bg-violet-50 text-violet-700 ring-violet-600/20',
-  Vendor:   'bg-amber-50 text-amber-700 ring-amber-600/20',
-  External: 'bg-slate-50 text-slate-600 ring-slate-600/20',
+const DELAY_TONE: Record<string, BadgeTone> = {
+  IT:       'brand',
+  Business: 'violet',
+  Vendor:   'warning',
+  External: 'slate',
 };
 
 function getNextAction(item: Item, rag: RAG): string {
@@ -279,9 +280,9 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint, emptySubh
                   </td>
                   <td className="px-4 py-2.5">
                     {item.outcomeCategory ? (
-                      <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${OUTCOME_CHIP[item.outcomeCategory] ?? 'bg-slate-50 text-slate-600 ring-slate-600/20'}`}>
+                      <Badge tone={OUTCOME_TONE[item.outcomeCategory] ?? 'slate'}>
                         {item.outcomeCategory}
-                      </span>
+                      </Badge>
                     ) : (
                       <span className="text-slate-300">—</span>
                     )}
@@ -310,9 +311,9 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint, emptySubh
                   </td>
                   <td className="px-4 py-2.5">
                     {item.delaySource ? (
-                      <span className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[11px] font-medium ring-1 ring-inset ${DELAY_SOURCE_TONE[item.delaySource]}`}>
+                      <Badge tone={DELAY_TONE[item.delaySource] ?? 'slate'}>
                         {item.delaySource}
-                      </span>
+                      </Badge>
                     ) : (
                       <span className="text-slate-300">—</span>
                     )}
