@@ -28,18 +28,43 @@ interface NavItem {
   roles: Role[];
 }
 
-const NAV_ITEMS: NavItem[] = [
-  { href: '/cio', label: 'Command Center', icon: LayoutDashboard, roles: ['CIO'] },
-  { href: '/pmo', label: 'PMO Control Tower', icon: ClipboardList, roles: ['PMO'] },
-  { href: '/pmo/new', label: 'New Initiative', icon: PlusCircle, roles: ['PMO'] },
-  { href: '/vertical-head', label: 'Ownership Workspace', icon: Briefcase, roles: ['VERTICAL_HEAD'] },
-  { href: '/business', label: 'Value Validation', icon: CheckSquare, roles: ['BUSINESS'] },
-  { href: '/demands', label: 'Demands', icon: Lightbulb, roles: ['CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS'] },
-  { href: '/value', label: 'Value Board', icon: TrendingUp, roles: ['CIO', 'PMO'] },
-  { href: '/dependencies', label: 'Dependencies', icon: Link2, roles: ['CIO', 'PMO', 'VERTICAL_HEAD'] },
-  { href: '/okrs', label: 'Strategic OKRs', icon: Target, roles: ['CIO', 'PMO'] },
-  { href: '/import', label: 'Import', icon: Upload, roles: ['PMO'] },
-  { href: '/report', label: 'Value Report', icon: FileBarChart, roles: ['CIO', 'PMO'] },
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
+
+const NAV_GROUPS: NavGroup[] = [
+  {
+    label: 'Governance',
+    items: [
+      { href: '/cio', label: 'Command Center', icon: LayoutDashboard, roles: ['CIO'] },
+      { href: '/pmo', label: 'PMO Control Tower', icon: ClipboardList, roles: ['PMO'] },
+      { href: '/pmo/new', label: 'New Initiative', icon: PlusCircle, roles: ['PMO'] },
+      { href: '/demands', label: 'Demands', icon: Lightbulb, roles: ['CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS'] },
+    ],
+  },
+  {
+    label: 'Value Intelligence',
+    items: [
+      { href: '/value', label: 'Value Board', icon: TrendingUp, roles: ['CIO', 'PMO'] },
+      { href: '/okrs', label: 'Strategic OKRs', icon: Target, roles: ['CIO', 'PMO'] },
+      { href: '/report', label: 'Value Report', icon: FileBarChart, roles: ['CIO', 'PMO'] },
+    ],
+  },
+  {
+    label: 'Delivery Control',
+    items: [
+      { href: '/dependencies', label: 'Dependencies', icon: Link2, roles: ['CIO', 'PMO', 'VERTICAL_HEAD'] },
+      { href: '/vertical-head', label: 'Ownership Workspace', icon: Briefcase, roles: ['VERTICAL_HEAD'] },
+      { href: '/business', label: 'Value Validation', icon: CheckSquare, roles: ['BUSINESS'] },
+    ],
+  },
+  {
+    label: 'Admin',
+    items: [
+      { href: '/import', label: 'Import', icon: Upload, roles: ['PMO'] },
+    ],
+  },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
@@ -61,7 +86,9 @@ export function Sidebar({
 
   if (!user) return null;
 
-  const visibleItems = NAV_ITEMS.filter(n => n.roles.includes(user.role));
+  const visibleGroups = NAV_GROUPS
+    .map(g => ({ ...g, items: g.items.filter(i => i.roles.includes(user.role)) }))
+    .filter(g => g.items.length > 0);
 
   const initials = user.name
     .split(' ')
@@ -89,38 +116,42 @@ export function Sidebar({
       <div className="mx-5 border-t border-white/5" />
 
       {/* Nav */}
-      <nav className="flex-1 overflow-y-auto px-3 py-4">
-        <p className="px-3 pb-2 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-          Menu
-        </p>
-        <div className="space-y-0.5">
-          {visibleItems.map(item => {
-            const active =
-              pathname === item.href ||
-              (item.href !== '/pmo/new' && pathname.startsWith(item.href + '/'));
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                onClick={onNavigate}
-                className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
-                  active
-                    ? 'bg-brand-600 text-white shadow-sm'
-                    : 'text-slate-400 hover:bg-white/5 hover:text-white'
-                }`}
-              >
-                <Icon
-                  className={`h-[18px] w-[18px] flex-shrink-0 ${
-                    active ? 'text-white' : 'text-slate-500 group-hover:text-slate-200'
-                  }`}
-                  strokeWidth={2}
-                />
-                {item.label}
-              </Link>
-            );
-          })}
-        </div>
+      <nav className="flex-1 overflow-y-auto px-3 py-3">
+        {visibleGroups.map((group, gi) => (
+          <div key={group.label} className={gi > 0 ? 'mt-4' : ''}>
+            <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+              {group.label}
+            </p>
+            <div className="space-y-0.5">
+              {group.items.map(item => {
+                const active =
+                  pathname === item.href ||
+                  (item.href !== '/pmo/new' && pathname.startsWith(item.href + '/'));
+                const Icon = item.icon;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    onClick={onNavigate}
+                    className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
+                      active
+                        ? 'bg-brand-600 text-white shadow-sm'
+                        : 'text-slate-400 hover:bg-white/5 hover:text-white'
+                    }`}
+                  >
+                    <Icon
+                      className={`h-[18px] w-[18px] flex-shrink-0 ${
+                        active ? 'text-white' : 'text-slate-500 group-hover:text-slate-200'
+                      }`}
+                      strokeWidth={2}
+                    />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
+        ))}
       </nav>
 
       {/* User profile */}
