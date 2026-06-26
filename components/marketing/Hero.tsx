@@ -57,22 +57,22 @@ export function Hero() {
 
             <motion.div {...rise(0.24)} className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Link
-                href="/cio"
+                href="/sign-in"
                 className="group inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
               >
-                Launch CIO Demo
+                Sign in to Platform
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
-                href="/sign-in"
+                href="#platform"
                 className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
               >
-                Choose Demo Role
+                Explore Platform
               </Link>
             </motion.div>
 
             <motion.p {...rise(0.3)} className="mt-4 text-xs text-slate-500">
-              No setup required · Sample banking IT portfolio data
+              Built for banking IT governance · Self-hosted · RBI-compliant
             </motion.p>
           </div>
 
