@@ -230,10 +230,10 @@ export default async function CioDashboard({
         </div>
       </div>
 
-      {/* Pipeline by Stage — context, not the primary decision area */}
+      {/* Governance Lifecycle View — context section, last in executive order */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
         <div className="flex items-center justify-between border-b border-slate-100 px-5 py-3.5">
-          <h2 className="text-sm font-semibold text-slate-800">Pipeline by Stage</h2>
+          <h2 className="text-sm font-semibold text-slate-800">Governance Lifecycle View</h2>
           <span className="text-xs text-slate-400">{totalCount} items across {STAGES.length} stages</span>
         </div>
         <div className="p-5">
