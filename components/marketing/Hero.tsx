@@ -60,19 +60,19 @@ export function Hero() {
                 href="/cio"
                 className="group inline-flex items-center justify-center gap-2 rounded-lg bg-brand-600 px-5 py-3 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
               >
-                View CIO Dashboard
+                Launch CIO Demo
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <Link
                 href="/sign-in"
                 className="inline-flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
               >
-                Explore Demo Roles
+                Choose Demo Role
               </Link>
             </motion.div>
 
             <motion.p {...rise(0.3)} className="mt-4 text-xs text-slate-500">
-              Built for banking IT governance, portfolio reviews, business validation, and leadership reporting.
+              No setup required · Sample banking IT portfolio data
             </motion.p>
           </div>
 
