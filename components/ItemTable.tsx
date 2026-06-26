@@ -5,8 +5,9 @@ import Link from 'next/link';
 import { Item, STAGES } from '@/lib/types';
 import { computeRAG, daysInStage, daysFromNow, daysSinceUpdate } from '@/lib/rag';
 import { RagDot } from './RagBadge';
+import { StateCard } from './StateCard';
 import type { RAG } from '@/lib/types';
-import { ChevronUp, ChevronDown, ChevronsUpDown, Inbox } from 'lucide-react';
+import { ChevronUp, ChevronDown, ChevronsUpDown } from 'lucide-react';
 
 interface Props {
   items: Item[];
@@ -94,15 +95,7 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) 
   };
 
   if (items.length === 0) {
-    return (
-      <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-slate-300 bg-white px-6 py-16 text-center">
-        <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400">
-          <Inbox className="h-5 w-5" />
-        </div>
-        <p className="text-sm font-medium text-slate-700">No items found</p>
-        <p className="mt-1 text-xs text-slate-400">{emptyHint ?? 'Try adjusting your filters.'}</p>
-      </div>
-    );
+    return <StateCard variant="empty" message={emptyHint} />;
   }
 
   const SortHeader = ({
