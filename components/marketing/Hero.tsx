@@ -72,7 +72,7 @@ export function Hero() {
             </motion.div>
 
             <motion.p {...rise(0.3)} className="mt-4 text-xs text-slate-500">
-              Built for banking IT governance · Self-hosted · RBI-compliant
+              Built for banking IT governance · Self-hosted · Designed for regulated environments
             </motion.p>
           </div>
 
