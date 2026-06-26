@@ -63,7 +63,7 @@ export default async function BusinessSpocView() {
                 </div>
                 <Link
                   href={`/items/${i.id}/validate`}
-                  className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-amber-600"
+                  className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-brand-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
                 >
                   Confirm Impact
                   <ArrowRight className="h-3.5 w-3.5" />

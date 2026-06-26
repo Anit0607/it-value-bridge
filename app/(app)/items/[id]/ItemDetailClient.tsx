@@ -128,7 +128,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
         {!closed && item.currentStage === 'Business Validation' && (
           <Link
             href={`/items/${item.id}/validate`}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-amber-500 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-amber-600"
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
           >
             <ClipboardCheck className="h-4 w-4" />
             Validate Outcome
