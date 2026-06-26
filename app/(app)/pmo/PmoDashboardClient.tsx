@@ -237,12 +237,20 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
       countCls: 'text-amber-600',
     },
     {
-      label: 'AppSec / UAT Pending',
-      desc: 'in security review or UAT stage',
-      count: items.filter(i => i.currentStage === 'AppSec' || i.currentStage === 'UAT').length,
+      label: 'AppSec Pending',
+      desc: 'in security review stage',
+      count: items.filter(i => i.currentStage === 'AppSec').length,
       apply: () => setFilters({ ...EMPTY_FILTERS, stage: 'AppSec' as Stage }),
       accent: 'border-emerald-200 bg-emerald-50/50',
       countCls: 'text-emerald-600',
+    },
+    {
+      label: 'UAT Pending',
+      desc: 'in user acceptance testing',
+      count: items.filter(i => i.currentStage === 'UAT').length,
+      apply: () => setFilters({ ...EMPTY_FILTERS, stage: 'UAT' as Stage }),
+      accent: 'border-sky-200 bg-sky-50/50',
+      countCls: 'text-sky-600',
     },
   ], [items]);
 
@@ -340,7 +348,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
         <div className="border-b border-slate-100 px-5 py-3">
           <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Work Queue</h2>
         </div>
-        <div className="grid grid-cols-2 divide-slate-100 sm:grid-cols-3 lg:grid-cols-6 lg:divide-x">
+        <div className="grid grid-cols-2 divide-slate-100 sm:grid-cols-4 lg:grid-cols-7 lg:divide-x">
           {queue.map((q, i) => (
             <button
               key={q.label}
