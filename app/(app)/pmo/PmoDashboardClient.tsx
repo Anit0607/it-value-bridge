@@ -7,7 +7,7 @@ import { ItemTable } from '@/components/ItemTable';
 import { FilterBar, EMPTY_FILTERS, type Filters } from '@/components/FilterBar';
 import type { Item, DelaySource, Stage } from '@/lib/types';
 import { AlertOctagon, ArrowRight, Download } from 'lucide-react';
-import { InsightCard, RiskCard } from '@/components/Card';
+import { SectionCard, InsightCard } from '@/components/ui/SectionCard';
 
 function exportCsv(items: Item[]) {
   const CSV_HEADERS = [
@@ -373,10 +373,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
       </div>
 
       {needsAttention.length > 0 && (
-        <RiskCard
-          title={<><AlertOctagon className="h-4 w-4 text-rose-500" /> Needs Attention</>}
-          count={needsAttention.length}
-        >
+        <SectionCard title="Needs Attention" icon={AlertOctagon} tone="risk" count={needsAttention.length} noPad>
           <div className="grid gap-2 p-4 sm:grid-cols-2">
             {needsAttention.map(i => {
               const stale = daysSinceUpdate(i.lastUpdated);
@@ -401,7 +398,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
               );
             })}
           </div>
-        </RiskCard>
+        </SectionCard>
       )}
 
       <div className="space-y-3">

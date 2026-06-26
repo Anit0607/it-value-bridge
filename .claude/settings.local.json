@@ -115,7 +115,14 @@
       "Bash(git commit -m 'feat\\(pmo\\): show live counts on quick filter chips *)",
       "Bash(git commit -m 'fix\\(pmo\\): split AppSec/UAT into two separate Work Queue cards *)",
       "Bash(rm components/SummaryCard.tsx)",
-      "Bash(git commit -m 'chore\\(tokens\\): delete unused SummaryCard with non-semantic gray/blue/green/red classes *)"
+      "Bash(git commit -m 'chore\\(tokens\\): delete unused SummaryCard with non-semantic gray/blue/green/red classes *)",
+      "Bash(git commit -m 'feat\\(design\\): create SectionCard component in components/ui and apply to CIO dashboard *)",
+      "Bash(git commit -m 'feat\\(design\\): apply glassmorphism selectively to marketing layer only *)",
+      "Bash(git commit -m 'feat\\(design\\): add Badge component and wire into ItemTable chips *)",
+      "Bash(git commit -m 'feat\\(sidebar\\): polish — right border, group label visibility, spacing, active state *)",
+      "Bash(git commit -m 'feat\\(design\\): add reusable Button component to components/ui *)",
+      "Bash(rm components/Card.tsx)",
+      "Bash(git commit -m 'refactor\\(design\\): consolidate card system — remove components/Card.tsx *)"
     ]
   }
 }

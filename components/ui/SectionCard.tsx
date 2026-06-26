@@ -111,3 +111,24 @@ export function SectionCard({
     </div>
   );
 }
+
+// ─── InsightCard ─────────────────────────────────────────────────────────────
+// Compact branded card for portfolio insights, summary lines, and "all clear" states.
+// variant 'default' → brand indigo; variant 'success' → emerald.
+
+interface InsightCardProps {
+  variant?: 'default' | 'success';
+  children: ReactNode;
+}
+
+export function InsightCard({ variant = 'default', children }: InsightCardProps) {
+  const cls =
+    variant === 'success'
+      ? 'border-emerald-100 bg-emerald-50/60'
+      : 'border-brand-100 bg-brand-50/60';
+  return (
+    <div className={`rounded-xl border px-4 py-3 text-xs font-medium ${cls}`}>
+      {children}
+    </div>
+  );
+}
