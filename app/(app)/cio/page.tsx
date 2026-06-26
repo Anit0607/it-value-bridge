@@ -79,18 +79,21 @@ export default async function CioDashboard({
 
         {/* Delivery commitments */}
         <SectionCard title="Delivery Commitments" subtitle={periodLabel} icon={CalendarClock} tone="default">
-          <div className="grid grid-cols-3 gap-3 text-center">
-            <div className="rounded-lg bg-slate-50 py-4">
+          <div className="grid grid-cols-3 gap-3">
+            <div className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
               <div className="tabular text-3xl font-semibold text-slate-900">{monthlyCommitted.length}</div>
-              <div className="mt-1 text-[11px] font-medium text-slate-500">Promised</div>
+              <div className="mt-2 text-xs font-semibold text-slate-700">Promised</div>
+              <div className="mt-0.5 text-[11px] leading-snug text-slate-400">Committed for selected period</div>
             </div>
-            <div className="rounded-lg bg-emerald-50 py-4">
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50/70 p-4">
               <div className="tabular text-3xl font-semibold text-emerald-700">{delivered.length}</div>
-              <div className="mt-1 text-[11px] font-medium text-emerald-700">Value Delivered</div>
+              <div className="mt-2 text-xs font-semibold text-emerald-700">Value Delivered</div>
+              <div className="mt-0.5 text-[11px] leading-snug text-emerald-600/70">Completed and value-confirmed</div>
             </div>
-            <div className="rounded-lg bg-rose-50 py-4">
+            <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-4">
               <div className="tabular text-3xl font-semibold text-rose-700">{missed.length}</div>
-              <div className="mt-1 text-[11px] font-medium text-rose-700">Commitment Slippage</div>
+              <div className="mt-2 text-xs font-semibold text-rose-700">Commitment Slippage</div>
+              <div className="mt-0.5 text-[11px] leading-snug text-rose-600/70">Missed or delayed commitments</div>
             </div>
           </div>
           {missed.length > 0 && (
