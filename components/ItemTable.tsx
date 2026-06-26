@@ -157,14 +157,20 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) 
               const days = daysInStage(item.stageStartDate);
               const daysToEta = daysFromNow(item.stageExpectedDate);
               const closed = item.currentStage === 'Closed';
+              const rowBg =
+                rag === 'Red' ? 'bg-rose-50/40' :
+                rag === 'Amber' ? (i % 2 === 1 ? 'bg-amber-50/20' : 'bg-white') :
+                (i % 2 === 1 ? 'bg-slate-50/40' : 'bg-white');
+              const accentBorder =
+                rag === 'Red' ? 'border-l-[3px] border-l-rose-400' :
+                rag === 'Amber' ? 'border-l-[3px] border-l-amber-400' :
+                'border-l-[3px] border-l-transparent';
               return (
                 <tr
                   key={item.id}
-                  className={`group border-t border-slate-100 transition-colors hover:bg-brand-50/40 ${
-                    i % 2 === 1 ? 'bg-slate-50/40' : 'bg-white'
-                  }`}
+                  className={`group border-t border-slate-100 transition-colors hover:bg-brand-50/40 ${rowBg}`}
                 >
-                  <td className="px-4 py-2.5">
+                  <td className={`py-2.5 pl-3 pr-4 ${accentBorder}`}>
                     <Link
                       href={`/items/${item.id}`}
                       className="font-medium text-slate-800 transition-colors hover:text-brand-700 group-hover:text-brand-700"
