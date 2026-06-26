@@ -35,12 +35,18 @@ interface NavGroup {
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: 'Governance',
+    label: 'Command',
     items: [
       { href: '/cio', label: 'Command Center', icon: LayoutDashboard, roles: ['CIO'] },
       { href: '/pmo', label: 'PMO Control Tower', icon: ClipboardList, roles: ['PMO'] },
+    ],
+  },
+  {
+    label: 'Governance',
+    items: [
       { href: '/pmo/new', label: 'New Initiative', icon: PlusCircle, roles: ['PMO'] },
       { href: '/demands', label: 'Demands', icon: Lightbulb, roles: ['CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS'] },
+      { href: '/dependencies', label: 'Dependencies', icon: Link2, roles: ['CIO', 'PMO', 'VERTICAL_HEAD'] },
     ],
   },
   {
@@ -52,9 +58,8 @@ const NAV_GROUPS: NavGroup[] = [
     ],
   },
   {
-    label: 'Delivery Control',
+    label: 'Validation',
     items: [
-      { href: '/dependencies', label: 'Dependencies', icon: Link2, roles: ['CIO', 'PMO', 'VERTICAL_HEAD'] },
       { href: '/vertical-head', label: 'Ownership Workspace', icon: Briefcase, roles: ['VERTICAL_HEAD'] },
       { href: '/business', label: 'Value Validation', icon: CheckSquare, roles: ['BUSINESS'] },
     ],
