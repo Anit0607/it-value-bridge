@@ -7,6 +7,7 @@ import { ItemTable } from '@/components/ItemTable';
 import { FilterBar, EMPTY_FILTERS, type Filters } from '@/components/FilterBar';
 import type { Item, DelaySource, Stage } from '@/lib/types';
 import { AlertOctagon, ArrowRight, Download } from 'lucide-react';
+import { InsightCard, RiskCard } from '@/components/Card';
 
 function exportCsv(items: Item[]) {
   const CSV_HEADERS = [
@@ -372,15 +373,11 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
       </div>
 
       {needsAttention.length > 0 && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-4">
-          <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-rose-800">
-            <AlertOctagon className="h-4 w-4 text-rose-500" />
-            Needs Attention
-            <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-semibold text-rose-700">
-              {needsAttention.length}
-            </span>
-          </h2>
-          <div className="grid gap-2 sm:grid-cols-2">
+        <RiskCard
+          title={<><AlertOctagon className="h-4 w-4 text-rose-500" /> Needs Attention</>}
+          count={needsAttention.length}
+        >
+          <div className="grid gap-2 p-4 sm:grid-cols-2">
             {needsAttention.map(i => {
               const stale = daysSinceUpdate(i.lastUpdated);
               const overdue = daysFromNow(i.stageExpectedDate) < 0;
@@ -404,7 +401,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
               );
             })}
           </div>
-        </div>
+        </RiskCard>
       )}
 
       <div className="space-y-3">
@@ -478,13 +475,10 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
           </div>
         </div>
         {/* Portfolio insight */}
-        <div className={`rounded-lg border px-4 py-2.5 text-xs font-medium ${
-          insight.startsWith('All active')
-            ? 'border-emerald-100 bg-emerald-50/60 text-emerald-800'
-            : 'border-brand-100 bg-brand-50/60 text-brand-800'
-        }`}>
-          <span className="font-semibold">Portfolio insight: </span>{insight}
-        </div>
+        <InsightCard variant={insight.startsWith('All active') ? 'success' : 'default'}>
+          <span className={`font-semibold ${insight.startsWith('All active') ? 'text-emerald-800' : 'text-brand-800'}`}>Portfolio insight: </span>
+          <span className={insight.startsWith('All active') ? 'text-emerald-700' : 'text-brand-700'}>{insight}</span>
+        </InsightCard>
 
         <ItemTable items={filtered} emptyHint={emptyContext.title} emptySubhint={emptyContext.sub} />
       </div>
