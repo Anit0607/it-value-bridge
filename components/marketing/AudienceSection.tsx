@@ -66,7 +66,7 @@ const ROLES: Role[] = [
 
 export function AudienceSection() {
   return (
-    <section className="border-b border-slate-200 bg-white py-20 lg:py-28">
+    <section id="roles" className="border-b border-slate-200 bg-white py-20 lg:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Reveal className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold uppercase tracking-wider text-brand-600">

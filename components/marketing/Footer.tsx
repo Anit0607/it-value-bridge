@@ -5,9 +5,10 @@ const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] =
   {
     heading: 'Platform',
     links: [
-      { label: 'Governance Lifecycle', href: '#methodology' },
-      { label: 'Delivery Confidence', href: '#health' },
-      { label: 'Leadership Value Report', href: '#reporting' },
+      { label: 'Platform', href: '#platform' },
+      { label: 'Value Intelligence', href: '#value-intelligence' },
+      { label: 'Role Views', href: '#roles' },
+      { label: 'Leadership Reports', href: '#reports' },
     ],
   },
   {

@@ -39,7 +39,7 @@ const QUESTIONS = [
 
 export function ProductPromiseSection() {
   return (
-    <section className="border-b border-slate-200 bg-navy-900 py-20 lg:py-28">
+    <section id="value-intelligence" className="border-b border-slate-200 bg-navy-900 py-20 lg:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Reveal className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold uppercase tracking-wider text-brand-400">

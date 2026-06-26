@@ -12,7 +12,7 @@ const TRUST = [
 
 export function CTASection() {
   return (
-    <section id="reporting" className="bg-slate-50 py-20 lg:py-28">
+    <section id="reports" className="bg-slate-50 py-20 lg:py-28">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <Reveal>
           <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white px-6 py-14 text-center shadow-card sm:px-12 lg:py-20">

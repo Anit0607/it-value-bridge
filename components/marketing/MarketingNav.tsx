@@ -5,9 +5,10 @@ import Link from 'next/link';
 import { Layers, Menu, X } from 'lucide-react';
 
 const LINKS = [
-  { href: '#methodology', label: 'Methodology' },
-  { href: '#health', label: 'Portfolio health' },
-  { href: '#reporting', label: 'Reporting' },
+  { href: '#platform', label: 'Platform' },
+  { href: '#value-intelligence', label: 'Value Intelligence' },
+  { href: '#roles', label: 'Role Views' },
+  { href: '#reports', label: 'Leadership Reports' },
 ];
 
 export function MarketingNav() {
@@ -48,7 +49,7 @@ export function MarketingNav() {
             href="/sign-in"
             className="rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-brand-700"
           >
-            Get started
+            View Demo
           </Link>
         </div>
 
@@ -87,7 +88,7 @@ export function MarketingNav() {
                 href="/sign-in"
                 className="rounded-lg bg-brand-600 px-3 py-2.5 text-center text-sm font-semibold text-white hover:bg-brand-700"
               >
-                Get started
+                View Demo
               </Link>
             </div>
           </div>
