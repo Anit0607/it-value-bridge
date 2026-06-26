@@ -25,14 +25,14 @@ export default async function BusinessSpocView() {
     <div className="space-y-6">
       <PageHeader
         title="My Items"
-        subtitle={`Items where you are the Business SPOC · ${items.length} total`}
+        subtitle={`Your delivery commitments and business impact confirmations · ${items.length} total`}
       />
 
       {pending.length > 0 && (
         <div className="rounded-xl border border-amber-200 bg-amber-50/60 p-4">
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-amber-800">
             <ClipboardCheck className="h-4 w-4 text-amber-600" />
-            Action Required — Business Validation
+            Action Required — Confirm Business Impact
             <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-700">
               {pending.length}
             </span>
@@ -55,7 +55,7 @@ export default async function BusinessSpocView() {
                   href={`/items/${i.id}/validate`}
                   className="inline-flex flex-shrink-0 items-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-colors hover:bg-amber-600"
                 >
-                  Validate
+                  Confirm Impact
                   <ArrowRight className="h-3.5 w-3.5" />
                 </Link>
               </div>

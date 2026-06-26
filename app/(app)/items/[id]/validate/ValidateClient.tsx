@@ -51,8 +51,8 @@ export function ValidateClient({ item }: { item: Item }) {
           <ChevronLeft className="h-4 w-4" />
           {item.title}
         </Link>
-        <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">Business Validation</h1>
-        <p className="mt-0.5 text-sm text-slate-500">Confirm whether the expected business outcome was achieved.</p>
+        <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">Did the delivery create the promised impact?</h1>
+        <p className="mt-0.5 text-sm text-slate-500">Confirm whether the delivered IT work created measurable business impact against the original commitment.</p>
       </div>
 
       <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">

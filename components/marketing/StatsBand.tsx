@@ -3,10 +3,10 @@
 import { Reveal } from './Reveal';
 
 const STATS = [
-  { value: '11', label: 'Delivery stages, BRD → Closed' },
-  { value: '10', label: 'Governance areas tracked' },
-  { value: '4', label: 'Role-based leadership views' },
-  { value: '2', label: 'Methodologies — Waterfall & Agile' },
+  { value: '11', label: 'Value journey milestones, BRD → business impact' },
+  { value: '10', label: 'Governance dimensions translated into insight' },
+  { value: '4', label: 'Leadership views, each tuned to a decision level' },
+  { value: '2', label: 'Methodologies — Waterfall & Agile — one intelligence layer' },
 ];
 
 export function StatsBand() {

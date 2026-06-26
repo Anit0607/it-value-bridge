@@ -43,7 +43,7 @@ export default async function CioDashboard({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="CIO Dashboard" subtitle="Portfolio health across all verticals — real-time view">
+      <PageHeader title="CIO Dashboard" subtitle="Where is delivery risk threatening business outcomes? — real-time across all verticals">
         <div className="flex flex-wrap items-center gap-2">
           <PeriodPicker />
           <Link
@@ -51,7 +51,7 @@ export default async function CioDashboard({
             className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
           >
             <FileBarChart className="h-4 w-4" />
-            Generate Monthly Report
+            Value Realization Report
           </Link>
         </div>
       </PageHeader>

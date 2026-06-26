@@ -17,7 +17,7 @@ export default async function VerticalHeadDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="My Portfolio" subtitle={`${verticalHead} · ${items.length} items`} />
+      <PageHeader title="My Portfolio" subtitle={`${verticalHead} · ${items.length} delivery commitments`} />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="Total Items" value={items.length} icon={Briefcase} accent="brand" />

@@ -61,7 +61,7 @@ export default async function ReportPage({
 
   return (
     <div className="mx-auto max-w-4xl space-y-6">
-      <PageHeader title="Delivery & Value Report" subtitle={`Period: ${period.label}`}>
+      <PageHeader title="Delivery & Value Report" subtitle={`Leadership-ready value realization summary · ${period.label}`}>
         <div className="flex flex-wrap items-center gap-2">
           <PeriodPicker />
           <form action="javascript:window.print()">

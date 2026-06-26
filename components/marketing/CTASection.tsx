@@ -30,10 +30,10 @@ export function CTASection() {
                 Get started
               </p>
               <h2 className="mx-auto mt-3 max-w-2xl text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-                Give leadership a clear line of sight from IT delivery to business value.
+                Stop reporting effort. Start communicating value.
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-lg leading-relaxed text-slate-600">
-                Sign in with a demo role and explore the full portfolio in seconds.
+                See how banking IT delivery becomes board-ready value intelligence. Sign in with a demo role and explore the full portfolio in under a minute.
               </p>
 
               <div className="mt-8 flex justify-center">
