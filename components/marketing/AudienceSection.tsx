@@ -43,7 +43,7 @@ const ROLES: Role[] = [
     title: 'Vertical Head',
     tagline: 'Your delivery. Your accountability.',
     points: [
-      'View only their vertical's pipeline',
+      "View only their vertical's pipeline",
       'Flag delays with reasons and owners',
       'Current-stage accountability without noise',
     ],
