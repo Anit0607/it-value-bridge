@@ -110,7 +110,7 @@ export function Sidebar({
 
   return (
     <aside
-      className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col bg-navy-900 text-slate-300 transition-transform duration-200 lg:translate-x-0 ${
+      className={`fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-white/5 bg-navy-900 text-slate-300 transition-transform duration-200 lg:translate-x-0 ${
         mobileOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
       }`}
     >
@@ -130,8 +130,8 @@ export function Sidebar({
       {/* Nav */}
       <nav className="flex-1 overflow-y-auto px-3 py-3">
         {visibleGroups.map((group, gi) => (
-          <div key={group.label} className={gi > 0 ? 'mt-4' : ''}>
-            <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
+          <div key={group.label} className={gi > 0 ? 'mt-6' : ''}>
+            <p className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">
               {group.label}
             </p>
             <div className="space-y-0.5">
@@ -147,7 +147,7 @@ export function Sidebar({
                     onClick={onNavigate}
                     className={`group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors duration-150 ${
                       active
-                        ? 'bg-brand-600 text-white shadow-sm'
+                        ? 'bg-brand-600/95 text-white shadow-sm'
                         : 'text-slate-400 hover:bg-white/5 hover:text-white'
                     }`}
                   >
