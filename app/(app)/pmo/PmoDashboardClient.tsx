@@ -102,8 +102,68 @@ const CHIPS: Chip[] = [
   },
 ];
 
+interface QueueItem {
+  label: string;
+  desc: string;
+  count: number;
+  apply: () => void;
+  accent: string;
+  countCls: string;
+}
+
 export function PmoDashboardClient({ items }: { items: Item[] }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
+
+  const queue = useMemo((): QueueItem[] => [
+    {
+      label: 'Overdue Stage Updates',
+      desc: 'past their stage deadline',
+      count: items.filter(i => i.currentStage !== 'Closed' && daysFromNow(i.stageExpectedDate) < 0).length,
+      apply: () => setFilters({ ...EMPTY_FILTERS, rag: 'Red' as const }),
+      accent: 'border-rose-200 bg-rose-50/50',
+      countCls: 'text-rose-600',
+    },
+    {
+      label: 'Stale Updates',
+      desc: 'not updated in the last 7 days',
+      count: items.filter(i => i.currentStage !== 'Closed' && daysSinceUpdate(i.lastUpdated) > 7).length,
+      apply: () => setFilters({ ...EMPTY_FILTERS, staleOnly: true }),
+      accent: 'border-orange-200 bg-orange-50/50',
+      countCls: 'text-orange-600',
+    },
+    {
+      label: 'Due This Week',
+      desc: 'stage deadline in the next 7 days',
+      count: items.filter(i => { const d = daysFromNow(i.stageExpectedDate); return i.currentStage !== 'Closed' && d >= 0 && d <= 7; }).length,
+      apply: () => setFilters({ ...EMPTY_FILTERS, dueThisWeek: true }),
+      accent: 'border-brand-200 bg-brand-50/50',
+      countCls: 'text-brand-600',
+    },
+    {
+      label: 'Business Pending',
+      desc: 'delay attributed to business side',
+      count: items.filter(i => i.currentStage !== 'Closed' && i.delaySource === 'Business').length,
+      apply: () => setFilters({ ...EMPTY_FILTERS, delaySource: 'Business' as DelaySource }),
+      accent: 'border-violet-200 bg-violet-50/50',
+      countCls: 'text-violet-600',
+    },
+    {
+      label: 'Vendor Pending',
+      desc: 'delay attributed to vendor',
+      count: items.filter(i => i.currentStage !== 'Closed' && i.delaySource === 'Vendor').length,
+      apply: () => setFilters({ ...EMPTY_FILTERS, delaySource: 'Vendor' as DelaySource }),
+      accent: 'border-amber-200 bg-amber-50/50',
+      countCls: 'text-amber-600',
+    },
+    {
+      label: 'AppSec / UAT Pending',
+      desc: 'in security review or UAT stage',
+      count: items.filter(i => i.currentStage === 'AppSec' || i.currentStage === 'UAT').length,
+      apply: () => setFilters({ ...EMPTY_FILTERS, stage: 'AppSec' as Stage }),
+      accent: 'border-emerald-200 bg-emerald-50/50',
+      countCls: 'text-emerald-600',
+    },
+  ], [items]);
 
   const needsAttention = useMemo(
     () => items.filter(i => i.currentStage !== 'Closed' && computeRAG(i) === 'Red'),
@@ -137,6 +197,34 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
 
   return (
     <>
+      {/* Work Queue */}
+      <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
+        <div className="border-b border-slate-100 px-5 py-3">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Work Queue</h2>
+        </div>
+        <div className="grid grid-cols-2 divide-slate-100 sm:grid-cols-3 lg:grid-cols-6 lg:divide-x">
+          {queue.map((q, i) => (
+            <button
+              key={q.label}
+              type="button"
+              onClick={q.apply}
+              className={`group flex flex-col gap-1.5 border-b p-4 text-left transition-colors hover:bg-slate-50 lg:border-b-0 ${q.accent} ${i % 2 === 1 ? 'border-l border-slate-100 lg:border-l-0' : ''}`}
+            >
+              <span className={`tabular text-3xl font-semibold leading-none ${q.countCls}`}>
+                {q.count}
+              </span>
+              <span className="text-xs font-semibold text-slate-700 group-hover:text-slate-900">
+                {q.label}
+              </span>
+              <span className="text-[11px] leading-snug text-slate-500">{q.desc}</span>
+              <span className="mt-1 text-[11px] font-semibold text-brand-600 group-hover:underline">
+                View items →
+              </span>
+            </button>
+          ))}
+        </div>
+      </div>
+
       {needsAttention.length > 0 && (
         <div className="rounded-xl border border-rose-200 bg-rose-50/60 p-4">
           <h2 className="mb-3 flex items-center gap-2 text-sm font-semibold text-rose-800">
