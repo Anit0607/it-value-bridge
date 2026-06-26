@@ -231,6 +231,36 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
     setFilters(f => chip.active(f) ? chip.clear(f) : chip.apply(f));
   };
 
+  const insight = useMemo(() => {
+    const active = items.filter(i => i.currentStage !== 'Closed');
+    const overdue  = active.filter(i => daysFromNow(i.stageExpectedDate) < 0).length;
+    const stale    = active.filter(i => daysSinceUpdate(i.lastUpdated) > 7).length;
+    const business = active.filter(i => i.delaySource === 'Business').length;
+    const vendor   = active.filter(i => i.delaySource === 'Vendor').length;
+    const regDue   = active.filter(i => i.isRegulatory && daysFromNow(i.regulatoryDueDate ?? '9999') < 14).length;
+
+    const attn = new Set<string>();
+    active.forEach(i => {
+      if (daysFromNow(i.stageExpectedDate) < 0)   attn.add(i.id);
+      if (daysSinceUpdate(i.lastUpdated) > 7)      attn.add(i.id);
+      if (i.delaySource === 'Business' || i.delaySource === 'Vendor') attn.add(i.id);
+    });
+
+    if (attn.size === 0 && regDue === 0) {
+      return 'All active initiatives are on track. No escalations needed today.';
+    }
+
+    const parts: string[] = [];
+    if (overdue  > 0) parts.push(`${overdue} overdue`);
+    if (stale    > 0) parts.push(`${stale} stale`);
+    if (business > 0) parts.push(`${business} awaiting business action`);
+    if (vendor   > 0) parts.push(`${vendor} with vendor delay`);
+    if (regDue   > 0) parts.push(`${regDue} regulatory item${regDue !== 1 ? 's' : ''} due within 14 days`);
+
+    const n = attn.size;
+    return `${n} initiative${n !== 1 ? 's' : ''} need${n === 1 ? 's' : ''} PMO attention today: ${parts.join(', ')}.`;
+  }, [items]);
+
   return (
     <>
       {/* Work Queue */}
@@ -348,6 +378,15 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
             {filtered.length} of {items.length}
           </span>
         </div>
+        {/* Portfolio insight */}
+        <div className={`rounded-lg border px-4 py-2.5 text-xs font-medium ${
+          insight.startsWith('All active')
+            ? 'border-emerald-100 bg-emerald-50/60 text-emerald-800'
+            : 'border-brand-100 bg-brand-50/60 text-brand-800'
+        }`}>
+          <span className="font-semibold">Portfolio insight: </span>{insight}
+        </div>
+
         <ItemTable items={filtered} />
       </div>
     </>
