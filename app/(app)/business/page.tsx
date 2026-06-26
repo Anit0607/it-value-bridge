@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { RagDot } from '@/components/RagBadge';
 import { PageHeader } from '@/components/PageHeader';
 import { ClipboardCheck, ArrowRight, Inbox } from 'lucide-react';
+import { TodaysFocus } from '@/components/TodaysFocus';
 
 const ACHIEVED_TONE: Record<string, string> = {
   Yes: 'text-emerald-600',
@@ -26,6 +27,15 @@ export default async function BusinessSpocView() {
       <PageHeader
         title="Business Value Validation"
         subtitle={`Your delivery commitments and outcome confirmations · ${items.length} total`}
+      />
+
+      <TodaysFocus
+        title="Pending validations"
+        items={[
+          { label: 'Validate business outcomes', href: '/business' },
+          { label: 'Confirm actual benefit against target', href: '/business' },
+          { label: 'Sign off value realization', href: '/business' },
+        ]}
       />
 
       {pending.length > 0 && (

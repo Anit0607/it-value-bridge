@@ -6,6 +6,7 @@ import { PmoDashboardClient } from './PmoDashboardClient';
 import { PageHeader } from '@/components/PageHeader';
 import { KpiCard } from '@/components/KpiCard';
 import { Layers, CheckCircle2, AlertTriangle, AlertOctagon, PlusCircle } from 'lucide-react';
+import { TodaysFocus } from '@/components/TodaysFocus';
 
 export default async function PmoDashboard() {
   const { items, activeCount, counts } = await getPmoList();
@@ -21,6 +22,16 @@ export default async function PmoDashboard() {
           New Initiative
         </Link>
       </PageHeader>
+
+      <TodaysFocus
+        title="Today's governance actions"
+        items={[
+          { label: 'Review red items', href: '/pmo' },
+          { label: 'Update stale initiatives', href: '/pmo' },
+          { label: 'Chase business and vendor delays', href: '/pmo' },
+          { label: 'Prepare leadership report', href: '/report' },
+        ]}
+      />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="Active Items" value={activeCount} sub={`of ${items.length} total`} icon={Layers} accent="brand" />

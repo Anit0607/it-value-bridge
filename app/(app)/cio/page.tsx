@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { PeriodPicker } from '@/components/PeriodPicker';
 import { StageFunnel } from '@/components/StageFunnel';
 import { RagDot } from '@/components/RagBadge';
+import { TodaysFocus } from '@/components/TodaysFocus';
 import { computeRAG } from '@/lib/rag';
 import {
   Activity,
@@ -55,6 +56,16 @@ export default async function CioDashboard({
           </Link>
         </div>
       </PageHeader>
+
+      <TodaysFocus
+        title="Today's leadership focus"
+        items={[
+          { label: 'Review value at risk', href: '/cio' },
+          { label: 'Check commitment slippage', href: '/cio' },
+          { label: 'Review regulatory watch', href: '/cio' },
+          { label: 'Open value realization report', href: '/value' },
+        ]}
+      />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <KpiCard label="Active Items" value={total} sub={`of ${totalCount} total`} icon={Activity} accent="brand" />
