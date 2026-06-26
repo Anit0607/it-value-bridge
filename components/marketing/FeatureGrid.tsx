@@ -35,7 +35,7 @@ const FEATURES: Feature[] = [
   },
   {
     icon: Users,
-    title: 'Four Views, One IT Value Portfolio',
+    title: 'Role-Based Leadership Views',
     body: 'Executive Command Center for the CIO, Governance Control Tower for PMO, Delivery Ownership View for Vertical Heads, Business Impact Validation for SPOCs.',
   },
   {
