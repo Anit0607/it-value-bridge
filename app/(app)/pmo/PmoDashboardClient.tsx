@@ -5,8 +5,84 @@ import Link from 'next/link';
 import { computeRAG, daysSinceUpdate, daysFromNow } from '@/lib/rag';
 import { ItemTable } from '@/components/ItemTable';
 import { FilterBar, EMPTY_FILTERS, type Filters } from '@/components/FilterBar';
-import type { Item } from '@/lib/types';
+import type { Item, DelaySource } from '@/lib/types';
 import { AlertOctagon, ArrowRight } from 'lucide-react';
+
+interface Chip {
+  key: string;
+  label: string;
+  active: (f: Filters) => boolean;
+  apply: (f: Filters) => Filters;
+  clear: (f: Filters) => Filters;
+  tone: string;
+  activeTone: string;
+}
+
+const CHIPS: Chip[] = [
+  {
+    key: 'red',
+    label: 'Red only',
+    active: f => f.rag === 'Red',
+    apply: f => ({ ...f, rag: 'Red' as const }),
+    clear: f => ({ ...f, rag: '' }),
+    tone: 'border-slate-200 bg-white text-slate-600 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700',
+    activeTone: 'border-rose-400 bg-rose-50 text-rose-700',
+  },
+  {
+    key: 'amber',
+    label: 'Amber only',
+    active: f => f.rag === 'Amber',
+    apply: f => ({ ...f, rag: 'Amber' as const }),
+    clear: f => ({ ...f, rag: '' }),
+    tone: 'border-slate-200 bg-white text-slate-600 hover:border-amber-300 hover:bg-amber-50 hover:text-amber-700',
+    activeTone: 'border-amber-400 bg-amber-50 text-amber-700',
+  },
+  {
+    key: 'stale',
+    label: 'Stale >7d',
+    active: f => f.staleOnly,
+    apply: f => ({ ...f, staleOnly: true }),
+    clear: f => ({ ...f, staleOnly: false }),
+    tone: 'border-slate-200 bg-white text-slate-600 hover:border-orange-300 hover:bg-orange-50 hover:text-orange-700',
+    activeTone: 'border-orange-400 bg-orange-50 text-orange-700',
+  },
+  {
+    key: 'due',
+    label: 'Due this week',
+    active: f => f.dueThisWeek,
+    apply: f => ({ ...f, dueThisWeek: true }),
+    clear: f => ({ ...f, dueThisWeek: false }),
+    tone: 'border-slate-200 bg-white text-slate-600 hover:border-brand-300 hover:bg-brand-50 hover:text-brand-700',
+    activeTone: 'border-brand-400 bg-brand-50 text-brand-700',
+  },
+  {
+    key: 'regulatory',
+    label: 'Regulatory',
+    active: f => f.regulatory,
+    apply: f => ({ ...f, regulatory: true }),
+    clear: f => ({ ...f, regulatory: false }),
+    tone: 'border-slate-200 bg-white text-slate-600 hover:border-rose-300 hover:bg-rose-50 hover:text-rose-700',
+    activeTone: 'border-rose-400 bg-rose-50 text-rose-700',
+  },
+  {
+    key: 'business',
+    label: 'Business delay',
+    active: f => f.delaySource === 'Business',
+    apply: f => ({ ...f, delaySource: 'Business' as DelaySource }),
+    clear: f => ({ ...f, delaySource: '' }),
+    tone: 'border-slate-200 bg-white text-slate-600 hover:border-violet-300 hover:bg-violet-50 hover:text-violet-700',
+    activeTone: 'border-violet-400 bg-violet-50 text-violet-700',
+  },
+  {
+    key: 'vendor',
+    label: 'Vendor delay',
+    active: f => f.delaySource === 'Vendor',
+    apply: f => ({ ...f, delaySource: 'Vendor' as DelaySource }),
+    clear: f => ({ ...f, delaySource: '' }),
+    tone: 'border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-100 hover:text-slate-800',
+    activeTone: 'border-slate-500 bg-slate-100 text-slate-800',
+  },
+];
 
 export function PmoDashboardClient({ items }: { items: Item[] }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
@@ -24,6 +100,12 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
       if (filters.verticalHead && i.verticalHead !== filters.verticalHead) return false;
       if (filters.type && i.type !== filters.type) return false;
       if (filters.regulatory && !i.isRegulatory) return false;
+      if (filters.staleOnly && (i.currentStage === 'Closed' || daysSinceUpdate(i.lastUpdated) <= 7)) return false;
+      if (filters.dueThisWeek) {
+        const d = daysFromNow(i.stageExpectedDate);
+        if (i.currentStage === 'Closed' || d < 0 || d > 7) return false;
+      }
+      if (filters.delaySource && i.delaySource !== filters.delaySource) return false;
       if (filters.search) {
         const q = filters.search.toLowerCase();
         if (!i.title.toLowerCase().includes(q) && !i.verticalHead.toLowerCase().includes(q)) return false;
@@ -31,6 +113,9 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
       return true;
     });
   }, [items, filters]);
+
+  const toggleChip = (chip: Chip) =>
+    setFilters(f => chip.active(f) ? chip.clear(f) : chip.apply(f));
 
   return (
     <>
@@ -71,6 +156,29 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
       )}
 
       <div className="space-y-3">
+        {/* Quick filter chips */}
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
+            Quick filters
+          </span>
+          {CHIPS.map(chip => {
+            const isActive = chip.active(filters);
+            return (
+              <button
+                key={chip.key}
+                type="button"
+                onClick={() => toggleChip(chip)}
+                className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                  isActive ? chip.activeTone : chip.tone
+                }`}
+              >
+                {chip.label}
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Full filter bar */}
         <div className="flex items-center justify-between">
           <FilterBar filters={filters} onChange={setFilters} />
           <span className="hidden flex-shrink-0 text-xs text-slate-400 sm:block">

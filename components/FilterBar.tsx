@@ -1,7 +1,7 @@
 'use client';
 
 import { STAGES, VERTICAL_HEADS } from '@/lib/types';
-import type { Stage, RAG, ItemType } from '@/lib/types';
+import type { Stage, RAG, ItemType, DelaySource } from '@/lib/types';
 import { Search, X } from 'lucide-react';
 
 export interface Filters {
@@ -11,10 +11,14 @@ export interface Filters {
   type: ItemType | '';
   search: string;
   regulatory: boolean;
+  staleOnly: boolean;
+  dueThisWeek: boolean;
+  delaySource: DelaySource | '';
 }
 
 export const EMPTY_FILTERS: Filters = {
-  stage: '', rag: '', verticalHead: '', type: '', search: '', regulatory: false,
+  stage: '', rag: '', verticalHead: '', type: '', search: '',
+  regulatory: false, staleOnly: false, dueThisWeek: false, delaySource: '',
 };
 
 interface Props {
@@ -32,7 +36,8 @@ export function FilterBar({ filters, onChange }: Props) {
       onChange({ ...filters, [key]: e.target.value });
 
   const hasFilters =
-    filters.stage || filters.rag || filters.verticalHead || filters.type || filters.search || filters.regulatory;
+    filters.stage || filters.rag || filters.verticalHead || filters.type || filters.search ||
+    filters.regulatory || filters.staleOnly || filters.dueThisWeek || filters.delaySource;
 
   return (
     <div className="flex flex-wrap items-center gap-2">
