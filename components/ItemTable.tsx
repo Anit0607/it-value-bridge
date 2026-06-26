@@ -228,6 +228,9 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) 
               const days = daysInStage(item.stageStartDate);
               const daysToEta = daysFromNow(item.stageExpectedDate);
               const closed = item.currentStage === 'Closed';
+              const stale = daysSinceUpdate(item.lastUpdated);
+              const staleLabel = stale === 0 ? 'today' : stale === 1 ? 'yesterday' : `${stale}d ago`;
+              const staleCls = stale >= 7 ? 'text-rose-500 font-medium' : stale >= 4 ? 'text-amber-500' : 'text-slate-400';
               const rowBg =
                 rag === 'Red' ? 'bg-rose-50/40' :
                 rag === 'Amber' ? (i % 2 === 1 ? 'bg-amber-50/20' : 'bg-white') :
@@ -249,13 +252,18 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint }: Props) 
                       className="h-3.5 w-3.5 rounded border-slate-300 text-brand-600 focus:ring-brand-500"
                     />
                   </td>
-                  <td className={`py-2.5 pl-3 pr-4 ${accentBorder}`}>
+                  <td className={`py-2 pl-3 pr-4 ${accentBorder}`}>
                     <Link
                       href={`/items/${item.id}`}
                       className="font-medium text-slate-800 transition-colors hover:text-brand-700 group-hover:text-brand-700"
                     >
                       {item.title}
                     </Link>
+                    {!closed && (
+                      <div className={`mt-0.5 text-[11px] ${staleCls}`}>
+                        Updated {staleLabel}
+                      </div>
+                    )}
                   </td>
                   <td className="px-4 py-2.5">
                     <span
