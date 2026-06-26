@@ -58,25 +58,27 @@ export default async function CioDashboard({
         </div>
       </PageHeader>
 
-      <TodaysFocus
-        title="Today's leadership focus"
-        items={[
-          { label: 'Review value at risk', href: '/cio' },
-          { label: 'Check commitment slippage', href: '/cio' },
-          { label: 'Review regulatory watch', href: '/cio' },
-          { label: 'Open value realization report', href: '/value' },
-        ]}
-      />
+      {/* ── Executive Summary Zone ── */}
+      <div className="space-y-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
+        <TodaysFocus
+          title="Today's leadership focus"
+          items={[
+            { label: 'Review value at risk', href: '/cio' },
+            { label: 'Check commitment slippage', href: '/cio' },
+            { label: 'Review regulatory watch', href: '/cio' },
+            { label: 'Open value realization report', href: '/value' },
+          ]}
+        />
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard label="Active Items" value={total} sub={`of ${totalCount} total`} icon={Activity} accent="brand" />
-        <KpiCard label="On Track" value={counts.green} sub={`${pct(counts.green)}%`} icon={CheckCircle2} accent="emerald" />
-        <KpiCard label="At Risk" value={counts.amber} sub={`${pct(counts.amber)}%`} icon={AlertTriangle} accent="amber" />
-        <KpiCard label="Value at Risk" value={counts.red} sub={`${pct(counts.red)}%`} icon={AlertOctagon} accent="rose" />
-      </div>
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <KpiCard label="Active Items" value={total} sub={`of ${totalCount} total`} icon={Activity} accent="brand" />
+          <KpiCard label="On Track" value={counts.green} sub={`${pct(counts.green)}%`} icon={CheckCircle2} accent="emerald" />
+          <KpiCard label="At Risk" value={counts.amber} sub={`${pct(counts.amber)}%`} icon={AlertTriangle} accent="amber" />
+          <KpiCard label="Value at Risk" value={counts.red} sub={`${pct(counts.red)}%`} icon={AlertOctagon} accent="rose" />
+        </div>
 
-      {/* Delivery commitments — first executive question after health */}
-      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+        {/* Delivery commitments */}
+        <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
         <div className="mb-4 flex items-center gap-2">
           <CalendarClock className="h-4 w-4 text-slate-400" />
           <h2 className="text-sm font-semibold text-slate-800">Delivery Commitments</h2>
@@ -111,7 +113,9 @@ export default async function CioDashboard({
             </ul>
           </div>
         )}
+        </div>
       </div>
+      {/* ── End Executive Summary Zone ── */}
 
       {delays.length > 0 && (
         <SectionCard title="Delays Needing Attention" icon={AlertOctagon} tone="risk" count={delays.length} subtitle="Worst slip first" noPad>
