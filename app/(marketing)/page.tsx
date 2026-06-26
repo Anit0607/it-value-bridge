@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Hero } from '@/components/marketing/Hero';
 import { PainSection } from '@/components/marketing/PainSection';
+import { WhyNowSection } from '@/components/marketing/WhyNowSection';
 import { StatsBand } from '@/components/marketing/StatsBand';
 import { AudienceSection } from '@/components/marketing/AudienceSection';
 import { FeatureGrid } from '@/components/marketing/FeatureGrid';
@@ -17,6 +18,7 @@ export default function LandingPage() {
     <>
       <Hero />
       <PainSection />
+      <WhyNowSection />
       <StatsBand />
       <AudienceSection />
       <FeatureGrid />
