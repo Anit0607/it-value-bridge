@@ -3,18 +3,18 @@ import { Layers } from 'lucide-react';
 
 const COLUMNS: { heading: string; links: { label: string; href: string }[] }[] = [
   {
-    heading: 'Product',
+    heading: 'Platform',
     links: [
-      { label: 'Methodology', href: '#methodology' },
-      { label: 'Portfolio health', href: '#health' },
-      { label: 'Reporting', href: '#reporting' },
+      { label: 'Governance Lifecycle', href: '#methodology' },
+      { label: 'Delivery Confidence', href: '#health' },
+      { label: 'Leadership Value Report', href: '#reporting' },
     ],
   },
   {
-    heading: 'Roles',
+    heading: 'Who it serves',
     links: [
-      { label: 'CIO', href: '/sign-in' },
-      { label: 'PMO', href: '/sign-in' },
+      { label: 'CIO / Head of IT', href: '/sign-in' },
+      { label: 'PMO / Governance Team', href: '/sign-in' },
       { label: 'Vertical Head', href: '/sign-in' },
       { label: 'Business SPOC', href: '/sign-in' },
     ],
@@ -44,8 +44,9 @@ export function Footer() {
               </span>
             </div>
             <p className="mt-4 max-w-xs text-sm leading-relaxed text-slate-500">
-              Portfolio management that translates banking IT delivery into measurable business
-              value for leadership.
+              A banking-focused IT value intelligence platform that helps CIOs and PMO teams
+              translate delivery progress, risks, delays, and outcomes into leadership-ready
+              business value.
             </p>
           </div>
 
@@ -74,7 +75,7 @@ export function Footer() {
           <p className="text-xs text-slate-400">
             © {new Date().getFullYear()} IT Value Bridge. Prototype build.
           </p>
-          <p className="text-xs text-slate-400">Built for banking IT portfolio management.</p>
+          <p className="text-xs text-slate-400">IT value intelligence for banking IT leadership.</p>
         </div>
       </div>
     </footer>

@@ -85,8 +85,9 @@ export default function SignInPage() {
             Bridge IT delivery to<br />measurable business value.
           </h1>
           <p className="mt-4 max-w-sm text-sm leading-relaxed text-slate-400">
-            Convert every CR and project from BRD to business impact — with Delivery Confidence,
-            Governance Lifecycle Visibility, and Leadership Value Reports for banking IT.
+            A banking-focused IT value intelligence platform that helps CIOs and PMO teams
+            translate delivery progress, risks, delays, and outcomes into leadership-ready
+            business value.
           </p>
         </div>
         <Link
