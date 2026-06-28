@@ -2,7 +2,7 @@ import NextAuth from 'next-auth';
 import { authConfig } from './auth.config';
 import { NextResponse } from 'next/server';
 import { getRoleHome } from '@/lib/rbac';
-import type { Role } from '@prisma/client';
+import type { Role } from '@/lib/types';
 
 const { auth } = NextAuth(authConfig);
 
@@ -24,7 +24,7 @@ export default auth(req => {
     return NextResponse.redirect(new URL('/sign-in', req.url));
   }
 
-  const role = user.role as string;
+  const role = user.role as Role;
 
   // ADMIN has full access to all dashboards and pages
   if (role === 'ADMIN') return NextResponse.next();
