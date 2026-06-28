@@ -15,11 +15,11 @@ export default async function EditInitiativePage({ params }: { params: { id: str
     select: {
       id: true,
       title: true,
-      requirement: true,
-      verticalHead: true,
+      description: true,
+      verticalHeadName: true,
       businessSpoc: true,
       businessSponsor: true,
-      goLiveDate: true,
+      expectedGoLiveDate: true,
       isRegulatory: true,
       regulatoryBody: true,
       regulatoryDueDate: true,
@@ -33,11 +33,11 @@ export default async function EditInitiativePage({ params }: { params: { id: str
       id={item.id}
       defaults={{
         title: item.title,
-        requirement: item.requirement ?? '',
-        verticalHead: item.verticalHead,
+        requirement: item.description ?? '',
+        verticalHead: item.verticalHeadName ?? '',
         businessSpoc: item.businessSpoc ?? '',
         businessSponsor: item.businessSponsor ?? '',
-        goLiveDate: item.goLiveDate ? item.goLiveDate.toISOString().slice(0, 10) : '',
+        goLiveDate: item.expectedGoLiveDate ? item.expectedGoLiveDate.toISOString().slice(0, 10) : '',
         isRegulatory: item.isRegulatory,
         regulatoryBody: item.regulatoryBody ?? '',
         regulatoryDueDate: item.regulatoryDueDate
