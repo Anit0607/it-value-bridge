@@ -467,6 +467,54 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
   const user = await requireRole('PMO', 'CIO');
   const today = new Date();
 
+  // Fetch current values to build a field-level diff for the audit trail
+  const current = await prisma.initiative.findUnique({
+    where: { id },
+    select: {
+      title: true,
+      description: true,
+      verticalHeadName: true,
+      businessSpoc: true,
+      businessSponsor: true,
+      expectedGoLiveDate: true,
+      isRegulatory: true,
+      regulatoryBody: true,
+      regulatoryDueDate: true,
+    },
+  });
+
+  const changes: string[] = [];
+  if (current) {
+    const oldDate = current.expectedGoLiveDate?.toISOString().slice(0, 10) ?? '';
+    const newDate = input.goLiveDate ?? '';
+
+    if (current.title !== input.title.trim())
+      changes.push(`Title updated`);
+    if ((current.description ?? '') !== input.requirement.trim())
+      changes.push(`Requirement updated`);
+    if ((current.verticalHeadName ?? '') !== input.verticalHead)
+      changes.push(`Vertical head changed from ${current.verticalHeadName} to ${input.verticalHead}`);
+    if ((current.businessSpoc ?? '') !== input.businessSpoc.trim())
+      changes.push(`Business SPOC changed from ${current.businessSpoc ?? '—'} to ${input.businessSpoc.trim()}`);
+    if ((current.businessSponsor ?? '') !== input.businessSponsor.trim())
+      changes.push(`Business sponsor changed from ${current.businessSponsor ?? '—'} to ${input.businessSponsor.trim()}`);
+    if (oldDate !== newDate)
+      changes.push(`Go-live date changed from ${oldDate || '—'} to ${newDate}`);
+    if (current.isRegulatory !== input.isRegulatory)
+      changes.push(input.isRegulatory ? 'Regulatory flag set to Yes' : 'Regulatory flag cleared');
+    else if (input.isRegulatory) {
+      const oldBody = current.regulatoryBody ?? '';
+      const newBody = input.regulatoryBody?.trim() ?? '';
+      const oldDue  = current.regulatoryDueDate?.toISOString().slice(0, 10) ?? '';
+      const newDue  = input.regulatoryDueDate ?? '';
+      if (oldBody !== newBody)
+        changes.push(`Regulator changed from ${oldBody || '—'} to ${newBody || '—'}`);
+      if (oldDue !== newDue)
+        changes.push(`Regulatory due date changed from ${oldDue || '—'} to ${newDue || '—'}`);
+    }
+  }
+  const historyNote = changes.length > 0 ? changes.join('; ') : 'Initiative metadata updated';
+
   await prisma.initiative.update({
     where: { id },
     data: {
@@ -481,12 +529,7 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
       regulatoryDueDate: input.isRegulatory && input.regulatoryDueDate ? new Date(input.regulatoryDueDate) : null,
       lastUpdated: today,
       history: {
-        create: {
-          stage: null,
-          note: 'Initiative metadata updated',
-          userName: user.name,
-          createdAt: today,
-        },
+        create: { stage: null, note: historyNote, userName: user.name, createdAt: today },
       },
     },
   });
