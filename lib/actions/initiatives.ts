@@ -125,26 +125,42 @@ export async function getInitiativesBySpoc(spocName: string): Promise<Item[]> {
 
 const BenefitInput = z.object({
   category: z.enum(['REVENUE', 'COST_SAVING', 'CUSTOMER_EXPERIENCE', 'COMPLIANCE', 'EFFICIENCY', 'RISK_REDUCTION']),
-  metricName: z.string().min(1),
+  metricName: z.string().min(1, 'Benefit metric name is required'),
   unit: z.enum(['INR', 'PERCENT', 'DAYS', 'HOURS', 'COUNT', 'RATIO']),
-  estimatedAnnualValueInr: z.number().min(0),
+  estimatedAnnualValueInr: z.number().min(1, 'Benefit estimated value must be greater than zero'),
   baselineValue: z.number().nullable().optional(),
   targetValue: z.number().nullable().optional(),
   narrative: z.string().default(''),
 });
 
 const CreateSchema = z.object({
-  title: z.string().min(1),
+  title: z.string().min(5, 'Initiative title must be at least 5 characters'),
   type: z.enum(['Change Request', 'Project']),
-  verticalHead: z.string().min(1),
-  businessSpoc: z.string().min(1),
-  businessSponsor: z.string().min(1),
-  requirement: z.string().min(1),
-  goLiveDate: z.string().min(1),
+  verticalHead: z.string().min(1, 'IT Vertical Head is required'),
+  businessSpoc: z.string().min(1, 'Business SPOC is required'),
+  businessSponsor: z.string().min(1, 'Business Sponsor is required'),
+  requirement: z.string().min(20, 'Requirement description must be at least 20 characters'),
+  goLiveDate: z.string().min(1, 'Go-live date is required'),
   benefits: z.array(BenefitInput).min(1, 'Define at least one quantified benefit'),
   isRegulatory: z.boolean().optional(),
   regulatoryBody: z.string().optional(),
   regulatoryDueDate: z.string().optional(),
+}).superRefine((data, ctx) => {
+  // Go-live date must not be in the past
+  const today = new Date().toISOString().slice(0, 10);
+  if (data.goLiveDate && data.goLiveDate < today) {
+    ctx.addIssue({ code: 'custom', path: ['goLiveDate'], message: 'Go-live date cannot be in the past' });
+  }
+  // Regulatory body and due date required when isRegulatory is true
+  if (data.isRegulatory) {
+    if (!data.regulatoryBody?.trim()) {
+      ctx.addIssue({ code: 'custom', path: ['regulatoryBody'], message: 'Regulator/body is required when compliance-mandated' });
+    }
+    if (!data.regulatoryDueDate) {
+      ctx.addIssue({ code: 'custom', path: ['regulatoryDueDate'], message: 'Mandated due date is required when compliance-mandated' });
+    }
+  }
+});
 });
 
 export type CreateInitiativeInput = z.infer<typeof CreateSchema>;
