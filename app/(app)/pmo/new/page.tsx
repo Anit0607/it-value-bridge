@@ -8,6 +8,8 @@ import { VERTICAL_HEADS } from '@/lib/types';
 import { PageHeader } from '@/components/PageHeader';
 import { BenefitPicker, type BenefitDraft } from '@/components/value/BenefitPicker';
 import { Button } from '@/components/ui/Button';
+import { formatInr, BENEFIT_CATEGORY_LABEL } from '@/lib/value';
+import type { BenefitCategory } from '@prisma/client';
 import { CheckCircle2, ChevronRight, ChevronLeft } from 'lucide-react';
 
 const STEPS = [
@@ -123,12 +125,18 @@ export default function NewItemPage() {
 
   if (!user) return null;
 
+  const totalProjectedValue = benefits.reduce((s, b) => s + b.estimatedAnnualValueInr, 0);
+
   return (
-    <div className="mx-auto max-w-3xl space-y-6">
+    <div className="mx-auto max-w-6xl space-y-6">
       <PageHeader
         title="Register New IT Initiative"
         subtitle="Define the initiative, ownership, delivery commitment, and business value up front"
       />
+
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1fr_300px]">
+      {/* ── Left: form ── */}
+      <div className="space-y-6">
 
       {/* Step indicator */}
       <div className="overflow-x-auto">
@@ -337,6 +345,53 @@ export default function NewItemPage() {
           </Button>
         )}
       </div>
+      </div>{/* end left column */}
+
+      {/* ── Right: sticky creation summary ── */}
+      <aside className="hidden lg:block">
+        <div className="sticky top-6 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
+          <div className="border-b border-slate-100 px-5 py-3.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Creation Summary</h3>
+          </div>
+          <dl className="divide-y divide-slate-100 px-5 py-2">
+            {[
+              { label: 'Type',            value: type === 'Change Request' ? 'CR' : 'Project', show: true },
+              { label: 'Title',           value: title, show: !!title },
+              { label: 'Vertical Head',   value: verticalHead, show: !!verticalHead },
+              { label: 'Business SPOC',   value: businessSpoc, show: !!businessSpoc },
+              { label: 'Business Sponsor',value: businessSponsor, show: !!businessSponsor },
+              { label: 'Go-Live',         value: goLiveDate, show: !!goLiveDate },
+              {
+                label: 'Benefits',
+                value: benefits.map(b => BENEFIT_CATEGORY_LABEL[b.category as BenefitCategory]).join(', '),
+                show: benefits.length > 0,
+              },
+              {
+                label: 'Projected Value',
+                value: totalProjectedValue > 0 ? formatInr(totalProjectedValue) : '',
+                show: totalProjectedValue > 0,
+              },
+              { label: 'Regulatory',      value: isRegulatory ? (regBody || 'Yes') : '', show: isRegulatory },
+            ].filter(r => r.show).map(r => (
+              <div key={r.label} className="py-2.5">
+                <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">{r.label}</dt>
+                <dd className="mt-0.5 truncate text-sm font-medium text-slate-800">{r.value}</dd>
+              </div>
+            ))}
+            {!title && !verticalHead && !goLiveDate && (
+              <p className="py-4 text-center text-xs text-slate-400">Start filling the form to see your summary here.</p>
+            )}
+          </dl>
+          <div className="border-t border-slate-100 px-5 py-3">
+            <div className="flex items-center justify-between text-[11px] text-slate-400">
+              <span>Step {step} of {STEPS.length}</span>
+              <span>{Math.round(((step - 1) / (STEPS.length - 1)) * 100)}% complete</span>
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      </div>{/* end grid */}
     </div>
   );
 }
