@@ -420,9 +420,23 @@ export async function getInitiativeValue(id: string): Promise<InitiativeValue | 
 
 export async function signOffValue(id: string) {
   const user = await requireRole('PMO', 'CIO');
+  const today = new Date();
+  const initiative = await prisma.initiative.findUnique({ where: { id }, select: { currentStage: true } });
   await prisma.initiative.update({
     where: { id },
-    data: { valueSignedOff: true, valueSignOffBy: user.name, valueSignOffAt: new Date() },
+    data: {
+      valueSignedOff: true,
+      valueSignOffBy: user.name,
+      valueSignOffAt: today,
+      history: {
+        create: {
+          stage: initiative?.currentStage ?? 'Closed',
+          note: `Value signed off by ${user.name}`,
+          userName: user.name,
+          createdAt: today,
+        },
+      },
+    },
   });
   revalidatePath(`/items/${id}`);
   revalidatePath('/value');
