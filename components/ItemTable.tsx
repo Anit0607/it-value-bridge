@@ -133,7 +133,7 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint, emptySubh
     return (
       <th
         aria-sort={activeSort ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'}
-        className={`sticky top-0 z-10 bg-slate-50/95 px-4 py-2.5 text-${align} text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur`}
+        className={`sticky top-0 z-10 bg-slate-50 px-4 py-2.5 text-${align} text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur`}
       >
         <button
           onClick={() => toggleSort(sk)}
@@ -203,7 +203,7 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint, emptySubh
           <thead>
             <tr>
               {/* Select-all checkbox */}
-              <th className="sticky top-0 z-10 w-8 bg-slate-50/95 px-3 py-2.5 backdrop-blur">
+              <th className="sticky top-0 z-10 w-8 bg-slate-50 px-3 py-2.5 backdrop-blur">
                 <input
                   type="checkbox"
                   checked={selected.size === items.length && items.length > 0}
@@ -220,8 +220,8 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint, emptySubh
               <SortHeader label="Confidence" sk="rag" />
               <SortHeader label="ETA" sk="eta" />
               <SortHeader label="In Stage" sk="days" align="right" />
-              <th className="sticky top-0 z-10 bg-slate-50/95 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur">Delay Source</th>
-              <th className="sticky top-0 z-10 bg-slate-50/95 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur">Next Action</th>
+              <th className="sticky top-0 z-10 bg-slate-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur">Delay Source</th>
+              <th className="sticky top-0 z-10 bg-slate-50 px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 backdrop-blur">Next Action</th>
             </tr>
           </thead>
           <tbody>
@@ -233,10 +233,7 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint, emptySubh
               const stale = daysSinceUpdate(item.lastUpdated);
               const staleLabel = stale === 0 ? 'today' : stale === 1 ? 'yesterday' : `${stale}d ago`;
               const staleCls = stale >= 7 ? 'text-rose-500 font-medium' : stale >= 4 ? 'text-amber-500' : 'text-slate-400';
-              const rowBg =
-                rag === 'Red' ? 'bg-rose-50/40' :
-                rag === 'Amber' ? (i % 2 === 1 ? 'bg-amber-50/20' : 'bg-white') :
-                (i % 2 === 1 ? 'bg-slate-50/40' : 'bg-white');
+              const rowBg = i % 2 === 1 ? 'bg-slate-50/30' : 'bg-white';
               const accentBorder =
                 rag === 'Red' ? 'border-l-[3px] border-l-rose-400' :
                 rag === 'Amber' ? 'border-l-[3px] border-l-amber-400' :
@@ -244,7 +241,7 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint, emptySubh
               return (
                 <tr
                   key={item.id}
-                  className={`group border-t border-slate-100 transition-colors hover:bg-brand-50/40 ${rowBg}`}
+                  className={`group border-t border-slate-100 transition-colors hover:bg-brand-50/30 ${rowBg}`}
                 >
                   <td className="px-3 py-2.5">
                     <input
