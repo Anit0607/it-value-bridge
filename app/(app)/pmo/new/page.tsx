@@ -279,7 +279,10 @@ export default function NewItemPage() {
               />
               <div>
                 <p className="text-sm font-semibold text-slate-800">Regulatory / compliance-mandated</p>
-                <p className="mt-0.5 text-xs text-slate-500">Check this if delivery is required by an external regulator or policy mandate.</p>
+                <p className="mt-0.5 text-xs text-slate-500">
+                  Use this when the initiative is driven by RBI, NPCI, SEBI, internal audit, compliance, cyber, or a statutory requirement.
+                  {' '}When checked, regulator name and mandated due date are required.
+                </p>
               </div>
             </label>
             {isRegulatory && (
