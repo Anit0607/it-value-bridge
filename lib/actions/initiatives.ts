@@ -161,7 +161,6 @@ const CreateSchema = z.object({
     }
   }
 });
-});
 
 export type CreateInitiativeInput = z.infer<typeof CreateSchema>;
 
