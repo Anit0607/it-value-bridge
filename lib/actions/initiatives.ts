@@ -264,8 +264,36 @@ export async function updateNotes(
   delaySource: string | undefined,
   delayReason?: string,
 ) {
-  await requireRole('PMO', 'CIO', 'VERTICAL_HEAD');
+  const user = await requireRole('PMO', 'CIO', 'VERTICAL_HEAD');
   const today = new Date();
+
+  // Diff current state to build a meaningful audit history entry
+  const current = await prisma.initiative.findUnique({
+    where: { id },
+    select: { delayed: true, delaySource: true, delayReason: true, notes: true, currentStage: true },
+  });
+
+  const parts: string[] = [];
+  if (!current?.delayed && delayed) {
+    const src = delaySource ? `: ${delaySource}` : '';
+    const rsn = delayReason?.trim() ? ` — ${delayReason.trim()}` : '';
+    parts.push(`Marked delayed${src}${rsn}`);
+  } else if (current?.delayed && !delayed) {
+    parts.push('Delay cleared');
+  } else if (current?.delayed && delayed) {
+    const srcChanged = current.delaySource !== (delaySource ?? null);
+    const rsnChanged = (current.delayReason ?? '') !== (delayReason?.trim() ?? '');
+    if (srcChanged || rsnChanged) {
+      const src = delaySource ? `: ${delaySource}` : '';
+      const rsn = delayReason?.trim() ? ` — ${delayReason.trim()}` : '';
+      parts.push(`Delay source updated${src}${rsn}`);
+    }
+  }
+  if (!parts.length && notes.trim() !== (current?.notes ?? '').trim()) {
+    parts.push('Stage update saved');
+  }
+  const historyNote = parts.join('; ');
+
   await prisma.initiative.update({
     where: { id },
     data: {
@@ -274,6 +302,16 @@ export async function updateNotes(
       delaySource: delayed && delaySource ? (delaySource as any) : null,
       delayReason: delayed ? (delayReason?.trim() || null) : null,
       lastUpdated: today,
+      ...(historyNote && current ? {
+        history: {
+          create: {
+            stage: current.currentStage,
+            note: historyNote,
+            userName: user.name,
+            createdAt: today,
+          },
+        },
+      } : {}),
     },
   });
 
