@@ -8,7 +8,7 @@ import { advanceStage, updateNotes, signOffValue, type InitiativeValue } from '@
 import { computeRAG, daysInStage, daysFromNow } from '@/lib/rag';
 import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE, BENEFIT_UNIT_LABEL } from '@/lib/value';
 import { RagBadge, RagDot } from '@/components/RagBadge';
-import { Badge } from '@/components/ui/Badge';
+import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { StageProgress } from '@/components/StageProgress';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { STAGES } from '@/lib/types';
@@ -32,6 +32,33 @@ const ROLE_BACK: Record<Role, { href: string; label: string }> = {
   VERTICAL_HEAD: { href: '/vertical-head', label: 'Ownership Workspace' },
   BUSINESS: { href: '/business', label: 'Value Validation' },
 };
+
+type AuditEvent = { label: string; tone: BadgeTone };
+
+function getAuditEventType(note: string, isFirst: boolean): AuditEvent {
+  const n = note.toLowerCase();
+  if (isFirst || n.includes('created') || n.includes('registered'))
+    return { label: 'Created', tone: 'success' };
+  if (n.includes('moved to') || n.startsWith('move'))
+    return { label: 'Stage moved', tone: 'brand' };
+  if (n.includes('marked delayed'))
+    return { label: 'Delay marked', tone: 'danger' };
+  if (n.includes('delay cleared'))
+    return { label: 'Delay cleared', tone: 'success' };
+  if (n.includes('delay source updated'))
+    return { label: 'Delay updated', tone: 'warning' };
+  if (n.includes('stage update saved'))
+    return { label: 'Notes updated', tone: 'slate' };
+  if (n.includes('signed off') || n.includes('sign off'))
+    return { label: 'Value signed off', tone: 'success' };
+  if (n.includes('validated') || n.includes('validation') || n.includes('outcome'))
+    return { label: 'Outcome validated', tone: 'success' };
+  if (n.includes('dependency'))
+    return { label: 'Dependency added', tone: 'brand' };
+  if (n.includes('regulatory'))
+    return { label: 'Regulatory updated', tone: 'danger' };
+  return { label: 'Updated', tone: 'slate' };
+}
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
@@ -301,20 +328,24 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
             )}
           </SectionCard>
 
-          <SectionCard title="History" icon={HistoryIcon}>
-            <ol className="relative space-y-3 border-l border-slate-200 pl-5">
-              {item.history.map((h, i) => (
-                <li key={i} className="relative">
-                  <div className="absolute -left-[21px] mt-0.5 flex h-4 w-4 items-center justify-center rounded-full border border-slate-200 bg-white">
-                    <span className="h-2 w-2 rounded-full bg-brand-400" />
-                  </div>
-                  <div className="flex flex-wrap items-baseline gap-2">
-                    <span className="text-xs font-semibold text-slate-700">{h.stage}</span>
-                    <span className="text-[11px] text-slate-400">{h.date} · {h.user}</span>
-                  </div>
-                  {h.note && <p className="mt-0.5 text-xs text-slate-500">{h.note}</p>}
-                </li>
-              ))}
+          <SectionCard title="Audit Trail" icon={HistoryIcon} subtitle={`${item.history.length} events`}>
+            <ol className="relative space-y-4 border-l border-slate-200 pl-5">
+              {item.history.map((h, i) => {
+                const { label, tone } = getAuditEventType(h.note ?? '', i === item.history.length - 1);
+                return (
+                  <li key={i} className="relative">
+                    <div className="absolute -left-[21px] mt-1 flex h-4 w-4 items-center justify-center rounded-full border border-slate-200 bg-white">
+                      <span className="h-2 w-2 rounded-full bg-brand-400" />
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge tone={tone} size="sm">{label}</Badge>
+                      <span className="text-[11px] text-slate-400">{h.stage}</span>
+                    </div>
+                    {h.note && <p className="mt-0.5 text-xs text-slate-600">{h.note}</p>}
+                    <p className="mt-0.5 text-[10px] text-slate-400">{h.date} · {h.user}</p>
+                  </li>
+                );
+              })}
             </ol>
           </SectionCard>
         </div>
