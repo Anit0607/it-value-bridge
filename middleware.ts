@@ -8,9 +8,55 @@ const { auth } = NextAuth(authConfig);
 
 const PUBLIC_PATHS = ['/', '/sign-in', '/sign-up'];
 
+// ── Route access matrix ───────────────────────────────────────────────────────
+// Each entry defines which roles are ALLOWED on that path prefix.
+// ADMIN is granted full access before this table is checked.
+// More-specific paths (e.g. /items/[id]/edit) must be checked before
+// their parent prefix (/items).
+
+type RouteRule = { path: string; allow: Role[] };
+
+const ROUTE_RULES: RouteRule[] = [
+  // Platform admin — ADMIN only
+  { path: '/admin',         allow: ['ADMIN'] },
+
+  // CIO — leadership dashboards
+  { path: '/cio',           allow: ['CIO'] },
+
+  // PMO — governance control tower
+  { path: '/pmo',           allow: ['PMO'] },
+
+  // Vertical Head — delivery workspace
+  { path: '/vertical-head', allow: ['VERTICAL_HEAD'] },
+
+  // Business SPOC — validation/demand views
+  { path: '/business',      allow: ['BUSINESS'] },
+
+  // Leadership + intelligence — CIO and PMO
+  { path: '/value',         allow: ['CIO', 'PMO'] },
+  { path: '/okrs',          allow: ['CIO', 'PMO'] },
+  { path: '/report',        allow: ['CIO', 'PMO'] },
+
+  // Governance tools — CIO and PMO
+  { path: '/import',        allow: ['PMO'] },
+
+  // Dependencies — everyone except BUSINESS
+  { path: '/dependencies',  allow: ['CIO', 'PMO', 'VERTICAL_HEAD'] },
+
+  // Initiative edit — governance owners only (not BUSINESS / VH)
+  { path: '/items/',        allow: ['CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS'] },
+  // Note: /items/[id]/edit and /items/[id]/validate are handled below
+  // before the /items/ prefix is matched.
+];
+
+// Sub-routes with narrower access
+const ITEM_EDIT_RE     = /^\/items\/[^/]+\/edit(\/.*)?$/;
+const ITEM_VALIDATE_RE = /^\/items\/[^/]+\/validate(\/.*)?$/;
+
 export default auth(req => {
   const { pathname } = req.nextUrl;
 
+  // Allow public paths and Next.js internals
   const isPublic =
     PUBLIC_PATHS.some(p => pathname === p) ||
     pathname.startsWith('/api/auth') ||
@@ -20,43 +66,40 @@ export default auth(req => {
   if (isPublic) return NextResponse.next();
 
   const user = req.auth?.user;
-  if (!user) {
-    return NextResponse.redirect(new URL('/sign-in', req.url));
-  }
+  if (!user) return NextResponse.redirect(new URL('/sign-in', req.url));
 
-  // Use string for the ADMIN check (enum not yet in DB; migration pending)
   const roleStr = user.role as string;
-  const role = roleStr as Role;
+  const role    = roleStr as Role;
 
-  // ADMIN has full access to all dashboards and pages
+  // ADMIN bypasses all route guards
   if (roleStr === 'ADMIN') return NextResponse.next();
 
-  if (pathname.startsWith('/admin') && roleStr !== 'ADMIN') {
-    return NextResponse.redirect(new URL(getRoleHome(role), req.url));
+  // ── Fine-grained item sub-routes (checked before prefix /items/) ──────────
+
+  // /items/[id]/edit — PMO and CIO only
+  if (ITEM_EDIT_RE.test(pathname)) {
+    if (!(['CIO', 'PMO'] as string[]).includes(roleStr)) {
+      return NextResponse.redirect(new URL(getRoleHome(role), req.url));
+    }
+    return NextResponse.next();
   }
-  if (pathname.startsWith('/cio') && role !== 'CIO') {
-    return NextResponse.redirect(new URL(getRoleHome(role), req.url));
+
+  // /items/[id]/validate — Business SPOC, PMO, CIO
+  if (ITEM_VALIDATE_RE.test(pathname)) {
+    if (!(['CIO', 'PMO', 'BUSINESS'] as string[]).includes(roleStr)) {
+      return NextResponse.redirect(new URL(getRoleHome(role), req.url));
+    }
+    return NextResponse.next();
   }
-  if (pathname.startsWith('/pmo') && role !== 'PMO') {
-    return NextResponse.redirect(new URL(getRoleHome(role), req.url));
-  }
-  if (pathname.startsWith('/vertical-head') && role !== 'VERTICAL_HEAD') {
-    return NextResponse.redirect(new URL(getRoleHome(role), req.url));
-  }
-  if (pathname.startsWith('/business') && role !== 'BUSINESS') {
-    return NextResponse.redirect(new URL(getRoleHome(role), req.url));
-  }
-  // Board value dashboard, OKR catalog and import are leadership-only (CIO + PMO).
-  if (
-    (pathname.startsWith('/value') || pathname.startsWith('/okrs') || pathname.startsWith('/import')) &&
-    role !== 'CIO' &&
-    role !== 'PMO'
-  ) {
-    return NextResponse.redirect(new URL(getRoleHome(role), req.url));
-  }
-  // Dependency view is for delivery owners (CIO + PMO + Vertical Head), not business.
-  if (pathname.startsWith('/dependencies') && role === 'BUSINESS') {
-    return NextResponse.redirect(new URL(getRoleHome(role), req.url));
+
+  // ── Route rules table ─────────────────────────────────────────────────────
+  for (const rule of ROUTE_RULES) {
+    if (pathname.startsWith(rule.path)) {
+      if (!(rule.allow as string[]).includes(roleStr)) {
+        return NextResponse.redirect(new URL(getRoleHome(role), req.url));
+      }
+      return NextResponse.next();
+    }
   }
 
   return NextResponse.next();
