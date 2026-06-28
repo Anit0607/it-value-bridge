@@ -327,6 +327,11 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                 <div className="text-[11px] text-slate-500">{daysToEta < 0 ? 'days overdue' : 'days to ETA'}</div>
               </div>
             </div>
+            {!closed && item.stageExpectedDate && (
+              <p className="mt-3 text-center text-[11px] text-slate-400">
+                Stage ETA: <span className="font-medium text-slate-600">{item.stageExpectedDate}</span>
+              </p>
+            )}
           </SectionCard>
 
           {/* Delay Management */}
@@ -389,6 +394,12 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
           {canProgress && !closed && (
             <SectionCard title="Advance Stage" tone="brand">
               <div className="space-y-2">
+                {/* Stage transition arrow */}
+                <div className="flex items-center justify-center gap-2 rounded-lg bg-brand-50/60 px-3 py-2.5">
+                  <span className="text-sm font-semibold text-brand-700">{item.currentStage}</span>
+                  <ArrowRight className="h-4 w-4 text-brand-400" strokeWidth={2} />
+                  <span className="text-sm font-semibold text-brand-900">{STAGES[stageIdx + 1]}</span>
+                </div>
                 <label className="block text-xs font-medium text-slate-600">Completion note</label>
                 <input
                   type="text"
