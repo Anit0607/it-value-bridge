@@ -295,30 +295,69 @@ export default async function ReportPage({
         </div>
       </SectionCard>
 
-      {/* ── 4. Value Delivered ───────────────────────────────────────────────── */}
-      <SectionCard title="Value Delivered" subtitle={`${completedWithOutcome.length} outcomes confirmed`} tone="success">
+      {/* ── 4. Value Delivered & Validated ───────────────────────────────────── */}
+      <SectionCard title="Value Delivered & Validated" subtitle={`${completedWithOutcome.length} initiatives confirmed`} tone="success">
         {completedWithOutcome.length === 0 ? (
           <p className="text-sm text-slate-500">No initiatives were closed with business validation in this period.</p>
         ) : (
           <div className="space-y-4">
-            {completedWithOutcome.map(i => (
-              <div key={i.id} className="rounded-lg border border-slate-100 bg-slate-50/40 p-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <Link href={`/items/${i.id}`} className="text-sm font-semibold text-slate-800 hover:text-brand-700">{i.title}</Link>
-                    <p className="mt-0.5 text-xs text-slate-500">{i.outcomeCategory} · {i.verticalHead}</p>
+            {completedWithOutcome.map(i => {
+              const claim = claimMap.get(i.id);
+              const cd = closureDate(i);
+              return (
+                <div key={i.id} className="overflow-hidden rounded-xl border border-emerald-100 bg-emerald-50/20">
+                  {/* Header */}
+                  <div className="flex flex-wrap items-start justify-between gap-2 border-b border-emerald-100 px-4 py-3">
+                    <div className="min-w-0">
+                      <Link href={`/items/${i.id}`} className="text-sm font-semibold text-slate-800 hover:text-brand-700">{i.title}</Link>
+                      <p className="mt-0.5 text-xs text-slate-500">
+                        {i.outcomeCategory} · {i.verticalHead}
+                        {i.businessSponsor && <> · Sponsor: {i.businessSponsor}</>}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+                      <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${ACHIEVED_TONE[i.validation!.outcomeAchieved]}`}>
+                        {i.validation!.outcomeAchieved}
+                      </span>
+                      {claim?.signedOff && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[11px] font-semibold text-emerald-700">
+                          <BadgeCheck className="h-3 w-3" /> Signed off
+                        </span>
+                      )}
+                    </div>
                   </div>
-                  <span className={`flex-shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold ring-1 ring-inset ${ACHIEVED_TONE[i.validation!.outcomeAchieved]}`}>
-                    {i.validation!.outcomeAchieved}
-                  </span>
+
+                  {/* Value + dates */}
+                  <div className="grid grid-cols-3 gap-0 divide-x divide-emerald-100 bg-white/60 px-0">
+                    <div className="px-4 py-2.5">
+                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Est. Annual Value</dt>
+                      <dd className="mt-0.5 text-sm font-semibold text-brand-700">
+                        {claim?.total ? formatInr(claim.total) : '—'}
+                      </dd>
+                    </div>
+                    <div className="px-4 py-2.5">
+                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Closure Date</dt>
+                      <dd className="mt-0.5 text-sm font-medium text-slate-700">{cd ?? '—'}</dd>
+                    </div>
+                    <div className="px-4 py-2.5">
+                      <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Validation Status</dt>
+                      <dd className="mt-0.5 text-sm font-medium text-slate-700">{i.validation!.outcomeAchieved}</dd>
+                    </div>
+                  </div>
+
+                  {/* Metric details */}
+                  <div className="border-t border-emerald-100 px-4 py-3">
+                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
+                      <div><span className="text-slate-400">Target: </span><span className="text-slate-700">{i.targetMetric}</span></div>
+                      <div><span className="text-slate-400">Actual: </span><span className="text-slate-700">{i.validation!.actualMetric}</span></div>
+                      {i.validation!.actualResult && (
+                        <div className="col-span-2"><span className="text-slate-400">Result: </span><span className="text-slate-700">{i.validation!.actualResult}</span></div>
+                      )}
+                    </div>
+                  </div>
                 </div>
-                <div className="mt-2 grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-                  <div><span className="text-slate-400">Target: </span><span className="text-slate-700">{i.targetMetric}</span></div>
-                  <div><span className="text-slate-400">Actual: </span><span className="text-slate-700">{i.validation!.actualMetric}</span></div>
-                  <div className="col-span-2"><span className="text-slate-400">Result: </span><span className="text-slate-700">{i.validation!.actualResult}</span></div>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </SectionCard>
