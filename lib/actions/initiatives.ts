@@ -430,7 +430,7 @@ export async function signOffValue(id: string) {
       valueSignOffAt: today,
       history: {
         create: {
-          stage: initiative?.currentStage ?? 'Closed',
+          stage: initiative?.currentStage ?? null,
           note: `Value signed off by ${user.name}`,
           userName: user.name,
           createdAt: today,
