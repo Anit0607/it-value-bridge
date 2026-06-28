@@ -51,7 +51,13 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
 
   const claims = value?.benefitClaims ?? [];
   const totalValue = claims.reduce((s, b) => s + b.estimatedAnnualValueInr, 0);
-  const canSignOff = user?.role === 'PMO' || user?.role === 'CIO';
+
+  // Role-specific UI permissions (server actions enforce the same rules server-side)
+  const canSignOff     = user?.role === 'PMO' || user?.role === 'CIO';
+  const canUpdateNotes = user?.role === 'PMO' || user?.role === 'CIO' || user?.role === 'VERTICAL_HEAD';
+  const canAdvance     = user?.role === 'PMO' || user?.role === 'CIO' || user?.role === 'VERTICAL_HEAD';
+  const canValidate    = (user?.role === 'BUSINESS' || user?.role === 'PMO' || user?.role === 'CIO') &&
+                         item.currentStage === 'Business Validation' && !closed;
 
   const handleSignOff = () => {
     if (!user) return;
@@ -135,7 +141,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
             )}
           </div>
         </div>
-        {!closed && item.currentStage === 'Business Validation' && (
+        {canValidate && (
           <Link
             href={`/items/${item.id}/validate`}
             className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
@@ -335,8 +341,8 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
             )}
           </SectionCard>
 
-          {/* Delay Management */}
-          {!closed && (
+          {/* Delay Management — PMO / CIO / Vertical Head only */}
+          {canUpdateNotes && !closed && (
             <SectionCard title="Delay Management" tone="warning">
               <div className="space-y-3">
                 <div>
@@ -391,8 +397,8 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
             </SectionCard>
           )}
 
-          {/* Stage Advancement */}
-          {canProgress && !closed && (
+          {/* Stage Advancement — PMO / CIO / Vertical Head only */}
+          {canAdvance && canProgress && !closed && (
             <SectionCard title="Advance Stage" tone="brand">
               <div className="space-y-2">
                 {/* Stage transition arrow */}
