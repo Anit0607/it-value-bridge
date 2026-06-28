@@ -46,6 +46,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const { user } = useRole();
   const router = useRouter();
   const [note, setNote] = useState('');
+  const [confirmingAdvance, setConfirmingAdvance] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const claims = value?.benefitClaims ?? [];
@@ -400,22 +401,57 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                   <ArrowRight className="h-4 w-4 text-brand-400" strokeWidth={2} />
                   <span className="text-sm font-semibold text-brand-900">{STAGES[stageIdx + 1]}</span>
                 </div>
-                <label className="block text-xs font-medium text-slate-600">Completion note</label>
-                <input
-                  type="text"
-                  value={note}
-                  onChange={e => setNote(e.target.value)}
-                  placeholder="Note for moving to next stage…"
-                  className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
-                />
-                <button
-                  onClick={handleComplete}
-                  disabled={isPending}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-60"
-                >
-                  <CheckCircle2 className="h-4 w-4" />
-                  {isPending ? 'Moving…' : `Move to: ${STAGES[stageIdx + 1]}`}
-                </button>
+
+                {confirmingAdvance ? (
+                  /* Confirmation panel */
+                  <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
+                    <p className="text-xs font-semibold text-amber-800">
+                      You are about to move this initiative from{' '}
+                      <span className="font-bold">{item.currentStage}</span> to{' '}
+                      <span className="font-bold">{STAGES[stageIdx + 1]}</span>.
+                    </p>
+                    <p className="text-[11px] leading-relaxed text-amber-700">
+                      This will reset delay flags, clear stage notes, and create a history entry.
+                      This action cannot be undone.
+                    </p>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={handleComplete}
+                        disabled={isPending}
+                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-600 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-60"
+                      >
+                        <CheckCircle2 className="h-3.5 w-3.5" />
+                        {isPending ? 'Moving…' : 'Confirm & advance'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingAdvance(false)}
+                        className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  /* Normal state */
+                  <>
+                    <label className="block text-xs font-medium text-slate-600">Completion note</label>
+                    <input
+                      type="text"
+                      value={note}
+                      onChange={e => setNote(e.target.value)}
+                      placeholder="Note for moving to next stage…"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+                    />
+                    <button
+                      onClick={() => setConfirmingAdvance(true)}
+                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      Move to: {STAGES[stageIdx + 1]}
+                    </button>
+                  </>
+                )}
               </div>
             </SectionCard>
           )}
