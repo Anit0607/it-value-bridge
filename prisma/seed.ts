@@ -104,6 +104,18 @@ const confidenceForStage = (s: Stage): Confidence => {
 async function main() {
   const password = await bcrypt.hash('Demo@1234!', 12);
 
+  // --- Default organisation (Pilot workspace) ---
+  const org = await prisma.organization.upsert({
+    where: { slug: 'it-value-bridge-pilot' },
+    update: {},
+    create: {
+      name: 'IT Value Bridge Pilot Workspace',
+      slug: 'it-value-bridge-pilot',
+      industry: 'Banking',
+      status: 'PILOT',
+    },
+  });
+
   // --- Demo users ---
   const cio = await prisma.user.upsert({
     where: { email: 'cio@bank.com' },

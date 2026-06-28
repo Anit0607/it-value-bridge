@@ -121,7 +121,9 @@ export function Sidebar({
         </div>
         <div className="leading-tight">
           <div className="text-sm font-semibold text-white">IT Value Bridge</div>
-          <div className="text-[11px] text-slate-400">Value Intelligence</div>
+          <div className="text-[11px] text-slate-400">
+            {process.env.NEXT_PUBLIC_WORKSPACE_NAME ?? 'Value Intelligence'}
+          </div>
         </div>
       </div>
 

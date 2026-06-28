@@ -127,6 +127,23 @@ enum DemandPriority {
   CRITICAL
 }
 
+// ---------- Workspace / Organisation ----------
+model Organization {
+  id        String   @id @default(cuid())
+  name      String
+  slug      String   @unique
+  industry  String?
+  status    String   @default("PILOT")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users       User[]
+  initiatives Initiative[]
+  demands     Demand[]
+  okrs        Okr[]
+  reports     MonthlyReport[]
+}
+
 // ---------- Auth / Users ----------
 model User {
   id           String   @id @default(cuid())
@@ -139,6 +156,9 @@ model User {
   avatarUrl    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
   ownedInitiatives Initiative[] @relation("VerticalHeadInitiatives")
   historyEntries   HistoryLog[]
@@ -190,6 +210,9 @@ model Initiative {
   delayReason         String?
 
   committedMonth String? // "YYYY-MM" for monthly-commitment tracking
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -347,6 +370,9 @@ model MonthlyReport {
   narrative   String? // AI-generated narrative (nullable until generated)
   generatedAt DateTime @default(now())
 
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
   @@unique([year, month])
 }
 
@@ -407,6 +433,10 @@ model Okr {
   active          Boolean          @default(true)
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
   links           InitiativeOkr[]
 }
 
@@ -439,6 +469,9 @@ model Demand {
 
   convertedInitiative   Initiative? @relation("DemandInitiative", fields: [convertedInitiativeId], references: [id])
   convertedInitiativeId String?     @unique
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
   createdAt     DateTime       @default(now())
   updatedAt     DateTime       @updatedAt
