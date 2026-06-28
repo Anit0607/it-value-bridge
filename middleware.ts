@@ -24,8 +24,14 @@ export default auth(req => {
     return NextResponse.redirect(new URL('/sign-in', req.url));
   }
 
-  const role = user.role as Role;
+  const role = user.role as string;
 
+  // ADMIN has full access to all dashboards and pages
+  if (role === 'ADMIN') return NextResponse.next();
+
+  if (pathname.startsWith('/admin') && role !== 'ADMIN') {
+    return NextResponse.redirect(new URL(getRoleHome(role), req.url));
+  }
   if (pathname.startsWith('/cio') && role !== 'CIO') {
     return NextResponse.redirect(new URL(getRoleHome(role), req.url));
   }

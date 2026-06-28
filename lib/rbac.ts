@@ -1,6 +1,7 @@
 import type { Role } from '@prisma/client';
 
 export const ROLE_HOME: Record<Role, string> = {
+  ADMIN: '/admin',
   CIO: '/cio',
   PMO: '/pmo',
   VERTICAL_HEAD: '/vertical-head',
@@ -8,6 +9,7 @@ export const ROLE_HOME: Record<Role, string> = {
 };
 
 export const ROLE_LABEL: Record<Role, string> = {
+  ADMIN: 'Platform Administrator',
   CIO: 'Chief Information Officer',
   PMO: 'PMO Manager',
   VERTICAL_HEAD: 'Vertical Head',

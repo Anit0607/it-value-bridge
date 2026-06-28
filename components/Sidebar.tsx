@@ -19,6 +19,8 @@ import {
   Link2,
   LogOut,
   Layers,
+  Settings,
+  Users,
 } from 'lucide-react';
 
 interface NavItem {
@@ -70,9 +72,19 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/import', label: 'Import', icon: Upload, roles: ['PMO'] },
     ],
   },
+  {
+    label: 'Platform',
+    items: [
+      { href: '/admin', label: 'Workspace Settings', icon: Settings, roles: ['ADMIN'] },
+      { href: '/admin/users', label: 'User Management', icon: Users, roles: ['ADMIN'] },
+      { href: '/cio', label: 'CIO Dashboard', icon: LayoutDashboard, roles: ['ADMIN'] },
+      { href: '/pmo', label: 'PMO Dashboard', icon: ClipboardList, roles: ['ADMIN'] },
+    ],
+  },
 ];
 
 const ROLE_LABEL: Record<Role, string> = {
+  ADMIN: 'Administrator',
   CIO: 'CIO',
   PMO: 'PMO',
   VERTICAL_HEAD: 'Vertical Head',
@@ -80,6 +92,7 @@ const ROLE_LABEL: Record<Role, string> = {
 };
 
 const ROLE_ACCESS: Record<Role, string> = {
+  ADMIN: 'Platform Administration',
   CIO: 'Executive Value Command Center',
   PMO: 'PMO Governance Control Tower',
   VERTICAL_HEAD: 'Delivery Ownership Workspace',

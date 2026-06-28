@@ -10,6 +10,7 @@ datasource db {
 
 // ---------- Enums ----------
 enum Role {
+  ADMIN
   CIO
   PMO
   VERTICAL_HEAD

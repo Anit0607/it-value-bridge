@@ -11,6 +11,7 @@ import {
   ClipboardList,
   Briefcase,
   CheckSquare,
+  Settings,
   ArrowRight,
   ArrowLeft,
   Eye,
@@ -18,10 +19,11 @@ import {
 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
-  { email: 'cio@bank.com', name: 'Mahesh Iyer', desc: 'Executive Value Command Center — portfolio, value board, risk', icon: LayoutDashboard },
-  { email: 'pmo@bank.com', name: 'Anita Desai', desc: 'PMO Governance Control Tower — full portfolio, RAG, delays', icon: ClipboardList },
-  { email: 'vh@bank.com', name: 'Rajesh Kumar', desc: 'Delivery Ownership Workspace — your vertical\'s commitments & Delivery Confidence', icon: Briefcase },
-  { email: 'business@bank.com', name: 'Anil Kumar', desc: 'Business Value Validation — confirm whether IT delivered the promised impact', icon: CheckSquare },
+  { email: 'admin@bank.com',    name: 'Platform Admin',  desc: 'Workspace Settings — user management, pilot configuration',      icon: Settings },
+  { email: 'cio@bank.com',      name: 'Mahesh Iyer',     desc: 'Executive Value Command Center — portfolio, value board, risk',   icon: LayoutDashboard },
+  { email: 'pmo@bank.com',      name: 'Anita Desai',     desc: 'PMO Governance Control Tower — full portfolio, RAG, delays',     icon: ClipboardList },
+  { email: 'vh@bank.com',       name: 'Rajesh Kumar',    desc: "Delivery Ownership Workspace — your vertical's commitments",     icon: Briefcase },
+  { email: 'business@bank.com', name: 'Anil Kumar',      desc: 'Business Value Validation — confirm IT delivered promised impact', icon: CheckSquare },
 ];
 
 const DEMO_PASSWORD = 'Demo@1234!';

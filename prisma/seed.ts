@@ -117,6 +117,18 @@ async function main() {
   });
 
   // --- Demo users ---
+  await prisma.user.upsert({
+    where: { email: 'admin@bank.com' },
+    update: {},
+    create: {
+      name: 'Platform Admin',
+      email: 'admin@bank.com',
+      passwordHash: password,
+      role: 'ADMIN',
+      organizationId: org.id,
+    },
+  });
+
   const cio = await prisma.user.upsert({
     where: { email: 'cio@bank.com' },
     update: {},

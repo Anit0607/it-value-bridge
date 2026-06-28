@@ -29,6 +29,7 @@ import {
 const DELAY_SOURCES: DelaySource[] = ['IT', 'Business', 'Vendor', 'External'];
 
 const ROLE_BACK: Record<Role, { href: string; label: string }> = {
+  ADMIN: { href: '/admin', label: 'Workspace' },
   PMO: { href: '/pmo', label: 'PMO Control Tower' },
   CIO: { href: '/cio', label: 'Command Center' },
   VERTICAL_HEAD: { href: '/vertical-head', label: 'Ownership Workspace' },

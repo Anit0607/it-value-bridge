@@ -7,6 +7,7 @@ import { useRole } from '@/components/RoleProvider';
 import type { Role } from '@/lib/types';
 
 const ROLE_LABEL: Record<Role, string> = {
+  ADMIN: 'Platform Administrator',
   CIO: 'Chief Information Officer',
   PMO: 'PMO Manager',
   VERTICAL_HEAD: 'Vertical Head',
