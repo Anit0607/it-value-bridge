@@ -57,11 +57,78 @@ export default async function ReportPage({
     .filter(i => i.isRegulatory)
     .sort((a, b) => (a.regulatoryDueDate ?? '9999').localeCompare(b.regulatoryDueDate ?? '9999'));
 
-  // Leadership Attention Required: red+overdue, regulatory overdue, missed committed
-  const needsLeadershipAttention = [
-    ...items.filter(i => computeRAG(i) === 'Red' && daysFromNow(i.stageExpectedDate) < 0 && i.currentStage !== 'Closed'),
-    ...items.filter(i => i.isRegulatory && i.regulatoryDueDate && i.regulatoryDueDate < today && i.currentStage !== 'Closed'),
-  ].filter((i, idx, arr) => arr.findIndex(x => x.id === i.id) === idx); // dedupe
+  // ── Leadership Attention — 6 rule categories ───────────────────────────────
+  type AttentionRow = { key: string; id: string; title: string; issue: string; owner: string; action: string; severity: 'critical' | 'warning' | 'info' };
+  const seenIds = new Set<string>();
+  const attentionRows: AttentionRow[] = [];
+
+  const addRow = (row: AttentionRow) => { attentionRows.push(row); seenIds.add(row.id); };
+
+  // 1. Red initiatives (by RAG)
+  items.filter(i => computeRAG(i) === 'Red' && i.currentStage !== 'Closed').forEach(i => {
+    if (!seenIds.has(i.id)) addRow({
+      key: `red-${i.id}`, id: i.id, title: i.title,
+      issue: 'Red delivery confidence',
+      owner: i.verticalHead,
+      action: i.delayed && i.delaySource ? `Escalate ${i.delaySource} dependency` : 'Advance or escalate stage',
+      severity: 'critical',
+    });
+  });
+
+  // 2. Overdue regulatory
+  items.filter(i => i.isRegulatory && i.regulatoryDueDate && i.regulatoryDueDate < today && i.currentStage !== 'Closed').forEach(i => {
+    addRow({
+      key: `reg-${i.id}`, id: i.id, title: i.title,
+      issue: `Regulatory deadline overdue${i.regulatoryBody ? ` — ${i.regulatoryBody}` : ''}`,
+      owner: i.verticalHead,
+      action: 'Review closure path immediately',
+      severity: 'critical',
+    });
+  });
+
+  // 3. Business / Vendor delayed
+  items.filter(i => i.delayed && (i.delaySource === 'Business' || i.delaySource === 'Vendor') && i.currentStage !== 'Closed').forEach(i => {
+    if (!seenIds.has(i.id)) addRow({
+      key: `delay-${i.id}`, id: i.id, title: i.title,
+      issue: `${i.delaySource} dependency blocking delivery${i.delayReason ? ` — ${i.delayReason}` : ''}`,
+      owner: i.verticalHead,
+      action: `Escalate ${i.delaySource} owner`,
+      severity: 'warning',
+    });
+  });
+
+  // 4. Stale >7 days
+  items.filter(i => daysSinceUpdate(i.lastUpdated) > 7 && i.currentStage !== 'Closed').forEach(i => {
+    if (!seenIds.has(i.id)) addRow({
+      key: `stale-${i.id}`, id: i.id, title: i.title,
+      issue: `No update in ${daysSinceUpdate(i.lastUpdated)} days`,
+      owner: i.verticalHead,
+      action: 'PMO to request stage update',
+      severity: 'warning',
+    });
+  });
+
+  // 5. Missed go-live
+  missed.forEach(i => {
+    if (!seenIds.has(i.id)) addRow({
+      key: `missed-${i.id}`, id: i.id, title: i.title,
+      issue: `Go-live ${i.goLiveDate} missed — now in ${i.currentStage}`,
+      owner: i.verticalHead,
+      action: 'Assess revised delivery timeline',
+      severity: 'critical',
+    });
+  });
+
+  // 6. Closed without outcome validation
+  items.filter(i => i.currentStage === 'Closed' && !i.validation).forEach(i => {
+    addRow({
+      key: `val-${i.id}`, id: i.id, title: i.title,
+      issue: 'Closed — business outcome not yet validated',
+      owner: i.businessSpoc ?? i.verticalHead,
+      action: 'Business SPOC to confirm delivered value',
+      severity: 'info',
+    });
+  });
 
   const deliveryPct = committed.length > 0
     ? Math.round((delivered.length / committed.length) * 100)
@@ -136,7 +203,41 @@ export default async function ReportPage({
         )}
       </div>
 
-      {/* ── 3. Portfolio Commitment Scorecard ────────────────────────────────── */}
+      {/* ── 3. Leadership Attention Required ─────────────────────────────────── */}
+      {attentionRows.length > 0 && (
+        <SectionCard title="Leadership Attention Required" count={attentionRows.length} icon={AlertOctagon} tone="risk" noPad>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="bg-rose-50/60">
+                  <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-rose-700">Initiative</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-rose-700">Issue</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-rose-700">Owner</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-rose-700">Recommended Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {attentionRows.map((row, idx) => (
+                  <tr key={row.key} className={`border-t border-rose-50 ${idx % 2 === 1 ? 'bg-rose-50/20' : 'bg-white'}`}>
+                    <td className={`border-l-[3px] py-3 pl-4 pr-4 ${row.severity === 'critical' ? 'border-l-rose-400' : row.severity === 'warning' ? 'border-l-amber-400' : 'border-l-brand-400'}`}>
+                      <Link href={`/items/${row.id}`} className="font-semibold text-slate-800 hover:text-brand-700">{row.title}</Link>
+                    </td>
+                    <td className="px-4 py-3">
+                      <Badge tone={row.severity === 'critical' ? 'danger' : row.severity === 'warning' ? 'warning' : 'brand'} size="sm">
+                        {row.issue}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-slate-600">{row.owner}</td>
+                    <td className="px-4 py-3 text-xs text-slate-700">{row.action}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </SectionCard>
+      )}
+
+      {/* ── 4. Portfolio Commitment Scorecard ────────────────────────────────── */}
       <SectionCard title="Portfolio Commitment Scorecard" subtitle={period.label}>
         <div className="grid grid-cols-3 gap-4">
           {[
@@ -277,31 +378,6 @@ export default async function ReportPage({
         </SectionCard>
       )}
 
-      {/* ── 9. Leadership Attention Required ─────────────────────────────────── */}
-      {needsLeadershipAttention.length > 0 && (
-        <SectionCard title="Leadership Attention Required" count={needsLeadershipAttention.length} icon={AlertOctagon} tone="risk" noPad>
-          <div>
-            {needsLeadershipAttention.map(i => {
-              const isRegOverdue = i.isRegulatory && i.regulatoryDueDate && i.regulatoryDueDate < today;
-              return (
-                <div key={i.id} className="flex items-start justify-between gap-3 px-5 py-3">
-                  <div className="min-w-0">
-                    <Link href={`/items/${i.id}`} className="text-sm font-semibold text-slate-800 hover:text-brand-700">{i.title}</Link>
-                    <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                      <span>{i.currentStage}</span>
-                      {i.delaySource && <Badge tone="danger" size="sm">{i.delaySource}</Badge>}
-                      {isRegOverdue && <Badge tone="danger" size="sm">Regulatory overdue</Badge>}
-                    </div>
-                  </div>
-                  <div className="shrink-0 text-[11px] font-semibold text-rose-600">
-                    {daysFromNow(i.stageExpectedDate) < 0 ? `${Math.abs(daysFromNow(i.stageExpectedDate))}d overdue` : ''}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </SectionCard>
-      )}
 
 
     </div>
