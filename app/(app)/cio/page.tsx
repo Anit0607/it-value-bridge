@@ -12,6 +12,7 @@ import { RagDot } from '@/components/RagBadge';
 import { TodaysFocus } from '@/components/TodaysFocus';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Badge } from '@/components/ui/Badge';
+import { buttonCls } from '@/components/ui/Button';
 import { computeRAG } from '@/lib/rag';
 import {
   Activity,
@@ -49,10 +50,7 @@ export default async function CioDashboard({
       <PageHeader title="Executive Value Command Center" subtitle="Where is delivery risk threatening business outcomes? — real-time across all verticals">
         <div className="flex flex-wrap items-center gap-2">
           <PeriodPicker />
-          <Link
-            href="/report"
-            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
-          >
+          <Link href="/report" className={buttonCls('primary')}>
             <FileBarChart className="h-4 w-4" />
             Value Realization Report
           </Link>

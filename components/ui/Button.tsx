@@ -31,6 +31,11 @@ const ICON_SIZE: Record<ButtonSize, string> = {
   md: 'h-4 w-4',
 };
 
+/** Class helper for styling <Link> or <a> elements with Button visuals */
+export function buttonCls(variant: ButtonVariant = 'secondary', size: ButtonSize = 'md', extra = '') {
+  return `inline-flex shrink-0 items-center justify-center transition-colors ${SIZE[size]} ${VARIANT[variant]} ${extra}`.trim();
+}
+
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
   (
     {

@@ -8,6 +8,7 @@ import { FilterBar, EMPTY_FILTERS, type Filters } from '@/components/FilterBar';
 import type { Item, DelaySource, Stage } from '@/lib/types';
 import { AlertOctagon, ArrowRight, Download } from 'lucide-react';
 import { SectionCard, InsightCard } from '@/components/ui/SectionCard';
+import { Button } from '@/components/ui/Button';
 
 function exportCsv(items: Item[]) {
   const CSV_HEADERS = [
@@ -458,15 +459,15 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
             <span className="hidden text-xs text-slate-400 sm:block">
               {filtered.length} of {items.length}
             </span>
-            <button
-              type="button"
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={Download}
               onClick={() => exportCsv(filtered)}
               disabled={filtered.length === 0}
-              className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              <Download className="h-3.5 w-3.5" />
               Export CSV
-            </button>
+            </Button>
           </div>
         </div>
         {/* Portfolio insight */}

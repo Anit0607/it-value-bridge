@@ -7,6 +7,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { KpiCard } from '@/components/KpiCard';
 import { Layers, CheckCircle2, AlertTriangle, AlertOctagon, PlusCircle } from 'lucide-react';
 import { TodaysFocus } from '@/components/TodaysFocus';
+import { buttonCls } from '@/components/ui/Button';
 
 export default async function PmoDashboard() {
   const { items, activeCount, counts } = await getPmoList();
@@ -14,10 +15,7 @@ export default async function PmoDashboard() {
   return (
     <div className="space-y-6">
       <PageHeader title="PMO Governance Control Tower" subtitle={`${items.length} initiatives translating delivery into business value`}>
-        <Link
-          href="/pmo/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3.5 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
-        >
+        <Link href="/pmo/new" className={buttonCls('primary')}>
           <PlusCircle className="h-4 w-4" />
           New Initiative
         </Link>
