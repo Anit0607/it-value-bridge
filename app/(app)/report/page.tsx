@@ -409,7 +409,7 @@ export default async function ReportPage({
                 <dd className="mt-0.5 font-semibold text-slate-800">{avgDelayAge}d</dd>
               </div>
               <div>
-                <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Stale (>7d no update)</dt>
+                <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Stale (&gt;7d no update)</dt>
                 <dd className={`mt-0.5 font-semibold ${staleDelayed > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
                   {staleDelayed} item{staleDelayed !== 1 ? 's' : ''}
                 </dd>
