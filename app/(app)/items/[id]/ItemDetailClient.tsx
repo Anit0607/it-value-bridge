@@ -376,7 +376,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
           <SectionCard title="Audit Trail" icon={HistoryIcon} subtitle={`${item.history.length} events`}>
             <ol className="relative space-y-4 border-l border-slate-200 pl-5">
               {item.history.map((h, i) => {
-                const { label, tone } = getAuditEventType(h.note ?? '', i === item.history.length - 1);
+                const { label, tone } = getAuditEventType(h.note ?? '', i === 0);
                 return (
                   <li key={i} className="relative">
                     <div className="absolute -left-[21px] mt-1 flex h-4 w-4 items-center justify-center rounded-full border border-slate-200 bg-white">
