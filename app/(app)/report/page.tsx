@@ -172,6 +172,23 @@ export default async function ReportPage({
 
   const closedWithoutValidation = items.filter(i => i.currentStage === 'Closed' && !i.validation);
 
+  // Delay accountability stats
+  const delayAges = delayed.map(i => {
+    const overdue = daysFromNow(i.stageExpectedDate);
+    return overdue < 0 ? -overdue : daysSinceUpdate(i.lastUpdated);
+  });
+  const avgDelayAge = delayAges.length > 0
+    ? Math.round(delayAges.reduce((s, d) => s + d, 0) / delayAges.length)
+    : 0;
+  const staleDelayed = delayed.filter(i => daysSinceUpdate(i.lastUpdated) > 7).length;
+  const maxDelayCount = Math.max(...Object.values(delaySources), 1);
+  const ESCALATION: Record<string, string> = {
+    IT: 'Review internal capacity constraints and clear blocked stages in the weekly standup.',
+    Business: 'Escalate business sign-off requirements with respective sponsors before next governance call.',
+    Vendor: 'Review vendor-owned delays in weekly governance and set resolution deadlines.',
+    External: 'Coordinate with external parties (legal, regulatory, infrastructure) to unblock dependencies.',
+  };
+
   // Value lens totals
   const allClaims = [...claimMap.values()];
   const projectedValue          = allClaims.reduce((s, c) => s + c.total, 0);
@@ -378,7 +395,49 @@ export default async function ReportPage({
 
       {/* ── 6. Delay Accountability ──────────────────────────────────────────── */}
       {delayed.length > 0 && (
-        <SectionCard title="Delay Accountability" subtitle="By initiative" noPad>
+        <SectionCard title="Delay Accountability" subtitle={`${delayed.length} delayed · avg ${avgDelayAge}d slip`} noPad>
+          {/* Insight summary */}
+          <div className="space-y-4 border-b border-slate-100 px-5 py-4">
+            {/* Stats row */}
+            <div className="flex flex-wrap gap-6 text-sm">
+              <div>
+                <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Primary Bottleneck</dt>
+                <dd className="mt-0.5 font-semibold text-slate-800">{topDelaySources[0] ?? '—'} dependencies</dd>
+              </div>
+              <div>
+                <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Avg Delay Age</dt>
+                <dd className="mt-0.5 font-semibold text-slate-800">{avgDelayAge}d</dd>
+              </div>
+              <div>
+                <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Stale (>7d no update)</dt>
+                <dd className={`mt-0.5 font-semibold ${staleDelayed > 0 ? 'text-rose-600' : 'text-emerald-600'}`}>
+                  {staleDelayed} item{staleDelayed !== 1 ? 's' : ''}
+                </dd>
+              </div>
+            </div>
+            {/* Horizontal source bars */}
+            <div className="space-y-1.5">
+              {(Object.entries(delaySources) as [DelaySource, number][]).filter(([, n]) => n > 0).map(([source, count]) => (
+                <div key={source} className="flex items-center gap-3">
+                  <span className="w-16 shrink-0 text-[11px] font-medium text-slate-500">{source}</span>
+                  <div className="flex-1 overflow-hidden rounded-full bg-slate-100 h-2">
+                    <div
+                      className="h-full rounded-full bg-rose-400"
+                      style={{ width: `${Math.max(8, (count / maxDelayCount) * 100)}%` }}
+                    />
+                  </div>
+                  <span className="w-4 shrink-0 text-right text-[11px] font-semibold text-slate-700">{count}</span>
+                </div>
+              ))}
+            </div>
+            {/* Escalation recommendation */}
+            {topDelaySources[0] && (
+              <div className="rounded-lg border border-amber-100 bg-amber-50/60 px-3 py-2 text-xs text-amber-800">
+                <span className="font-semibold">Recommended: </span>
+                {ESCALATION[topDelaySources[0]]}
+              </div>
+            )}
+          </div>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
