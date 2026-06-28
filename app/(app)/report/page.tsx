@@ -173,6 +173,12 @@ export default async function ReportPage({
 
   const closedWithoutValidation = items.filter(i => i.currentStage === 'Closed' && !i.validation);
 
+  // Regulatory summary indicators
+  const regOverdue  = regulatory.filter(i => i.regulatoryDueDate && i.regulatoryDueDate < today && i.currentStage !== 'Closed').length;
+  const regDue7     = regulatory.filter(i => i.regulatoryDueDate && i.regulatoryDueDate >= today && daysFromNow(i.regulatoryDueDate) <= 7  && i.currentStage !== 'Closed').length;
+  const regDue14    = regulatory.filter(i => i.regulatoryDueDate && i.regulatoryDueDate >= today && daysFromNow(i.regulatoryDueDate) <= 14 && i.currentStage !== 'Closed').length;
+  const regClosed   = regulatory.filter(i => i.currentStage === 'Closed').length;
+
   // Stage-wise portfolio snapshot
   const stageCounts = STAGES.map(stage => ({
     stage,
@@ -545,19 +551,39 @@ export default async function ReportPage({
       {/* ── 8. Regulatory Commitments ────────────────────────────────────────── */}
       {regulatory.length > 0 && (
         <SectionCard title="Regulatory Commitments" count={regulatory.length} icon={ShieldAlert} tone="risk" noPad>
+          {/* Summary indicators */}
+          <div className="grid grid-cols-5 divide-x divide-rose-100 border-b border-rose-100 bg-rose-50/30">
+            {[
+              { label: 'Total',        value: regulatory.length, cls: 'text-slate-800' },
+              { label: 'Due in 7d',    value: regDue7,           cls: regDue7   > 0 ? 'text-rose-700 font-bold' : 'text-slate-400' },
+              { label: 'Due in 14d',   value: regDue14,          cls: regDue14  > 0 ? 'text-amber-700 font-semibold' : 'text-slate-400' },
+              { label: 'Overdue',      value: regOverdue,        cls: regOverdue > 0 ? 'text-rose-700 font-bold' : 'text-slate-400' },
+              { label: 'Closed',       value: regClosed,         cls: regClosed > 0 ? 'text-emerald-700' : 'text-slate-400' },
+            ].map(s => (
+              <div key={s.label} className="py-3 text-center">
+                <div className={`tabular text-2xl font-semibold ${s.cls}`}>{s.value}</div>
+                <div className="mt-0.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400">{s.label}</div>
+              </div>
+            ))}
+          </div>
+          {/* Item list */}
           <div>
             {regulatory.map(i => {
               const overdue = i.regulatoryDueDate ? i.regulatoryDueDate < today && i.currentStage !== 'Closed' : false;
+              const due7    = i.regulatoryDueDate && i.regulatoryDueDate >= today && daysFromNow(i.regulatoryDueDate) <= 7 && i.currentStage !== 'Closed';
               return (
-                <div key={i.id} className="flex items-center justify-between gap-3 px-5 py-3">
+                <div key={i.id} className={`flex items-center justify-between gap-3 border-t px-5 py-3 ${overdue ? 'border-rose-100 bg-rose-50/20' : 'border-slate-100'}`}>
                   <div className="min-w-0">
                     <Link href={`/items/${i.id}`} className="text-sm font-medium text-slate-700 hover:text-brand-700">{i.title}</Link>
-                    <div className="mt-0.5 text-xs text-slate-500">{i.regulatoryBody ?? 'Regulatory'} · {i.currentStage}</div>
+                    <div className="mt-0.5 text-xs text-slate-500">
+                      {i.regulatoryBody ?? 'Regulatory'} · {i.currentStage}
+                    </div>
                   </div>
                   <div className="flex-shrink-0 text-right text-xs">
                     {i.regulatoryDueDate ? (
-                      <span className={overdue ? 'font-semibold text-rose-600' : 'text-slate-600'}>
-                        due {i.regulatoryDueDate}{overdue ? ' · overdue' : ''}
+                      <span className={overdue ? 'font-bold text-rose-600' : due7 ? 'font-semibold text-amber-600' : 'text-slate-600'}>
+                        {i.currentStage === 'Closed' ? '✓ closed' : `due ${i.regulatoryDueDate}`}
+                        {overdue ? ' · overdue' : ''}
                       </span>
                     ) : (
                       <span className="text-slate-400">no fixed date</span>
