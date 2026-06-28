@@ -135,7 +135,7 @@ export default function NewItemPage() {
           regulatoryBody: isRegulatory ? regBody : undefined,
           regulatoryDueDate: isRegulatory && regDue ? regDue : undefined,
         });
-        router.push(`/items/${id}`);
+        router.push(`/items/${id}?created=1`);
       } catch {
         setError('Failed to create initiative. Please check all fields and try again.');
       }

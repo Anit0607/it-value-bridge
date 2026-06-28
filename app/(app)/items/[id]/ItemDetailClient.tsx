@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useRole } from '@/components/RoleProvider';
 import { advanceStage, updateNotes, signOffValue, type InitiativeValue } from '@/lib/actions/initiatives';
 import { computeRAG, daysInStage, daysFromNow, daysSinceUpdate } from '@/lib/rag';
@@ -74,6 +74,9 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 export function ItemDetailClient({ item, value }: { item: Item; value: InitiativeValue | null }) {
   const { user } = useRole();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [bannerDismissed, setBannerDismissed] = useState(false);
+  const showCreatedBanner = searchParams.get('created') === '1' && !bannerDismissed;
   const [note, setNote] = useState('');
   const [confirmingAdvance, setConfirmingAdvance] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -157,6 +160,29 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
 
   return (
     <div className="mx-auto max-w-5xl space-y-5">
+      {/* Post-creation success banner */}
+      {showCreatedBanner && (
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-emerald-200 bg-emerald-50/70 px-5 py-3.5">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+            <p className="text-sm font-medium text-emerald-800">
+              Initiative created successfully.{' '}
+              <span className="font-normal text-emerald-700">
+                Review the control room and confirm stage ownership before your next governance call.
+              </span>
+            </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBannerDismissed(true)}
+            className="shrink-0 text-emerald-500 hover:text-emerald-700"
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-sm text-slate-500">
         <Link href={back.href} className="hover:text-brand-600">
