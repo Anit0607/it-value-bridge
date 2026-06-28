@@ -24,12 +24,14 @@ export default auth(req => {
     return NextResponse.redirect(new URL('/sign-in', req.url));
   }
 
-  const role = user.role as Role;
+  // Use string for the ADMIN check (enum not yet in DB; migration pending)
+  const roleStr = user.role as string;
+  const role = roleStr as Role;
 
   // ADMIN has full access to all dashboards and pages
-  if (role === 'ADMIN') return NextResponse.next();
+  if (roleStr === 'ADMIN') return NextResponse.next();
 
-  if (pathname.startsWith('/admin') && role !== 'ADMIN') {
+  if (pathname.startsWith('/admin') && roleStr !== 'ADMIN') {
     return NextResponse.redirect(new URL(getRoleHome(role), req.url));
   }
   if (pathname.startsWith('/cio') && role !== 'CIO') {
