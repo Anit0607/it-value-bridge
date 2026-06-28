@@ -62,10 +62,82 @@
 }
 
 @media print {
-  .no-print {
+  /* ── Hide all non-report chrome ─────────────────────────────────────────── */
+  .no-print,
+  aside,                   /* sidebar */
+  nav,                     /* marketing nav */
+  header,                  /* top bar */
+  [role="banner"],
+  [role="navigation"],
+  form,                    /* period pickers, export forms */
+  button                   /* all action buttons */
+  {
     display: none !important;
   }
-  body {
-    @apply bg-white;
+
+  /* ── Page setup ─────────────────────────────────────────────────────────── */
+  @page {
+    margin: 1.5cm 2cm;
+    size: A4 portrait;
+  }
+
+  html, body {
+    background: white !important;
+    color: #0f172a !important;
+    font-size: 11pt;
+  }
+
+  /* ── Reset layout for print ─────────────────────────────────────────────── */
+  div.lg\:ml-64 {           /* app layout sidebar offset */
+    margin-left: 0 !important;
+  }
+
+  main {
+    padding: 0 !important;
+    max-width: 100% !important;
+    margin: 0 !important;
+  }
+
+  /* ── Card / shadow cleanup ──────────────────────────────────────────────── */
+  .shadow-card,
+  .shadow-card-hover {
+    box-shadow: none !important;
+    border: 1px solid #e2e8f0 !important;
+  }
+
+  /* ── Ensure links are readable ──────────────────────────────────────────── */
+  a {
+    color: inherit !important;
+    text-decoration: none !important;
+  }
+
+  /* ── Page break helpers ─────────────────────────────────────────────────── */
+  .print-break {
+    page-break-before: always;
+    break-before: page;
+  }
+
+  .print-avoid-break {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Avoid breaking cards and table rows mid-page */
+  .shadow-card,
+  tr,
+  li {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* ── Typography for print ───────────────────────────────────────────────── */
+  h1 { font-size: 18pt !important; }
+  h2 { font-size: 13pt !important; }
+  h3 { font-size: 11pt !important; }
+
+  /* ── Background colours — keep tints for charts/bars ───────────────────── */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
   }
 }
