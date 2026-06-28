@@ -11,6 +11,7 @@ import { RagBadge, RagDot } from '@/components/RagBadge';
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { StageProgress } from '@/components/StageProgress';
 import { SectionCard } from '@/components/ui/SectionCard';
+import { Button, buttonCls } from '@/components/ui/Button';
 import { STAGES } from '@/lib/types';
 import type { Item, DelaySource, Role } from '@/lib/types';
 import type { BenefitCategory, BenefitUnit } from '@prisma/client';
@@ -190,10 +191,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
           </div>
         </div>
         {canValidate && (
-          <Link
-            href={`/items/${item.id}/validate`}
-            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
-          >
+          <Link href={`/items/${item.id}/validate`} className={buttonCls('primary')}>
             <ClipboardCheck className="h-4 w-4" />
             Validate Outcome
           </Link>
@@ -462,13 +460,9 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                   </div>
                 )}
                 {isDirty && (
-                  <button
-                    onClick={handleSaveNotes}
-                    disabled={isPending}
-                    className="w-full rounded-lg border border-slate-300 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
-                  >
+                  <Button variant="secondary" onClick={handleSaveNotes} disabled={isPending} loading={isPending} className="w-full justify-center">
                     {isPending ? 'Saving…' : 'Save notes'}
-                  </button>
+                  </Button>
                 )}
               </div>
             </SectionCard>
@@ -498,21 +492,12 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                       This action cannot be undone.
                     </p>
                     <div className="flex gap-2">
-                      <button
-                        onClick={handleComplete}
-                        disabled={isPending}
-                        className="flex flex-1 items-center justify-center gap-1.5 rounded-lg bg-brand-600 py-2 text-xs font-semibold text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-60"
-                      >
-                        <CheckCircle2 className="h-3.5 w-3.5" />
+                      <Button variant="primary" size="sm" icon={CheckCircle2} onClick={handleComplete} disabled={isPending} loading={isPending} className="flex-1 justify-center">
                         {isPending ? 'Moving…' : 'Confirm & advance'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setConfirmingAdvance(false)}
-                        className="rounded-lg border border-slate-300 px-3 py-2 text-xs font-medium text-slate-700 transition-colors hover:bg-slate-50"
-                      >
+                      </Button>
+                      <Button variant="secondary" size="sm" type="button" onClick={() => setConfirmingAdvance(false)}>
                         Cancel
-                      </button>
+                      </Button>
                     </div>
                   </div>
                 ) : (
@@ -526,13 +511,9 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                       placeholder="Note for moving to next stage…"
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
                     />
-                    <button
-                      onClick={() => setConfirmingAdvance(true)}
-                      className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700"
-                    >
-                      <CheckCircle2 className="h-4 w-4" />
+                    <Button variant="primary" icon={CheckCircle2} onClick={() => setConfirmingAdvance(true)} className="w-full justify-center">
                       Move to: {STAGES[stageIdx + 1]}
-                    </button>
+                    </Button>
                   </>
                 )}
               </div>
