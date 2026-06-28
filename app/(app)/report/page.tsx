@@ -3,15 +3,18 @@ export const dynamic = 'force-dynamic';
 import { listInitiativesAsItems } from '@/lib/actions/initiatives';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import { prisma } from '@/lib/db';
 import { PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { SectionCard } from '@/components/ui/SectionCard';
+import { KpiCard } from '@/components/KpiCard';
 import type { DelaySource } from '@/lib/types';
 import { computeRAG, daysFromNow, daysSinceUpdate } from '@/lib/rag';
 import { resolvePeriod, inPeriod, onOrBeforeEnd } from '@/lib/period';
+import { formatInr } from '@/lib/value';
 import { PeriodPicker } from '@/components/PeriodPicker';
 import Link from 'next/link';
-import { Printer, AlertTriangle, ShieldAlert, AlertOctagon } from 'lucide-react';
+import { Printer, AlertTriangle, ShieldAlert, AlertOctagon, TrendingUp, BadgeCheck, Clock, Flame } from 'lucide-react';
 
 const ACHIEVED_TONE: Record<string, string> = {
   Yes: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
@@ -30,6 +33,26 @@ export default async function ReportPage({
   const items = await listInitiativesAsItems();
   const period = resolvePeriod(searchParams);
   const today = new Date().toISOString().slice(0, 10);
+
+  // Value lens — benefit claim totals per initiative
+  const claimData = await prisma.initiative.findMany({
+    select: {
+      id: true,
+      currentStage: true,
+      delayed: true,
+      valueSignedOff: true,
+      benefitClaims: { select: { estimatedAnnualValueInr: true } },
+    },
+  });
+  const claimMap = new Map(claimData.map(c => [
+    c.id,
+    {
+      total: c.benefitClaims.reduce((s, b) => s + b.estimatedAnnualValueInr, 0),
+      signedOff: c.valueSignedOff,
+      closed: c.currentStage === 'CLOSED',
+      delayed: c.delayed,
+    },
+  ]));
 
   const closureDate = (i: (typeof items)[number]) =>
     i.history.find(h => h.stage === 'Closed')?.date ?? null;
@@ -149,6 +172,14 @@ export default async function ReportPage({
 
   const closedWithoutValidation = items.filter(i => i.currentStage === 'Closed' && !i.validation);
 
+  // Value lens totals
+  const allClaims = [...claimMap.values()];
+  const projectedValue          = allClaims.reduce((s, c) => s + c.total, 0);
+  const valueDelivered          = allClaims.filter(c => c.closed && c.signedOff).reduce((s, c) => s + c.total, 0);
+  const valuePendingValidation  = allClaims.filter(c => c.closed && !c.signedOff && c.total > 0).reduce((s, c) => s + c.total, 0);
+  const atRiskIds               = new Set([...delayed, ...missed].map(i => i.id));
+  const valueAtRisk             = [...atRiskIds].reduce((s, id) => s + (claimMap.get(id)?.total ?? 0), 0);
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
 
@@ -203,7 +234,17 @@ export default async function ReportPage({
         )}
       </div>
 
-      {/* ── 3. Leadership Attention Required ─────────────────────────────────── */}
+      {/* ── 3. Value-at-Risk Summary ─────────────────────────────────────────── */}
+      {projectedValue > 0 && (
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          <KpiCard label="Projected Value" value={formatInr(projectedValue)} icon={TrendingUp} accent="brand" />
+          <KpiCard label="Value Delivered" value={formatInr(valueDelivered)} icon={BadgeCheck} accent="emerald" />
+          <KpiCard label="Pending Validation" value={formatInr(valuePendingValidation)} icon={Clock} accent="amber" />
+          <KpiCard label="Value at Risk" value={formatInr(valueAtRisk)} icon={Flame} accent="rose" />
+        </div>
+      )}
+
+      {/* ── 4. Leadership Attention Required ─────────────────────────────────── */}
       {attentionRows.length > 0 && (
         <SectionCard title="Leadership Attention Required" count={attentionRows.length} icon={AlertOctagon} tone="risk" noPad>
           <div className="overflow-x-auto">
