@@ -77,6 +77,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const searchParams = useSearchParams();
   const [bannerDismissed, setBannerDismissed] = useState(false);
   const showCreatedBanner = searchParams.get('created') === '1' && !bannerDismissed;
+  const showEditedBanner  = searchParams.get('edited')  === '1' && !bannerDismissed;
   const [note, setNote] = useState('');
   const [confirmingAdvance, setConfirmingAdvance] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -183,6 +184,22 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
         </div>
       )}
 
+      {/* Post-edit success banner */}
+      {showEditedBanner && (
+        <div className="flex items-start justify-between gap-3 rounded-xl border border-brand-200 bg-brand-50/60 px-5 py-3.5">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="h-4 w-4 shrink-0 text-brand-600" />
+            <p className="text-sm font-medium text-brand-800">
+              Initiative updated.{' '}
+              <span className="font-normal text-brand-700">
+                Changes have been saved and logged in the audit trail.
+              </span>
+            </p>
+          </div>
+          <button type="button" onClick={() => setBannerDismissed(true)} className="shrink-0 text-brand-400 hover:text-brand-600" aria-label="Dismiss">✕</button>
+        </div>
+      )}
+
       {/* Breadcrumb */}
       <nav className="flex items-center gap-1.5 text-sm text-slate-500">
         <Link href={back.href} className="hover:text-brand-600">
@@ -216,6 +233,11 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
             )}
           </div>
         </div>
+        {(user?.role === 'PMO' || user?.role === 'CIO') && (
+          <Link href={`/items/${item.id}/edit`} className={buttonCls('secondary')}>
+            Edit Initiative
+          </Link>
+        )}
         {canValidate && (
           <Link href={`/items/${item.id}/validate`} className={buttonCls('primary')}>
             <ClipboardCheck className="h-4 w-4" />

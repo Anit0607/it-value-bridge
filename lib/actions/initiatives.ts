@@ -450,6 +450,52 @@ const RegulatoryInput = z.object({
 
 export type SetRegulatoryInput = z.infer<typeof RegulatoryInput>;
 
+// ─── Edit Initiative Metadata ────────────────────────────────────────────────
+export interface EditInitiativeInput {
+  title: string;
+  requirement: string;
+  verticalHead: string;
+  businessSpoc: string;
+  businessSponsor: string;
+  goLiveDate: string;
+  isRegulatory: boolean;
+  regulatoryBody?: string;
+  regulatoryDueDate?: string;
+}
+
+export async function updateInitiative(id: string, input: EditInitiativeInput) {
+  const user = await requireRole('PMO', 'CIO');
+  const today = new Date();
+
+  await prisma.initiative.update({
+    where: { id },
+    data: {
+      title: input.title.trim(),
+      requirement: input.requirement.trim(),
+      verticalHead: input.verticalHead,
+      businessSpoc: input.businessSpoc.trim(),
+      businessSponsor: input.businessSponsor.trim(),
+      goLiveDate: input.goLiveDate ? new Date(input.goLiveDate) : undefined,
+      isRegulatory: input.isRegulatory,
+      regulatoryBody: input.isRegulatory ? (input.regulatoryBody?.trim() || null) : null,
+      regulatoryDueDate: input.isRegulatory && input.regulatoryDueDate ? new Date(input.regulatoryDueDate) : null,
+      lastUpdated: today,
+      history: {
+        create: {
+          stage: null,
+          note: 'Initiative metadata updated',
+          userName: user.name,
+          createdAt: today,
+        },
+      },
+    },
+  });
+
+  revalidatePath(`/items/${id}`);
+  revalidatePath('/pmo');
+  revalidatePath('/cio');
+}
+
 export async function setRegulatory(id: string, input: SetRegulatoryInput) {
   await requireRole('PMO', 'CIO');
   const parsed = RegulatoryInput.parse(input);
