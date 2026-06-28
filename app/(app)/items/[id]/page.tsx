@@ -43,7 +43,7 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <ItemDetailClient item={item} value={value} />
       <div className="mx-auto max-w-5xl">
         <RegulatoryControl
