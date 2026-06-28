@@ -8,6 +8,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { KpiCard } from '@/components/KpiCard';
+import { STAGES } from '@/lib/types';
 import type { DelaySource } from '@/lib/types';
 import { computeRAG, daysFromNow, daysSinceUpdate } from '@/lib/rag';
 import { resolvePeriod, inPeriod, onOrBeforeEnd } from '@/lib/period';
@@ -172,6 +173,15 @@ export default async function ReportPage({
 
   const closedWithoutValidation = items.filter(i => i.currentStage === 'Closed' && !i.validation);
 
+  // Stage-wise portfolio snapshot
+  const stageCounts = STAGES.map(stage => ({
+    stage,
+    count: items.filter(i => i.currentStage === stage).length,
+  }));
+  const maxStageCount = Math.max(...stageCounts.map(s => s.count), 1);
+  const BOTTLENECK_STAGES = new Set(['UAT', 'AppSec', 'CAB Approval']);
+  const totalInPipeline = items.filter(i => i.currentStage !== 'Closed').length;
+
   // Delay accountability stats
   const delayAges = delayed.map(i => {
     const overdue = daysFromNow(i.stageExpectedDate);
@@ -312,7 +322,50 @@ export default async function ReportPage({
         </div>
       </SectionCard>
 
-      {/* ── 4. Value Delivered & Validated ───────────────────────────────────── */}
+      {/* ── 4. Stage-wise Portfolio Snapshot ─────────────────────────────────── */}
+      <SectionCard
+        title="Stage-wise Portfolio Snapshot"
+        subtitle={`${totalInPipeline} active initiatives across ${STAGES.length - 1} stages`}
+      >
+        <div className="space-y-2">
+          {stageCounts.map(({ stage, count }) => {
+            const isBottleneck = BOTTLENECK_STAGES.has(stage) && count > 0;
+            const isClosed = stage === 'Closed';
+            const barW = count === 0 ? 0 : Math.max(4, (count / maxStageCount) * 100);
+            return (
+              <div key={stage} className="flex items-center gap-3">
+                <span className={`w-28 shrink-0 text-[11px] font-medium ${isBottleneck ? 'text-amber-700 font-semibold' : 'text-slate-500'}`}>
+                  {stage}
+                  {isBottleneck && <span className="ml-1 text-[9px] font-bold uppercase tracking-wider text-amber-500"> ⚠</span>}
+                </span>
+                <div className="relative flex-1 overflow-hidden rounded-full bg-slate-100" style={{ height: 10 }}>
+                  {count > 0 && (
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        isBottleneck ? 'bg-amber-400' : isClosed ? 'bg-emerald-400' : 'bg-brand-400'
+                      }`}
+                      style={{ width: `${barW}%` }}
+                    />
+                  )}
+                </div>
+                <span className={`w-6 shrink-0 text-right text-xs font-semibold tabular-nums ${
+                  isBottleneck ? 'text-amber-700' : count === 0 ? 'text-slate-300' : 'text-slate-700'
+                }`}>
+                  {count}
+                </span>
+              </div>
+            );
+          })}
+          {/* Bottleneck legend */}
+          {[...BOTTLENECK_STAGES].some(s => (stageCounts.find(c => c.stage === s)?.count ?? 0) > 0) && (
+            <p className="pt-2 text-[11px] text-amber-600">
+              ⚠ UAT, AppSec, and CAB Approval are pre-launch governance gates — concentration here signals potential go-live risk.
+            </p>
+          )}
+        </div>
+      </SectionCard>
+
+      {/* ── 5. Value Delivered & Validated ───────────────────────────────────── */}
       <SectionCard title="Value Delivered & Validated" subtitle={`${completedWithOutcome.length} initiatives confirmed`} tone="success">
         {completedWithOutcome.length === 0 ? (
           <p className="text-sm text-slate-500">No initiatives were closed with business validation in this period.</p>
