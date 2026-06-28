@@ -7,7 +7,7 @@ import { useRole } from '@/components/RoleProvider';
 import { advanceStage, updateNotes, signOffValue, type InitiativeValue } from '@/lib/actions/initiatives';
 import { computeRAG, daysInStage, daysFromNow } from '@/lib/rag';
 import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE, BENEFIT_UNIT_LABEL } from '@/lib/value';
-import { RagBadge } from '@/components/RagBadge';
+import { RagBadge, RagDot } from '@/components/RagBadge';
 import { Badge } from '@/components/ui/Badge';
 import { StageProgress } from '@/components/StageProgress';
 import { STAGES } from '@/lib/types';
@@ -142,6 +142,70 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
             Validate Outcome
           </Link>
         )}
+      </div>
+
+      {/* Status strip */}
+      <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-card">
+        <dl className="flex min-w-max divide-x divide-slate-100">
+          {([
+            {
+              label: 'Current Stage',
+              node: <span className="text-sm font-semibold text-slate-800">{item.currentStage}</span>,
+            },
+            {
+              label: 'Delivery Confidence',
+              node: (
+                <span className="inline-flex items-center gap-1.5 text-sm font-semibold text-slate-800">
+                  <RagDot rag={rag} />
+                  {rag}
+                </span>
+              ),
+            },
+            {
+              label: 'Days in Stage',
+              node: <span className="text-sm font-semibold text-slate-800">{days}d</span>,
+            },
+            {
+              label: 'ETA Status',
+              node: closed ? (
+                <span className="text-sm font-semibold text-emerald-600">Closed</span>
+              ) : daysToEta < 0 ? (
+                <span className="text-sm font-semibold text-rose-600">{Math.abs(daysToEta)}d overdue</span>
+              ) : (
+                <span className="text-sm font-semibold text-slate-800">{daysToEta}d to ETA</span>
+              ),
+            },
+            {
+              label: 'Delay Source',
+              node: item.delaySource ? (
+                <Badge tone="danger" size="sm">{item.delaySource}</Badge>
+              ) : (
+                <span className="text-sm text-slate-400">None</span>
+              ),
+            },
+            {
+              label: 'Business Value',
+              node: totalValue > 0 ? (
+                <span className="text-sm font-semibold text-brand-700">{formatInr(totalValue)}</span>
+              ) : (
+                <span className="text-sm text-slate-400">—</span>
+              ),
+            },
+            {
+              label: 'Regulatory',
+              node: item.isRegulatory ? (
+                <span className="text-sm font-semibold text-rose-600">{item.regulatoryBody ?? 'Yes'}</span>
+              ) : (
+                <span className="text-sm text-slate-400">None</span>
+              ),
+            },
+          ] as const).map(f => (
+            <div key={f.label} className="flex flex-col gap-1.5 px-4 py-3">
+              <dt className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 whitespace-nowrap">{f.label}</dt>
+              <dd>{f.node}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
 
       {/* Stage progress */}
