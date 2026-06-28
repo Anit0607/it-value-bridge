@@ -352,7 +352,7 @@ export default async function ReportPage({
             { label: 'Commitment Slippage', value: missed.length, bar: 'border-l-rose-500', num: 'text-rose-700', bg: 'bg-rose-50/70', helper: 'Missed go-live' },
           ].map(c => (
             <div key={c.label} className={`rounded-xl border-l-[3px] p-4 ${c.bar} ${c.bg}`}>
-              <div className="tabular text-3xl font-semibold leading-none ${c.num} ${c.num}">{c.value}</div>
+              <div className={`tabular text-3xl font-semibold leading-none ${c.num}`}>{c.value}</div>
               <div className="mt-2 text-xs font-semibold text-slate-700">{c.label}</div>
               <div className="mt-0.5 text-[11px] text-slate-400">{c.helper}</div>
             </div>
