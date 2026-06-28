@@ -72,10 +72,14 @@ export default function NewItemPage() {
   const [regBody, setRegBody] = useState('');
   const [regDue, setRegDue] = useState('');
 
+  const today = new Date().toISOString().slice(0, 10);
+
   const validateStep = (n: number): string => {
     if (n === 1) {
       if (!title.trim()) return 'Initiative title is required.';
+      if (title.trim().length < 5) return 'Initiative title must be at least 5 characters.';
       if (!requirement.trim()) return 'Brief requirement description is required.';
+      if (requirement.trim().length < 20) return 'Requirement description must be at least 20 characters — add enough context for governance.';
     }
     if (n === 2) {
       if (!businessSpoc.trim()) return 'Business SPOC name is required.';
@@ -83,14 +87,29 @@ export default function NewItemPage() {
     }
     if (n === 3) {
       if (!goLiveDate) return 'Expected go-live date is required.';
+      if (goLiveDate < today) return 'Go-live date cannot be in the past. Update the date or contact PMO.';
     }
     if (n === 4) {
       if (benefits.length === 0) return 'Define at least one business benefit before proceeding.';
-      const incomplete = benefits.find(b => !b.metricName || b.estimatedAnnualValueInr <= 0);
-      if (incomplete) return 'Each benefit needs a metric name and an estimated value greater than zero.';
+      const noMetric = benefits.find(b => !b.metricName?.trim());
+      if (noMetric) return 'Each benefit category needs a metric name (e.g. "Reduce transaction failure rate").';
+      const noValue = benefits.find(b => b.estimatedAnnualValueInr <= 0);
+      if (noValue) return 'Each benefit must have an estimated annual value greater than ₹0.';
+    }
+    if (n === 5) {
+      if (isRegulatory) {
+        if (!regBody.trim()) return 'Regulator / body is required when the initiative is compliance-mandated.';
+        if (!regDue) return 'Mandated due date is required when the initiative is compliance-mandated.';
+      }
     }
     return '';
   };
+
+  // Soft warning: regulatory due date should not be after go-live date
+  const regDueWarning =
+    isRegulatory && regDue && goLiveDate && regDue > goLiveDate
+      ? `Regulatory due date (${regDue}) is after the go-live date (${goLiveDate}). Consider aligning these or flag the risk.`
+      : '';
 
   const next = () => {
     const msg = validateStep(step);
@@ -237,6 +256,12 @@ export default function NewItemPage() {
             <h2 className="text-base font-semibold text-slate-900">Business Value</h2>
             <p className="text-sm text-slate-500">Define the measurable business value this initiative will deliver. At least one complete benefit is required.</p>
             <BenefitPicker onChange={setBenefits} />
+            {totalProjectedValue > 0 && (
+              <div className="flex items-center justify-between rounded-lg border border-brand-100 bg-brand-50/60 px-4 py-2.5">
+                <span className="text-sm font-medium text-brand-700">Total projected annual value</span>
+                <span className="tabular text-base font-semibold text-brand-700">{formatInr(totalProjectedValue)}</span>
+              </div>
+            )}
           </div>
         )}
 
@@ -266,6 +291,11 @@ export default function NewItemPage() {
                   <input type="date" value={regDue} onChange={e => setRegDue(e.target.value)} className={inputCls} />
                 </Field>
               </div>
+            {regDueWarning && (
+              <p className="rounded-lg border border-amber-200 bg-amber-50/60 px-3 py-2 text-xs text-amber-700">
+                ⚠ {regDueWarning}
+              </p>
+            )}
             )}
             {!isRegulatory && (
               <div className="rounded-lg border border-slate-100 bg-slate-50/60 p-3 text-xs text-slate-500">
