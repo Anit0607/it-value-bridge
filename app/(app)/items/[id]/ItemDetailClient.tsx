@@ -10,6 +10,7 @@ import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE, BENEFIT_UNIT_LABEL } 
 import { RagBadge, RagDot } from '@/components/RagBadge';
 import { Badge } from '@/components/ui/Badge';
 import { StageProgress } from '@/components/StageProgress';
+import { SectionCard } from '@/components/ui/SectionCard';
 import { STAGES } from '@/lib/types';
 import type { Item, DelaySource, Role } from '@/lib/types';
 import type { BenefitCategory, BenefitUnit } from '@prisma/client';
@@ -212,10 +213,9 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
       <StageProgress currentStage={item.currentStage} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
-        {/* Details */}
+        {/* Left column */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-            <h2 className="mb-4 text-xs font-semibold uppercase tracking-wider text-slate-500">Details</h2>
+          <SectionCard title="Details">
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
               <Field label="Vertical Head">{item.verticalHead}</Field>
               <Field label="Business SPOC">{item.businessSpoc}</Field>
@@ -225,37 +225,29 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                 <Field label="Requirement">{item.requirement}</Field>
               </div>
             </dl>
-          </div>
+          </SectionCard>
 
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Business Value</h2>
-              <div className="flex items-center gap-2">
-                {totalValue > 0 && (
-                  <span className="text-xs text-slate-400">
-                    Total <span className="tabular font-semibold text-brand-700">{formatInr(totalValue)}</span>
-                  </span>
-                )}
-                {value?.valueSignedOff ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
-                    <BadgeCheck className="h-3.5 w-3.5" />
-                    Signed off{value.valueSignOffBy ? ` · ${value.valueSignOffBy}` : ''}
-                  </span>
-                ) : (
-                  canSignOff && claims.length > 0 && (
-                    <button
-                      onClick={handleSignOff}
-                      disabled={isPending}
-                      className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 px-2.5 py-1 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-60"
-                    >
-                      <BadgeCheck className="h-3.5 w-3.5" />
-                      Sign off value
-                    </button>
-                  )
-                )}
-              </div>
-            </div>
-
+          <SectionCard
+            title="Business Value"
+            subtitle={totalValue > 0 ? formatInr(totalValue) : undefined}
+            action={
+              value?.valueSignedOff ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                  <BadgeCheck className="h-3.5 w-3.5" />
+                  Signed off{value.valueSignOffBy ? ` · ${value.valueSignOffBy}` : ''}
+                </span>
+              ) : canSignOff && claims.length > 0 ? (
+                <button
+                  onClick={handleSignOff}
+                  disabled={isPending}
+                  className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 px-2.5 py-1 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-60"
+                >
+                  <BadgeCheck className="h-3.5 w-3.5" />
+                  Sign off value
+                </button>
+              ) : undefined
+            }
+          >
             {claims.length > 0 ? (
               <ul className="space-y-2.5">
                 {claims.map(b => (
@@ -287,10 +279,9 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                 </div>
               </dl>
             )}
-
             {item.validation && (
               <div className="mt-4 border-t border-slate-100 pt-4">
-                <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Validation Result</h3>
+                <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Validation Result</p>
                 <dl className="grid grid-cols-2 gap-x-6 gap-y-3">
                   <Field label="Outcome Achieved">{item.validation.outcomeAchieved}</Field>
                   <Field label="Actual Metric">{item.validation.actualMetric}</Field>
@@ -300,14 +291,9 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                 </dl>
               </div>
             )}
-          </div>
+          </SectionCard>
 
-          {/* History */}
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-            <h2 className="mb-4 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
-              <HistoryIcon className="h-3.5 w-3.5" />
-              History
-            </h2>
+          <SectionCard title="History" icon={HistoryIcon}>
             <ol className="relative space-y-3 border-l border-slate-200 pl-5">
               {item.history.map((h, i) => (
                 <li key={i} className="relative">
@@ -322,14 +308,13 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                 </li>
               ))}
             </ol>
-          </div>
+          </SectionCard>
         </div>
 
-        {/* Current stage card */}
+        {/* Right column */}
         <div className="space-y-4">
-          <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
-            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wider text-slate-500">Current Stage</h2>
-            <div className="mb-4 text-lg font-semibold text-slate-900">{item.currentStage}</div>
+          {/* Current Stage metrics */}
+          <SectionCard title="Current Stage" subtitle={item.currentStage}>
             <div className="grid grid-cols-2 gap-3 text-center">
               <div className="rounded-lg bg-slate-50 py-2.5">
                 <div className="tabular text-xl font-semibold text-slate-900">{days}</div>
@@ -342,21 +327,23 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                 <div className="text-[11px] text-slate-500">{daysToEta < 0 ? 'days overdue' : 'days to ETA'}</div>
               </div>
             </div>
+          </SectionCard>
 
-            {!closed && (
-              <div className="mt-4 border-t border-slate-100 pt-4">
-                {/* Notes */}
-                <label className="mb-1 block text-xs font-medium text-slate-600">Stage notes</label>
-                <textarea
-                  rows={3}
-                  value={currentNotes}
-                  onChange={e => setLocalNotes(e.target.value)}
-                  className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
-                  placeholder="Add a note…"
-                />
-
-                {/* Delay flag */}
-                <div className="mt-3 flex items-center gap-2">
+          {/* Delay Management */}
+          {!closed && (
+            <SectionCard title="Delay Management" tone="warning">
+              <div className="space-y-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-slate-600">Stage notes</label>
+                  <textarea
+                    rows={3}
+                    value={currentNotes}
+                    onChange={e => setLocalNotes(e.target.value)}
+                    className="w-full resize-none rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+                    placeholder="Add a note…"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
                   <input
                     type="checkbox"
                     id="delayed"
@@ -367,61 +354,60 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                   <label htmlFor="delayed" className="text-sm text-slate-700">Mark as delayed</label>
                 </div>
                 {currentDelayed && (
-                  <>
+                  <div className="space-y-2">
                     <select
-                      className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none"
                       value={currentDelaySource ?? ''}
                       onChange={e => setLocalDelaySource(e.target.value as DelaySource)}
                     >
                       <option value="">Delay owner / source…</option>
-                      {DELAY_SOURCES.map(s => (
-                        <option key={s} value={s}>{s}</option>
-                      ))}
+                      {DELAY_SOURCES.map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                     <input
                       type="text"
                       value={currentDelayReason}
                       onChange={e => setLocalDelayReason(e.target.value)}
                       placeholder="Reason for delay…"
-                      className="mt-2 w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
+                      className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
                     />
-                  </>
+                  </div>
                 )}
-
                 {isDirty && (
                   <button
                     onClick={handleSaveNotes}
                     disabled={isPending}
-                    className="mt-3 w-full rounded-lg border border-slate-300 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
+                    className="w-full rounded-lg border border-slate-300 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-50 disabled:opacity-60"
                   >
                     {isPending ? 'Saving…' : 'Save notes'}
                   </button>
                 )}
               </div>
-            )}
+            </SectionCard>
+          )}
 
-            {/* Advance stage */}
-            {canProgress && !closed && (
-              <div className="mt-4 border-t border-slate-100 pt-4">
-                <label className="mb-1 block text-xs font-medium text-slate-600">Completion note</label>
+          {/* Stage Advancement */}
+          {canProgress && !closed && (
+            <SectionCard title="Advance Stage" tone="brand">
+              <div className="space-y-2">
+                <label className="block text-xs font-medium text-slate-600">Completion note</label>
                 <input
                   type="text"
                   value={note}
                   onChange={e => setNote(e.target.value)}
-                  placeholder={`Note for moving to next stage…`}
+                  placeholder="Note for moving to next stage…"
                   className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
                 />
                 <button
                   onClick={handleComplete}
                   disabled={isPending}
-                  className="mt-2 flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-60"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-60"
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  {isPending ? 'Moving…' : `Complete & advance`}
+                  {isPending ? 'Moving…' : 'Complete & advance'}
                 </button>
               </div>
-            )}
-          </div>
+            </SectionCard>
+          )}
         </div>
       </div>
     </div>
