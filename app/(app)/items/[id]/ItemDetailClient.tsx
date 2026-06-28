@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useRole } from '@/components/RoleProvider';
 import { advanceStage, updateNotes, signOffValue, type InitiativeValue } from '@/lib/actions/initiatives';
-import { computeRAG, daysInStage, daysFromNow } from '@/lib/rag';
+import { computeRAG, daysInStage, daysFromNow, daysSinceUpdate } from '@/lib/rag';
 import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE, BENEFIT_UNIT_LABEL } from '@/lib/value';
 import { RagBadge, RagDot } from '@/components/RagBadge';
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
@@ -110,6 +110,25 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const currentDelaySource = localDelaySource ?? item.delaySource;
   const currentDelayReason = localDelayReason ?? item.delayReason ?? '';
   const back = user ? (ROLE_BACK[user.role] ?? ROLE_BACK.PMO) : ROLE_BACK.PMO;
+
+  // Rule-based action panel
+  const requiredActions: { label: string; tone: 'danger' | 'warning' | 'brand' }[] = [];
+  if (!closed) {
+    if (rag === 'Red' && daysToEta < 0)
+      requiredActions.push({ label: 'Escalate delay owner — initiative is overdue', tone: 'danger' });
+    if (daysSinceUpdate(item.lastUpdated) > 7)
+      requiredActions.push({ label: 'Update stage notes — no update in over 7 days', tone: 'warning' });
+    if (item.currentStage === 'Business Validation' && !item.validation)
+      requiredActions.push({ label: 'Awaiting business outcome validation from Business SPOC', tone: 'warning' });
+    if (item.currentStage === 'AppSec')
+      requiredActions.push({ label: 'Awaiting security clearance from AppSec team', tone: 'brand' });
+    if (item.currentStage === 'CAB Approval')
+      requiredActions.push({ label: 'Awaiting CAB approval before go-live', tone: 'brand' });
+    if (item.isRegulatory && item.regulatoryDueDate && daysFromNow(item.regulatoryDueDate) < 14)
+      requiredActions.push({ label: `Regulatory deadline approaching: ${item.regulatoryDueDate}`, tone: 'danger' });
+  }
+  if (closed && !value?.valueSignedOff && totalValue > 0)
+    requiredActions.push({ label: 'PMO / CIO value sign-off pending — initiative is closed', tone: 'brand' });
   const isDirty =
     localNotes !== null || localDelayed !== null || localDelaySource !== undefined || localDelayReason !== null;
 
@@ -243,6 +262,31 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
           ))}
         </dl>
       </div>
+
+      {/* Action Required panel — only shown when there are active actions */}
+      {requiredActions.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-amber-200 bg-amber-50/40 shadow-card">
+          <div className="border-b border-amber-100 px-5 py-3">
+            <h2 className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-amber-800">
+              <AlertOctagon className="h-3.5 w-3.5 text-amber-500" />
+              Action Required
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                {requiredActions.length}
+              </span>
+            </h2>
+          </div>
+          <ul className="divide-y divide-amber-100">
+            {requiredActions.map((a, i) => (
+              <li key={i} className="flex items-start gap-3 px-5 py-3">
+                <Badge tone={a.tone} size="sm" className="mt-0.5 shrink-0">
+                  {a.tone === 'danger' ? 'Critical' : a.tone === 'warning' ? 'Action' : 'Pending'}
+                </Badge>
+                <span className="text-sm text-slate-700">{a.label}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {/* Stage progress */}
       <StageProgress currentStage={item.currentStage} />
