@@ -56,8 +56,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const canSignOff     = user?.role === 'PMO' || user?.role === 'CIO';
   const canUpdateNotes = user?.role === 'PMO' || user?.role === 'CIO' || user?.role === 'VERTICAL_HEAD';
   const canAdvance     = user?.role === 'PMO' || user?.role === 'CIO' || user?.role === 'VERTICAL_HEAD';
-  const canValidate    = (user?.role === 'BUSINESS' || user?.role === 'PMO' || user?.role === 'CIO') &&
-                         item.currentStage === 'Business Validation' && !closed;
+  // canValidate declared below after `closed` is computed
 
   const handleSignOff = () => {
     if (!user) return;
@@ -77,6 +76,8 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const stageIdx = STAGES.indexOf(item.currentStage);
   const canProgress = stageIdx < STAGES.length - 1;
   const closed = item.currentStage === 'Closed';
+  const canValidate = (user?.role === 'BUSINESS' || user?.role === 'PMO' || user?.role === 'CIO') &&
+                      item.currentStage === 'Business Validation' && !closed;
   const currentNotes = localNotes ?? item.notes;
   const currentDelayed = localDelayed ?? item.delayed;
   const currentDelaySource = localDelaySource ?? item.delaySource;
