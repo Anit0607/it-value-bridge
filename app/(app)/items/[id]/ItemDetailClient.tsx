@@ -20,6 +20,7 @@ import {
   CheckCircle2,
   BadgeCheck,
   ShieldAlert,
+  AlertOctagon,
   ArrowRight,
   History as HistoryIcon,
 } from 'lucide-react';
