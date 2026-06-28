@@ -466,20 +466,30 @@ const RegulatoryInput = z.object({
 export type SetRegulatoryInput = z.infer<typeof RegulatoryInput>;
 
 // ─── Edit Initiative Metadata ────────────────────────────────────────────────
-export interface EditInitiativeInput {
-  title: string;
-  requirement: string;
-  verticalHead: string;
-  businessSpoc: string;
-  businessSponsor: string;
-  goLiveDate: string;
-  isRegulatory: boolean;
-  regulatoryBody?: string;
-  regulatoryDueDate?: string;
-}
+const EditSchema = z.object({
+  title:           z.string().min(5,  'Title must be at least 5 characters'),
+  requirement:     z.string().min(20, 'Requirement must be at least 20 characters'),
+  verticalHead:    z.string().min(1,  'IT Vertical Head is required'),
+  businessSpoc:    z.string().min(1,  'Business SPOC is required'),
+  businessSponsor: z.string().min(1,  'Business Sponsor is required'),
+  goLiveDate:      z.string().min(1,  'Go-live date is required'),
+  isRegulatory:    z.boolean(),
+  regulatoryBody:  z.string().optional(),
+  regulatoryDueDate: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.isRegulatory) {
+    if (!data.regulatoryBody?.trim())
+      ctx.addIssue({ code: 'custom', path: ['regulatoryBody'],    message: 'Regulator/body is required when compliance-mandated' });
+    if (!data.regulatoryDueDate)
+      ctx.addIssue({ code: 'custom', path: ['regulatoryDueDate'], message: 'Mandated due date is required when compliance-mandated' });
+  }
+});
+
+export type EditInitiativeInput = z.infer<typeof EditSchema>;
 
 export async function updateInitiative(id: string, input: EditInitiativeInput) {
   const user = await requireRole('PMO', 'CIO');
+  const parsed = EditSchema.parse(input);
   const today = new Date();
 
   // Fetch current values to build a field-level diff for the audit trail
@@ -501,27 +511,27 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
   const changes: string[] = [];
   if (current) {
     const oldDate = current.expectedGoLiveDate?.toISOString().slice(0, 10) ?? '';
-    const newDate = input.goLiveDate ?? '';
+    const newDate = parsed.goLiveDate ?? '';
 
-    if (current.title !== input.title.trim())
+    if (current.title !== parsed.title.trim())
       changes.push(`Title updated`);
-    if ((current.description ?? '') !== input.requirement.trim())
+    if ((current.description ?? '') !== parsed.requirement.trim())
       changes.push(`Requirement updated`);
-    if ((current.verticalHeadName ?? '') !== input.verticalHead)
-      changes.push(`Vertical head changed from ${current.verticalHeadName} to ${input.verticalHead}`);
-    if ((current.businessSpoc ?? '') !== input.businessSpoc.trim())
-      changes.push(`Business SPOC changed from ${current.businessSpoc ?? '—'} to ${input.businessSpoc.trim()}`);
-    if ((current.businessSponsor ?? '') !== input.businessSponsor.trim())
-      changes.push(`Business sponsor changed from ${current.businessSponsor ?? '—'} to ${input.businessSponsor.trim()}`);
+    if ((current.verticalHeadName ?? '') !== parsed.verticalHead)
+      changes.push(`Vertical head changed from ${current.verticalHeadName} to ${parsed.verticalHead}`);
+    if ((current.businessSpoc ?? '') !== parsed.businessSpoc.trim())
+      changes.push(`Business SPOC changed from ${current.businessSpoc ?? '—'} to ${parsed.businessSpoc.trim()}`);
+    if ((current.businessSponsor ?? '') !== parsed.businessSponsor.trim())
+      changes.push(`Business sponsor changed from ${current.businessSponsor ?? '—'} to ${parsed.businessSponsor.trim()}`);
     if (oldDate !== newDate)
       changes.push(`Go-live date changed from ${oldDate || '—'} to ${newDate}`);
-    if (current.isRegulatory !== input.isRegulatory)
-      changes.push(input.isRegulatory ? 'Regulatory flag set to Yes' : 'Regulatory flag cleared');
-    else if (input.isRegulatory) {
+    if (current.isRegulatory !== parsed.isRegulatory)
+      changes.push(parsed.isRegulatory ? 'Regulatory flag set to Yes' : 'Regulatory flag cleared');
+    else if (parsed.isRegulatory) {
       const oldBody = current.regulatoryBody ?? '';
-      const newBody = input.regulatoryBody?.trim() ?? '';
+      const newBody = parsed.regulatoryBody?.trim() ?? '';
       const oldDue  = current.regulatoryDueDate?.toISOString().slice(0, 10) ?? '';
-      const newDue  = input.regulatoryDueDate ?? '';
+      const newDue  = parsed.regulatoryDueDate ?? '';
       if (oldBody !== newBody)
         changes.push(`Regulator changed from ${oldBody || '—'} to ${newBody || '—'}`);
       if (oldDue !== newDue)
@@ -533,15 +543,15 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
   await prisma.initiative.update({
     where: { id },
     data: {
-      title: input.title.trim(),
-      description: input.requirement.trim(),
-      verticalHeadName: input.verticalHead,
-      businessSpoc: input.businessSpoc.trim(),
-      businessSponsor: input.businessSponsor.trim(),
-      expectedGoLiveDate: input.goLiveDate ? new Date(input.goLiveDate) : undefined,
-      isRegulatory: input.isRegulatory,
-      regulatoryBody: input.isRegulatory ? (input.regulatoryBody?.trim() || null) : null,
-      regulatoryDueDate: input.isRegulatory && input.regulatoryDueDate ? new Date(input.regulatoryDueDate) : null,
+      title: parsed.title.trim(),
+      description: parsed.requirement.trim(),
+      verticalHeadName: parsed.verticalHead,
+      businessSpoc: parsed.businessSpoc.trim(),
+      businessSponsor: parsed.businessSponsor.trim(),
+      expectedGoLiveDate: parsed.goLiveDate ? new Date(parsed.goLiveDate) : undefined,
+      isRegulatory: parsed.isRegulatory,
+      regulatoryBody: parsed.isRegulatory ? (parsed.regulatoryBody?.trim() || null) : null,
+      regulatoryDueDate: parsed.isRegulatory && parsed.regulatoryDueDate ? new Date(parsed.regulatoryDueDate) : null,
       lastUpdated: today,
       history: {
         create: { stage: null, note: historyNote, userName: user.name, createdAt: today },
