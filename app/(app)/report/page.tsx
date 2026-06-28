@@ -17,6 +17,7 @@ import { PeriodPicker } from '@/components/PeriodPicker';
 import Link from 'next/link';
 import { AlertTriangle, ShieldAlert, AlertOctagon, TrendingUp, BadgeCheck, Clock, Flame } from 'lucide-react';
 import { PrintButton } from '@/components/PrintButton';
+import { ReportExportButtons } from '@/components/report/ReportExportButtons';
 
 const ACHIEVED_TONE: Record<string, string> = {
   Yes: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
@@ -221,6 +222,41 @@ export default async function ReportPage({
       <PageHeader title="Leadership Value Report" subtitle={`Delivery accountability and outcome realization · ${period.label}`}>
         <div className="flex flex-wrap items-center gap-2">
           <PeriodPicker />
+          <ReportExportButtons
+            periodLabel={period.label}
+            delayed={delayed.map(i => ({
+              title: i.title,
+              verticalHead: i.verticalHead,
+              currentStage: i.currentStage,
+              delaySource: i.delaySource,
+              delayReason: i.delayReason,
+              goLiveDate: i.goLiveDate,
+            }))}
+            missed={missed.map(i => ({
+              title: i.title,
+              verticalHead: i.verticalHead,
+              goLiveDate: i.goLiveDate,
+              currentStage: i.currentStage,
+            }))}
+            regulatory={regulatory.map(i => ({
+              title: i.title,
+              regulatoryBody: i.regulatoryBody,
+              regulatoryDueDate: i.regulatoryDueDate,
+              currentStage: i.currentStage,
+              isOverdue: !!i.regulatoryDueDate && i.regulatoryDueDate < today && i.currentStage !== 'Closed',
+            }))}
+            delivered={completedWithOutcome.map(i => ({
+              title: i.title,
+              outcomeCategory: i.outcomeCategory,
+              verticalHead: i.verticalHead,
+              businessSponsor: i.businessSponsor,
+              outcomeAchieved: i.validation!.outcomeAchieved,
+              targetMetric: i.targetMetric,
+              actualMetric: i.validation!.actualMetric,
+              actualResult: i.validation!.actualResult,
+              closureDate: closureDate(i),
+            }))}
+          />
           <PrintButton />
         </div>
       </PageHeader>
