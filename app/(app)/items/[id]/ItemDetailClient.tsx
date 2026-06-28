@@ -414,7 +414,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                   className="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-600 py-2.5 text-sm font-medium text-white shadow-sm transition-colors hover:bg-brand-700 disabled:opacity-60"
                 >
                   <CheckCircle2 className="h-4 w-4" />
-                  {isPending ? 'Moving…' : 'Complete & advance'}
+                  {isPending ? 'Moving…' : `Move to: ${STAGES[stageIdx + 1]}`}
                 </button>
               </div>
             </SectionCard>
