@@ -8,6 +8,7 @@ import { advanceStage, updateNotes, signOffValue, type InitiativeValue } from '@
 import { computeRAG, daysInStage, daysFromNow } from '@/lib/rag';
 import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE, BENEFIT_UNIT_LABEL } from '@/lib/value';
 import { RagBadge } from '@/components/RagBadge';
+import { Badge } from '@/components/ui/Badge';
 import { StageProgress } from '@/components/StageProgress';
 import { STAGES } from '@/lib/types';
 import type { Item, DelaySource, Role } from '@/lib/types';
@@ -111,19 +112,26 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="inline-flex items-center rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-600">
-              {item.type}
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-600">
+            Initiative Control Room
+          </p>
+          <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{item.title}</h1>
+          <div className="mt-1.5 flex flex-wrap items-center gap-2">
+            <span className="text-sm text-slate-500">
+              Current Stage: <span className="font-medium text-slate-700">{item.currentStage}</span>
             </span>
+            <span className="text-slate-300">·</span>
             <RagBadge rag={rag} />
+            <Badge tone={item.type === 'Project' ? 'violet' : 'sky'} size="sm">
+              {item.type === 'Project' ? 'Project' : 'CR'}
+            </Badge>
             {item.isRegulatory && (
-              <span className="inline-flex items-center gap-1 rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20">
-                <ShieldAlert className="h-3.5 w-3.5" />
+              <Badge tone="danger" size="sm">
+                <ShieldAlert className="mr-1 h-3 w-3" />
                 Regulatory{item.regulatoryBody ? ` · ${item.regulatoryBody}` : ''}
-              </span>
+              </Badge>
             )}
           </div>
-          <h1 className="mt-2 text-xl font-semibold tracking-tight text-slate-900">{item.title}</h1>
         </div>
         {!closed && item.currentStage === 'Business Validation' && (
           <Link
