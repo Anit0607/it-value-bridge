@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { requireRole } from '@/lib/authz';
+import { Prisma } from '@prisma/client';
 import { STAGE_LABEL, STAGE_TO_PROCESS_GROUP, nextStage } from '@/lib/stage-map';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -110,7 +111,7 @@ export async function listVisibleInitiativesForUser(user: {
 }): Promise<Item[]> {
   const role = user.role;
 
-  let where: Parameters<typeof prisma.initiative.findMany>[0]['where'] = {};
+  let where: Prisma.InitiativeWhereInput = {};
 
   if (role === 'VERTICAL_HEAD') {
     where = { verticalHeadName: user.verticalHead ?? user.name };
