@@ -11,7 +11,7 @@ import { computeRAG, daysFromNow, daysSinceUpdate } from '@/lib/rag';
 import { resolvePeriod, inPeriod, onOrBeforeEnd } from '@/lib/period';
 import { PeriodPicker } from '@/components/PeriodPicker';
 import Link from 'next/link';
-import { Printer, Sparkles, AlertTriangle, ShieldAlert, AlertOctagon } from 'lucide-react';
+import { Printer, AlertTriangle, ShieldAlert, AlertOctagon } from 'lucide-react';
 
 const ACHIEVED_TONE: Record<string, string> = {
   Yes: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
@@ -67,6 +67,21 @@ export default async function ReportPage({
     ? Math.round((delivered.length / committed.length) * 100)
     : null;
 
+  // For executive summary
+  const topDelaySources = (Object.entries(delaySources) as [DelaySource, number][])
+    .filter(([, n]) => n > 0)
+    .sort(([, a], [, b]) => b - a)
+    .map(([s]) => s);
+
+  const regDueSoon = regulatory.filter(
+    i => i.regulatoryDueDate && daysFromNow(i.regulatoryDueDate) >= 0 && daysFromNow(i.regulatoryDueDate) <= 14 && i.currentStage !== 'Closed',
+  );
+
+  const stuckStages = ['UAT', 'AppSec', 'CAB Approval'] as const;
+  const stuckInPreLaunch = items.filter(i => (stuckStages as readonly string[]).includes(i.currentStage));
+
+  const closedWithoutValidation = items.filter(i => i.currentStage === 'Closed' && !i.validation);
+
   return (
     <div className="mx-auto max-w-4xl space-y-6">
 
@@ -86,20 +101,39 @@ export default async function ReportPage({
       {/* ── 2. Executive Summary ─────────────────────────────────────────────── */}
       <div className="rounded-xl border border-brand-100 bg-gradient-to-br from-brand-50/60 to-white p-5 shadow-card">
         <p className="text-[11px] font-semibold uppercase tracking-wider text-brand-600">Executive Summary</p>
-        <p className="mt-2 text-sm leading-relaxed text-slate-700">
-          In <strong>{period.label}</strong>, the IT portfolio committed to{' '}
-          <strong>{committed.length} initiative{committed.length !== 1 ? 's' : ''}</strong>.{' '}
-          {deliveryPct !== null
-            ? <><strong className="text-emerald-700">{delivered.length}</strong> were delivered on time ({deliveryPct}% delivery rate){missed.length > 0 ? `, and ` : `. `}</>
-            : null}
-          {missed.length > 0 && <><strong className="text-rose-700">{missed.length}</strong> missed their committed go-live date. </>}
-          {delayed.length > 0 && <><strong>{delayed.length}</strong> active initiatives are flagged as delayed, primarily driven by {topSource} dependencies. </>}
-          {needsLeadershipAttention.length > 0 && (
-            <span className="text-amber-700">
-              <strong>{needsLeadershipAttention.length}</strong> initiative{needsLeadershipAttention.length !== 1 ? 's' : ''} require{needsLeadershipAttention.length === 1 ? 's' : ''} immediate leadership attention.
-            </span>
+        <p className="mt-3 text-sm leading-relaxed text-slate-700">
+          In <strong>{period.label}</strong>, the IT portfolio{' '}
+          {committed.length > 0
+            ? <>delivered <strong className="text-emerald-700">{delivered.length}</strong> out of{' '}
+              <strong>{committed.length}</strong> committed initiative{committed.length !== 1 ? 's' : ''}
+              {deliveryPct !== null ? ` (${deliveryPct}% on-time delivery rate)` : ''}</>
+            : <>had no go-live commitments in this period</>}.
+          {missed.length > 0 && (
+            <> <strong className="text-rose-700">{missed.length}</strong> item{missed.length !== 1 ? 's' : ''}{' '}
+            slipped beyond the agreed timeline.</>
+          )}
+          {topDelaySources.length > 0 && (
+            <> Active delay risk is concentrated around{' '}
+            <strong>{topDelaySources.slice(0, 2).join(' and ')}</strong> dependencies.</>
+          )}
+          {regDueSoon.length > 0 && (
+            <> Regulatory commitments require continued leadership oversight, with{' '}
+            <strong className="text-rose-700">{regDueSoon.length}</strong> item{regDueSoon.length !== 1 ? 's' : ''}{' '}
+            due within the next 14 days.</>
           )}
         </p>
+        {(stuckInPreLaunch.length > 0 || closedWithoutValidation.length > 0) && (
+          <p className="mt-2 text-sm leading-relaxed text-slate-700">
+            <strong>Recommended CIO focus:</strong>{' '}
+            {stuckInPreLaunch.length > 0 && (
+              <>Clear {stuckInPreLaunch.length} initiative{stuckInPreLaunch.length !== 1 ? 's' : ''} currently in UAT, AppSec, or CAB Approval.</>
+            )}
+            {stuckInPreLaunch.length > 0 && closedWithoutValidation.length > 0 && ' '}
+            {closedWithoutValidation.length > 0 && (
+              <>Validate business outcomes for {closedWithoutValidation.length} recently closed initiative{closedWithoutValidation.length !== 1 ? 's' : ''} awaiting confirmation.</>
+            )}
+          </p>
+        )}
       </div>
 
       {/* ── 3. Portfolio Commitment Scorecard ────────────────────────────────── */}
@@ -269,32 +303,6 @@ export default async function ReportPage({
         </SectionCard>
       )}
 
-      {/* ── 10. Detailed Appendix — AI Narrative ─────────────────────────────── */}
-      <div className="rounded-xl border border-brand-200 bg-gradient-to-br from-brand-50 to-white p-5 shadow-card">
-        <div className="flex items-start gap-3">
-          <div className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg bg-brand-600 text-white">
-            <Sparkles className="h-5 w-5" />
-          </div>
-          <div>
-            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-brand-800">
-              Detailed Appendix — AI Narrative
-              <span className="rounded-full bg-brand-100 px-2 py-0.5 text-[10px] font-medium text-brand-700">Coming Soon</span>
-            </h2>
-            <p className="text-sm leading-relaxed text-slate-600">
-              <em>
-                &ldquo;In {period.label}, the IT portfolio demonstrated strong execution with{' '}
-                {delivered.length} item{delivered.length !== 1 ? 's' : ''} delivered against a
-                commitment of {committed.length}. Key risks include {delayed.length} items
-                with active delay flags, predominantly driven by {topSource} dependencies. Priority
-                escalation is recommended for the items flagged above.&rdquo;
-              </em>
-            </p>
-            <p className="mt-2 text-xs text-brand-400">
-              Auto-generated narrative will be available when the Claude API is connected.
-            </p>
-          </div>
-        </div>
-      </div>
 
     </div>
   );
