@@ -15,7 +15,8 @@ import { resolvePeriod, inPeriod, onOrBeforeEnd } from '@/lib/period';
 import { formatInr } from '@/lib/value';
 import { PeriodPicker } from '@/components/PeriodPicker';
 import Link from 'next/link';
-import { Printer, AlertTriangle, ShieldAlert, AlertOctagon, TrendingUp, BadgeCheck, Clock, Flame } from 'lucide-react';
+import { AlertTriangle, ShieldAlert, AlertOctagon, TrendingUp, BadgeCheck, Clock, Flame } from 'lucide-react';
+import { PrintButton } from '@/components/PrintButton';
 
 const ACHIEVED_TONE: Record<string, string> = {
   Yes: 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
@@ -220,12 +221,7 @@ export default async function ReportPage({
       <PageHeader title="Leadership Value Report" subtitle={`Delivery accountability and outcome realization · ${period.label}`}>
         <div className="flex flex-wrap items-center gap-2">
           <PeriodPicker />
-          <form action="javascript:window.print()">
-            <button type="submit" className="no-print inline-flex items-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 shadow-sm transition-colors hover:bg-slate-50">
-              <Printer className="h-4 w-4" />
-              Export as PDF
-            </button>
-          </form>
+          <PrintButton />
         </div>
       </PageHeader>
 
