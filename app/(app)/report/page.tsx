@@ -1,6 +1,6 @@
 export const dynamic = 'force-dynamic';
 
-import { listInitiativesAsItems } from '@/lib/actions/initiatives';
+import { listVisibleInitiativesForUser } from '@/lib/actions/initiatives';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
@@ -33,7 +33,7 @@ export default async function ReportPage({
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
 
-  const items = await listInitiativesAsItems();
+  const items = await listVisibleInitiativesForUser(session.user);
   const period = resolvePeriod(searchParams);
   const today = new Date().toISOString().slice(0, 10);
 

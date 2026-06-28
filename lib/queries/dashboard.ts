@@ -1,8 +1,10 @@
 import {
   listInitiativesAsItems,
+  listVisibleInitiativesForUser,
   getInitiativesByVerticalHead,
   getInitiativesBySpoc,
 } from '@/lib/actions/initiatives';
+import type { AuthUser } from '@/lib/types';
 import { ragCounts } from '@/lib/rag';
 import { STAGES, type Stage } from '@/lib/types';
 import { inPeriod, onOrBeforeEnd, type Period } from '@/lib/period';
@@ -114,8 +116,9 @@ export interface PmoList {
  * UX over a small dataset) — this returns every enriched item plus headline
  * counts for the KPI cards.
  */
-export async function getPmoList(): Promise<PmoList> {
-  const items = enrichAll(await listInitiativesAsItems());
+export async function getPmoList(user?: Pick<AuthUser, 'role' | 'name' | 'verticalHead'>): Promise<PmoList> {
+  const raw = user ? await listVisibleInitiativesForUser(user) : await listInitiativesAsItems();
+  const items = enrichAll(raw);
   const active = items.filter(i => i.currentStage !== 'Closed');
   return {
     items,

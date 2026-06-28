@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
 import { getPmoList } from '@/lib/queries/dashboard';
 import { PmoDashboardClient } from './PmoDashboardClient';
 import { PageHeader } from '@/components/PageHeader';
@@ -10,7 +12,9 @@ import { TodaysFocus } from '@/components/TodaysFocus';
 import { buttonCls } from '@/components/ui/Button';
 
 export default async function PmoDashboard() {
-  const { items, activeCount, counts } = await getPmoList();
+  const session = await auth();
+  if (!session?.user) redirect('/sign-in');
+  const { items, activeCount, counts } = await getPmoList(session.user);
 
   return (
     <div className="space-y-6">

@@ -95,6 +95,38 @@ export async function listInitiativesAsItems(): Promise<Item[]> {
   return rows.map(toItem);
 }
 
+/**
+ * Role-scoped initiative list. Use this instead of listInitiativesAsItems()
+ * in any page where the caller's role should limit what they see.
+ *
+ *  ADMIN / CIO / PMO  → all initiatives
+ *  VERTICAL_HEAD      → initiatives where verticalHeadName = user.verticalHead
+ *  BUSINESS           → initiatives where businessSpoc = user.name
+ */
+export async function listVisibleInitiativesForUser(user: {
+  role: string;
+  name: string;
+  verticalHead?: string | null;
+}): Promise<Item[]> {
+  const role = user.role;
+
+  let where: Parameters<typeof prisma.initiative.findMany>[0]['where'] = {};
+
+  if (role === 'VERTICAL_HEAD') {
+    where = { verticalHeadName: user.verticalHead ?? user.name };
+  } else if (role === 'BUSINESS') {
+    where = { businessSpoc: user.name };
+  }
+  // ADMIN / CIO / PMO: no where filter → all initiatives
+
+  const rows = await prisma.initiative.findMany({
+    where,
+    include: WITH_RELATIONS,
+    orderBy: { createdAt: 'desc' },
+  });
+  return rows.map(toItem);
+}
+
 export async function getInitiativeItem(id: string): Promise<Item | null> {
   const row = await prisma.initiative.findUnique({
     where: { id },
