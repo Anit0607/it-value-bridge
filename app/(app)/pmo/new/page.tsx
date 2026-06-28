@@ -337,11 +337,11 @@ export default function NewItemPage() {
         )}
         {step < 6 ? (
           <Button variant="primary" icon={ChevronRight} iconPosition="right" onClick={next}>
-            Next: {STEPS[step].label}
+            {step === 5 ? 'Review Initiative' : `Next: ${STEPS[step].label}`}
           </Button>
         ) : (
           <Button variant="primary" icon={CheckCircle2} onClick={handleSubmit} loading={isPending}>
-            {isPending ? 'Registering…' : 'Register Initiative'}
+            {isPending ? 'Creating…' : 'Submit & Create Initiative'}
           </Button>
         )}
       </div>
