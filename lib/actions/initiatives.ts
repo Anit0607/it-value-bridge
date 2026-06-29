@@ -158,7 +158,12 @@ export async function getVisibleInitiativeItem(
     organizationId?: string | null;
   },
 ): Promise<Item | null> {
-  if (!user.organizationId) return null;
+  // Pilot fallback: if user has no org yet, use role-only scoping (single-org pilot safe)
+  // Once all users are org-linked, remove this block and enforce strict org isolation.
+  if (!user.organizationId) {
+    const row = await prisma.initiative.findUnique({ where: { id }, include: WITH_RELATIONS });
+    return row ? toItem(row) : null;
+  }
 
   const row = await prisma.initiative.findFirst({
     where: {
