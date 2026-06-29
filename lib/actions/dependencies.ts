@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
+import { requireRole } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { STAGE_LABEL } from '@/lib/stage-map';
@@ -112,17 +113,21 @@ const AddInput = z.object({
 export type AddDependencyInput = z.infer<typeof AddInput>;
 
 async function requireEditor() {
-  const session = await auth();
-  const role = session?.user?.role;
-  if (!session?.user || (role !== 'PMO' && role !== 'CIO' && role !== 'VERTICAL_HEAD')) {
-    throw new Error('Not allowed to edit dependencies');
-  }
+  return requireRole('PMO', 'CIO', 'VERTICAL_HEAD');
+}
+
+async function assertDependencyOrgAccess(id: string, organizationId: string | null | undefined) {
+  if (!organizationId) return;
+  const exists = await prisma.initiative.findFirst({ where: { id, organizationId }, select: { id: true } });
+  if (!exists) throw new Error('Initiative not found in your organization');
 }
 
 export async function addDependency(input: AddDependencyInput) {
-  await requireEditor();
+  const user = await requireEditor();
   const parsed = AddInput.parse(input);
   if (parsed.dependentId === parsed.blockerId) throw new Error('An item cannot depend on itself');
+  await assertDependencyOrgAccess(parsed.dependentId, user.organizationId);
+  await assertDependencyOrgAccess(parsed.blockerId, user.organizationId);
 
   const existing = await prisma.dependency.findUnique({
     where: { dependentId_blockerId: { dependentId: parsed.dependentId, blockerId: parsed.blockerId } },
@@ -151,8 +156,11 @@ export async function addDependency(input: AddDependencyInput) {
 }
 
 export async function removeDependency(dependencyId: string) {
-  await requireEditor();
-  const dep = await prisma.dependency.findUnique({ where: { id: dependencyId } });
+  const user = await requireEditor();
+  const dep = await prisma.dependency.findUnique({ where: { id: dependencyId }, select: { dependentId: true, blockerId: true } });
+  if (dep) {
+    await assertDependencyOrgAccess(dep.dependentId, user.organizationId);
+  }
   await prisma.dependency.delete({ where: { id: dependencyId } });
   if (dep) {
     revalidatePath(`/items/${dep.dependentId}`);

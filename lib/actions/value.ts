@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
+import { requireRole } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -17,12 +18,16 @@ const MeasurementInput = z.object({
 export type AddMeasurementInput = z.infer<typeof MeasurementInput>;
 
 export async function addValueMeasurement(input: AddMeasurementInput) {
-  const session = await auth();
-  if (!session?.user) throw new Error('Not authenticated');
-  if (session.user.role !== 'PMO' && session.user.role !== 'CIO') {
-    throw new Error('Only PMO/CIO can record realized value');
-  }
+  const user = await requireRole('PMO', 'CIO');
   const parsed = MeasurementInput.parse(input);
+  // Org access check on the initiative
+  if (user.organizationId) {
+    const exists = await prisma.initiative.findFirst({
+      where: { id: parsed.initiativeId, organizationId: user.organizationId },
+      select: { id: true },
+    });
+    if (!exists) throw new Error('Initiative not found in your organization');
+  }
 
   // Ensure the claim belongs to the named initiative.
   const claim = await prisma.benefitClaim.findUnique({
