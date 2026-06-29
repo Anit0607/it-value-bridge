@@ -77,6 +77,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/admin', label: 'Workspace Settings', icon: Settings, roles: ['ADMIN'] },
       { href: '/admin/users', label: 'User Management', icon: Users, roles: ['ADMIN'] },
+      { href: '/admin/pilot-readiness', label: 'Pilot Readiness', icon: CheckSquare, roles: ['ADMIN'] },
       { href: '/cio', label: 'CIO Dashboard', icon: LayoutDashboard, roles: ['ADMIN'] },
       { href: '/pmo', label: 'PMO Dashboard', icon: ClipboardList, roles: ['ADMIN'] },
     ],
