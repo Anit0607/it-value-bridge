@@ -108,17 +108,25 @@ export async function listVisibleInitiativesForUser(user: {
   role: string;
   name: string;
   verticalHead?: string | null;
+  organizationId?: string | null;
 }): Promise<Item[]> {
-  const role = user.role;
-
-  let where: Prisma.InitiativeWhereInput = {};
-
-  if (role === 'VERTICAL_HEAD') {
-    where = { verticalHeadName: user.verticalHead ?? user.name };
-  } else if (role === 'BUSINESS') {
-    where = { businessSpoc: user.name };
+  // If the user has no org context, return nothing (safe default for unlinked accounts)
+  if (!user.organizationId) {
+    return [];
   }
-  // ADMIN / CIO / PMO: no where filter → all initiatives
+
+  // Base scope: always limit to the user's organization
+  let where: Prisma.InitiativeWhereInput = {
+    organizationId: user.organizationId,
+  };
+
+  // Additional role-based scoping within the org
+  if (user.role === 'VERTICAL_HEAD') {
+    where = { ...where, verticalHeadName: user.verticalHead ?? user.name };
+  } else if (user.role === 'BUSINESS') {
+    where = { ...where, businessSpoc: user.name };
+  }
+  // ADMIN / CIO / PMO: org-scoped only, no further filter
 
   const rows = await prisma.initiative.findMany({
     where,
