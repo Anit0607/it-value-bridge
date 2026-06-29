@@ -159,7 +159,27 @@ async function main() {
     create: { name: 'Anil Kumar', email: 'business@bank.com', passwordHash: password, role: 'BUSINESS' },
   });
 
-  console.log('Seeded 4 users:', cio.email, pmo.email, vh.email, business.email);
+  // Second Vertical Head — covers Retail Assets vertical
+  const vh2 = await prisma.user.upsert({
+    where: { email: 'vh2@bank.com' },
+    update: {},
+    create: {
+      name: 'Priya Sharma',
+      email: 'vh2@bank.com',
+      passwordHash: password,
+      role: 'VERTICAL_HEAD',
+      verticalHead: 'Priya Sharma',
+    },
+  });
+
+  // Second Business SPOC — covers Retail Lending products
+  const business2 = await prisma.user.upsert({
+    where: { email: 'business2@bank.com' },
+    update: {},
+    create: { name: 'Deepa Nair', email: 'business2@bank.com', passwordHash: password, role: 'BUSINESS' },
+  });
+
+  console.log('Seeded 7 users:', cio.email, pmo.email, vh.email, vh2.email, business.email, business2.email);
 
   // --- Clean value-layer data (safe FK order) before re-seeding ---
   await prisma.dependency.deleteMany();

@@ -19,11 +19,13 @@ import {
 } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
-  { email: 'admin@bank.com',    name: 'Platform Admin',  desc: 'Workspace Settings — user management, pilot configuration',      icon: Settings },
-  { email: 'cio@bank.com',      name: 'Mahesh Iyer',     desc: 'Executive Value Command Center — portfolio, value board, risk',   icon: LayoutDashboard },
-  { email: 'pmo@bank.com',      name: 'Anita Desai',     desc: 'PMO Governance Control Tower — full portfolio, RAG, delays',     icon: ClipboardList },
-  { email: 'vh@bank.com',       name: 'Rajesh Kumar',    desc: "Delivery Ownership Workspace — your vertical's commitments",     icon: Briefcase },
-  { email: 'business@bank.com', name: 'Anil Kumar',      desc: 'Business Value Validation — confirm IT delivered promised impact', icon: CheckSquare },
+  { email: 'admin@bank.com',     name: 'Platform Admin', desc: 'Workspace Settings — user management, pilot configuration',       icon: Settings },
+  { email: 'cio@bank.com',       name: 'Mahesh Iyer',    desc: 'Executive Value Command Center — portfolio, value board, risk',    icon: LayoutDashboard },
+  { email: 'pmo@bank.com',       name: 'Anita Desai',    desc: 'PMO Governance Control Tower — full portfolio, RAG, delays',      icon: ClipboardList },
+  { email: 'vh@bank.com',        name: 'Rajesh Kumar',   desc: "Delivery Ownership Workspace — Digital Banking vertical",         icon: Briefcase },
+  { email: 'vh2@bank.com',       name: 'Priya Sharma',   desc: "Delivery Ownership Workspace — Retail Assets vertical",           icon: Briefcase },
+  { email: 'business@bank.com',  name: 'Anil Kumar',     desc: 'Business Value Validation — Digital Products SPOC',              icon: CheckSquare },
+  { email: 'business2@bank.com', name: 'Deepa Nair',     desc: 'Business Value Validation — Retail Lending SPOC',               icon: CheckSquare },
 ];
 
 const DEMO_PASSWORD = 'Demo@1234!';

@@ -55,13 +55,15 @@ DATABASE_URL="<neon-url>" npx tsx scripts/seed-admin.ts
 
 **Demo credentials (all use password `Demo@1234!`):**
 
-| Email | Role | Landing page |
-|---|---|---|
-| `admin@bank.com` | ADMIN | Workspace Settings |
-| `cio@bank.com` | CIO | Executive Value Command Center |
-| `pmo@bank.com` | PMO | PMO Governance Control Tower |
-| `vh@bank.com` | Vertical Head | Delivery Ownership Workspace |
-| `business@bank.com` | Business SPOC | Business Value Validation |
+| Email | Role | Name | Notes |
+|---|---|---|---|
+| `admin@bank.com` | ADMIN | Platform Admin | Workspace Settings, user mgmt |
+| `cio@bank.com` | CIO | Mahesh Iyer | Executive Value Command Center |
+| `pmo@bank.com` | PMO | Anita Desai | PMO Governance Control Tower |
+| `vh@bank.com` | Vertical Head | Rajesh Kumar | Digital Banking vertical |
+| `vh2@bank.com` | Vertical Head | Priya Sharma | Retail Assets vertical |
+| `business@bank.com` | Business SPOC | Anil Kumar | Digital Products |
+| `business2@bank.com` | Business SPOC | Deepa Nair | Retail Lending |
 
 > ⚠️ These are demo credentials. In production, force password reset on first login.
 
