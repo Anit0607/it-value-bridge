@@ -152,7 +152,7 @@ export default async function KnownLimitationsPage() {
         </p>
         <p className="mt-1 text-sm leading-relaxed text-emerald-700">
           Share this page with CIO, mentors, or pilot users before the demo.
-          Frame it as: <em>"Here is what the platform does today, and here is the clear path to production readiness."</em>
+          Frame it as: <em>&ldquo;Here is what the platform does today, and here is the clear path to production readiness.&rdquo;</em>
           This is stronger than discovering gaps during a live demo.
         </p>
       </div>
