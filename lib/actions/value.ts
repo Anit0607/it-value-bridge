@@ -45,7 +45,7 @@ export async function addValueMeasurement(input: AddMeasurementInput) {
       actualValue: parsed.actualValue ?? null,
       realizedInr: parsed.realizedInr ?? null,
       note: parsed.note,
-      recordedByName: session.user.name,
+      recordedByName: user.name,
     },
   });
 
