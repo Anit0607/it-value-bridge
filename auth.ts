@@ -51,13 +51,16 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         const valid = await bcrypt.compare(password, user.passwordHash);
         if (!valid) return null;
 
+        // Future enforcement — enable once all users are linked to an org:
+        // if (!user.organizationId) throw new Error('User is not assigned to a workspace');
+
         return {
-          id: user.id,
-          email: user.email,
-          name: user.name,
-          role: user.role,
-          verticalHead: user.verticalHead,
-          organizationId: user.organizationId,
+          id:             user.id,
+          email:          user.email,
+          name:           user.name,
+          role:           user.role,
+          verticalHead:   user.verticalHead   ?? null,
+          organizationId: user.organizationId ?? null,
         };
       },
     }),
