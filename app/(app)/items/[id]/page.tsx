@@ -2,7 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
-import { getInitiativeItem, getInitiativeValue } from '@/lib/actions/initiatives';
+import { getVisibleInitiativeItem, getInitiativeValue } from '@/lib/actions/initiatives';
 import { getInitiativeDependencies, listLinkableInitiatives } from '@/lib/actions/dependencies';
 import { ItemDetailClient } from './ItemDetailClient';
 import { ValueRealizationPanel } from '@/components/value/ValueRealizationPanel';
@@ -15,7 +15,7 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
   if (!session?.user) redirect('/sign-in');
 
   const [item, value, deps, linkOptions] = await Promise.all([
-    getInitiativeItem(params.id),
+    getVisibleInitiativeItem(params.id, session.user),
     getInitiativeValue(params.id),
     getInitiativeDependencies(params.id),
     listLinkableInitiatives(params.id),

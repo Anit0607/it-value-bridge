@@ -144,6 +144,39 @@ export async function getInitiativeItem(id: string): Promise<Item | null> {
   return row ? toItem(row) : null;
 }
 
+/**
+ * Tenant-safe single initiative fetch.
+ * Adds organizationId + role-based scoping to prevent cross-tenant access via known IDs.
+ * Returns null if the initiative does not belong to the user's org or is outside their scope.
+ */
+export async function getVisibleInitiativeItem(
+  id: string,
+  user: {
+    role: string;
+    name: string;
+    verticalHead?: string | null;
+    organizationId?: string | null;
+  },
+): Promise<Item | null> {
+  if (!user.organizationId) return null;
+
+  const row = await prisma.initiative.findFirst({
+    where: {
+      id,
+      organizationId: user.organizationId,
+      ...(user.role === 'VERTICAL_HEAD'
+        ? { verticalHeadName: user.verticalHead ?? user.name }
+        : {}),
+      ...(user.role === 'BUSINESS'
+        ? { businessSpoc: user.name }
+        : {}),
+    },
+    include: WITH_RELATIONS,
+  });
+
+  return row ? toItem(row) : null;
+}
+
 export async function getInitiativesByVerticalHead(verticalHead: string): Promise<Item[]> {
   const rows = await prisma.initiative.findMany({
     where: { verticalHeadName: verticalHead },
