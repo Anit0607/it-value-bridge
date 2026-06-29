@@ -22,3 +22,22 @@ export async function requireRole(...roles: Role[]) {
   }
   return user;
 }
+
+/**
+ * Like requireRole(), but also asserts the user belongs to an organization.
+ * Use this guard for any server action that reads or writes business data
+ * (initiatives, demands, OKRs, value claims) so tenant context is always verified.
+ *
+ * Activation path:
+ *   Once all users are org-linked (seed + migration clean), swap requireRole()
+ *   calls in data-mutating actions to requireRoleWithOrg() to enforce isolation.
+ */
+export async function requireRoleWithOrg(...roles: Role[]) {
+  const user = await requireRole(...roles);
+
+  if (!user.organizationId) {
+    throw new Error('User is not assigned to an organization');
+  }
+
+  return user as typeof user & { organizationId: string };
+}
