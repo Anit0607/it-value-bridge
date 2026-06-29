@@ -131,52 +131,54 @@ async function main() {
 
   const cio = await prisma.user.upsert({
     where: { email: 'cio@bank.com' },
-    update: {},
-    create: { name: 'Mahesh Iyer', email: 'cio@bank.com', passwordHash: password, role: 'CIO' },
+    update: { organizationId: org.id },
+    create: { name: 'Mahesh Iyer', email: 'cio@bank.com', passwordHash: password, role: 'CIO', organizationId: org.id },
   });
 
   const pmo = await prisma.user.upsert({
     where: { email: 'pmo@bank.com' },
-    update: {},
-    create: { name: 'Anita Desai', email: 'pmo@bank.com', passwordHash: password, role: 'PMO' },
+    update: { organizationId: org.id },
+    create: { name: 'Anita Desai', email: 'pmo@bank.com', passwordHash: password, role: 'PMO', organizationId: org.id },
   });
 
   const vh = await prisma.user.upsert({
     where: { email: 'vh@bank.com' },
-    update: {},
+    update: { organizationId: org.id },
     create: {
       name: 'Rajesh Kumar',
       email: 'vh@bank.com',
       passwordHash: password,
       role: 'VERTICAL_HEAD',
       verticalHead: 'Rajesh Kumar',
+      organizationId: org.id,
     },
   });
 
   const business = await prisma.user.upsert({
     where: { email: 'business@bank.com' },
-    update: {},
-    create: { name: 'Anil Kumar', email: 'business@bank.com', passwordHash: password, role: 'BUSINESS' },
+    update: { organizationId: org.id },
+    create: { name: 'Anil Kumar', email: 'business@bank.com', passwordHash: password, role: 'BUSINESS', organizationId: org.id },
   });
 
   // Second Vertical Head — covers Retail Assets vertical
   const vh2 = await prisma.user.upsert({
     where: { email: 'vh2@bank.com' },
-    update: {},
+    update: { organizationId: org.id },
     create: {
       name: 'Priya Sharma',
       email: 'vh2@bank.com',
       passwordHash: password,
       role: 'VERTICAL_HEAD',
       verticalHead: 'Priya Sharma',
+      organizationId: org.id,
     },
   });
 
   // Second Business SPOC — covers Retail Lending products
   const business2 = await prisma.user.upsert({
     where: { email: 'business2@bank.com' },
-    update: {},
-    create: { name: 'Deepa Nair', email: 'business2@bank.com', passwordHash: password, role: 'BUSINESS' },
+    update: { organizationId: org.id },
+    create: { name: 'Deepa Nair', email: 'business2@bank.com', passwordHash: password, role: 'BUSINESS', organizationId: org.id },
   });
 
   console.log('Seeded 7 users:', cio.email, pmo.email, vh.email, vh2.email, business.email, business2.email);
@@ -889,6 +891,7 @@ async function main() {
         isRegulatory: !!reg,
         regulatoryBody: reg?.body ?? null,
         regulatoryDueDate: reg ? d(reg.due) : null,
+        organizationId: org.id,
         benefitClaims: { create: benefitCreates },
         okrLinks: categoryToOkrId[seed.benefitCategory]
           ? { create: { okrId: categoryToOkrId[seed.benefitCategory]! } }

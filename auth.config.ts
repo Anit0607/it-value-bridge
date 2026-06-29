@@ -11,6 +11,7 @@ export const authConfig: NextAuthConfig = {
         token.id = user.id as string;
         token.role = (user as any).role;
         token.verticalHead = (user as any).verticalHead;
+        token.organizationId = (user as any).organizationId ?? null;
       }
       return token;
     },
@@ -19,6 +20,7 @@ export const authConfig: NextAuthConfig = {
         session.user.id = token.id as string;
         session.user.role = token.role as any;
         session.user.verticalHead = token.verticalHead as any;
+        (session.user as any).organizationId = token.organizationId ?? null;
       }
       return session;
     },

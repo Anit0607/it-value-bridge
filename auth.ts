@@ -9,6 +9,7 @@ declare module 'next-auth' {
   interface User {
     role: Role;
     verticalHead?: string | null;
+    organizationId?: string | null;
   }
   interface Session {
     user: {
@@ -17,6 +18,7 @@ declare module 'next-auth' {
       name: string;
       role: Role;
       verticalHead?: string | null;
+      organizationId?: string | null;
     };
   }
 }
@@ -26,6 +28,7 @@ declare module '@auth/core/jwt' {
     id: string;
     role: Role;
     verticalHead?: string | null;
+    organizationId?: string | null;
   }
 }
 
@@ -54,6 +57,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           name: user.name,
           role: user.role,
           verticalHead: user.verticalHead,
+          organizationId: user.organizationId,
         };
       },
     }),
