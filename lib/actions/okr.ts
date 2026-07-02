@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { auth } from '@/auth';
+import { requireRole } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { BenefitCategory } from '@prisma/client';
@@ -56,14 +56,11 @@ const OkrInput = z.object({
 export type OkrInput = z.infer<typeof OkrInput>;
 
 async function requireLeadership() {
-  const session = await auth();
-  if (!session?.user || (session.user.role !== 'PMO' && session.user.role !== 'CIO')) {
-    throw new Error('Only PMO/CIO can manage OKRs');
-  }
+  return requireRole('PMO', 'CIO');
 }
 
 export async function createOkr(input: OkrInput) {
-  await requireLeadership();
+  const user = await requireLeadership();
   const parsed = OkrInput.parse(input);
   await prisma.okr.create({
     data: {
@@ -72,6 +69,7 @@ export async function createOkr(input: OkrInput) {
       category: parsed.category ?? null,
       owner: parsed.owner,
       targetStatement: parsed.targetStatement,
+      organizationId: user.organizationId ?? null,
     },
   });
   revalidatePath('/okrs');

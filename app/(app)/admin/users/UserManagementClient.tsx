@@ -18,6 +18,8 @@ interface UserRow {
   role: string;
   verticalHead: string | null;
   createdAt: string;
+  organizationName: string | null;
+  organizationStatus: string | null;
 }
 
 interface Props {
@@ -27,6 +29,10 @@ interface Props {
 const ROLE_TONE: Record<string, BadgeTone> = {
   ADMIN: 'danger', CIO: 'brand', PMO: 'success',
   VERTICAL_HEAD: 'warning', BUSINESS: 'violet',
+};
+
+const ORG_STATUS_TONE: Record<string, BadgeTone> = {
+  PILOT: 'warning', ACTIVE: 'success', SUSPENDED: 'slate',
 };
 
 const ROLE_OPTIONS = [
@@ -127,7 +133,7 @@ export function UserManagementClient({ users }: Props) {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="bg-slate-50">
-                {['Name', 'Email', 'Role', 'Vertical Head', 'Created', 'Status'].map(h => (
+                {['Name', 'Email', 'Role', 'Vertical Head', 'Organization', 'Created', 'Status'].map(h => (
                   <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">{h}</th>
                 ))}
               </tr>
@@ -141,6 +147,18 @@ export function UserManagementClient({ users }: Props) {
                     <Badge tone={ROLE_TONE[u.role] ?? 'slate'} size="sm">{u.role}</Badge>
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-500">{u.verticalHead ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    {u.organizationName ? (
+                      <div className="flex items-center gap-1.5">
+                        <span className="text-xs font-medium text-slate-600">{u.organizationName}</span>
+                        {u.organizationStatus && (
+                          <Badge tone={ORG_STATUS_TONE[u.organizationStatus] ?? 'slate'} size="sm">{u.organizationStatus}</Badge>
+                        )}
+                      </div>
+                    ) : (
+                      <Badge tone="danger" size="sm">Unassigned</Badge>
+                    )}
+                  </td>
                   <td className="px-4 py-3 tabular text-xs text-slate-400">{u.createdAt}</td>
                   <td className="px-4 py-3">
                     <Badge tone="success" size="sm">Active</Badge>

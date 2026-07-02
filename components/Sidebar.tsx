@@ -22,6 +22,7 @@ import {
   Settings,
   Users,
   AlertTriangle,
+  Building2,
 } from 'lucide-react';
 
 interface NavItem {
@@ -77,6 +78,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Platform',
     items: [
       { href: '/admin', label: 'Workspace Settings', icon: Settings, roles: ['ADMIN'] },
+      { href: '/admin/workspace', label: 'Workspace', icon: Building2, roles: ['ADMIN'] },
       { href: '/admin/users', label: 'User Management', icon: Users, roles: ['ADMIN'] },
       { href: '/admin/pilot-readiness', label: 'Pilot Readiness', icon: CheckSquare, roles: ['ADMIN'] },
       { href: '/admin/known-limitations', label: 'Known Limitations', icon: AlertTriangle, roles: ['ADMIN'] },

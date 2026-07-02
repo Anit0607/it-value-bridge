@@ -32,12 +32,16 @@ export async function signUpAction(formData: FormData): Promise<{ error?: string
 
   const passwordHash = await bcrypt.hash(password, 12);
 
+  // Single-org pilot: self-signups join the one pilot workspace.
+  const org = await prisma.organization.findFirst({ orderBy: { createdAt: 'asc' } });
+
   await prisma.user.create({
     data: {
       name,
       email,
       passwordHash,
       role: 'BUSINESS',
+      organizationId: org?.id ?? null,
     },
   });
 
@@ -58,7 +62,7 @@ export type CreatePilotUserInput = z.infer<typeof CreatePilotUserSchema>;
 export async function createPilotUser(
   input: CreatePilotUserInput,
 ): Promise<{ error?: string }> {
-  await requireRole('ADMIN' as any);
+  const admin = await requireRole('ADMIN' as any);
 
   const parsed = CreatePilotUserSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -77,6 +81,7 @@ export async function createPilotUser(
       passwordHash,
       role: role as any,
       verticalHead: role === 'VERTICAL_HEAD' ? (verticalHead ?? name) : null,
+      organizationId: admin.organizationId ?? null,
     },
   });
 

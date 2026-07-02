@@ -204,7 +204,7 @@ async function main() {
   const categoryToOkrId: Partial<Record<BenefitCategory, string>> = {};
   for (const o of OKR_DEFS) {
     const okr = await prisma.okr.create({
-      data: { name: o.name, category: o.category, owner: o.owner, targetStatement: o.targetStatement, description: o.description },
+      data: { name: o.name, category: o.category, owner: o.owner, targetStatement: o.targetStatement, description: o.description, organizationId: org.id },
     });
     categoryToOkrId[o.category] = okr.id;
   }
@@ -1043,6 +1043,7 @@ async function main() {
         status: dem.status,
         priority: dem.priority,
         reviewNote: dem.reviewNote ?? '',
+        organizationId: org.id,
         benefitClaims: {
           create: dem.benefits.map(b => ({
             category: b.category,

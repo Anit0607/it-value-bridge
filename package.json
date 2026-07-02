@@ -9,6 +9,7 @@
     "lint": "next lint",
     "db:seed": "tsx prisma/seed.ts",
     "db:deploy": "prisma migrate deploy",
+    "db:backfill-org": "tsx scripts/backfill-org.ts",
     "postinstall": "prisma generate"
   },
   "prisma": {

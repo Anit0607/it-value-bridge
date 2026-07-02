@@ -20,6 +20,7 @@ export default async function UserManagementPage() {
       role: true,
       verticalHead: true,
       createdAt: true,
+      organization: { select: { name: true, status: true } },
     },
   });
 
@@ -37,6 +38,8 @@ export default async function UserManagementPage() {
           role: u.role,
           verticalHead: u.verticalHead,
           createdAt: u.createdAt.toISOString().slice(0, 10),
+          organizationName: u.organization?.name ?? null,
+          organizationStatus: u.organization?.status ?? null,
         }))}
       />
     </div>

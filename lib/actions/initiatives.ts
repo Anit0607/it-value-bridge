@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { requireRole } from '@/lib/authz';
+import { requireRole, requireRoleWithOrg } from '@/lib/authz';
 import { Prisma } from '@prisma/client';
 import { STAGE_LABEL, STAGE_TO_PROCESS_GROUP, nextStage } from '@/lib/stage-map';
 import { revalidatePath } from 'next/cache';
@@ -256,7 +256,7 @@ const CreateSchema = z.object({
 export type CreateInitiativeInput = z.infer<typeof CreateSchema>;
 
 export async function createInitiative(input: CreateInitiativeInput) {
-  const user = await requireRole('PMO', 'CIO');
+  const user = await requireRoleWithOrg('PMO', 'CIO');
   const userName = user.name;
   const parsed = CreateSchema.parse(input);
 
@@ -268,7 +268,9 @@ export async function createInitiative(input: CreateInitiativeInput) {
 
   const today = new Date();
   const expectedDate = new Date(Date.now() + 21 * 86_400_000);
-  const okr = await prisma.okr.findFirst({ where: { category: primary.category, active: true } });
+  const okr = await prisma.okr.findFirst({
+    where: { category: primary.category, active: true, organizationId: user.organizationId },
+  });
 
   const initiative = await prisma.initiative.create({
     data: {
@@ -292,6 +294,7 @@ export async function createInitiative(input: CreateInitiativeInput) {
       delayed: false,
       estimatedCostInr: Math.round(totalValue * 0.3),
       valueSignedOff: false,
+      organizationId: user.organizationId,
       isRegulatory: parsed.isRegulatory ?? false,
       regulatoryBody: parsed.isRegulatory ? (parsed.regulatoryBody?.trim() || null) : null,
       regulatoryDueDate: parsed.isRegulatory && parsed.regulatoryDueDate ? new Date(parsed.regulatoryDueDate) : null,

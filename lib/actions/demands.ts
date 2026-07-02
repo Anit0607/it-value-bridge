@@ -1,7 +1,6 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { auth } from '@/auth';
 import { requireRole } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -28,8 +27,7 @@ const CreateDemandInput = z.object({
 export type CreateDemandInput = z.infer<typeof CreateDemandInput>;
 
 export async function createDemand(input: CreateDemandInput) {
-  const session = await auth();
-  if (!session?.user) throw new Error('Not authenticated');
+  const user = await requireRole('PMO', 'CIO', 'BUSINESS', 'VERTICAL_HEAD');
   const parsed = CreateDemandInput.parse(input);
 
   const demand = await prisma.demand.create({
@@ -37,9 +35,10 @@ export async function createDemand(input: CreateDemandInput) {
       title: parsed.title,
       requirement: parsed.requirement,
       priority: parsed.priority,
-      raisedByName: session.user.name,
-      raisedById: session.user.id,
+      raisedByName: user.name,
+      raisedById: user.id,
       status: 'RAISED',
+      organizationId: user.organizationId ?? null,
       benefitClaims: {
         create: parsed.benefits.map(b => ({
           category: b.category,
@@ -119,7 +118,9 @@ export async function approveDemand(id: string, input: ApproveDemandInput) {
 
   const today = new Date();
   const expectedDate = new Date(Date.now() + 21 * 86_400_000);
-  const okr = await prisma.okr.findFirst({ where: { category: primary.category, active: true } });
+  const okr = await prisma.okr.findFirst({
+    where: { category: primary.category, active: true, organizationId: user.organizationId ?? undefined },
+  });
 
   const initiative = await prisma.initiative.create({
     data: {
@@ -141,6 +142,7 @@ export async function approveDemand(id: string, input: ApproveDemandInput) {
       lastUpdated: today,
       estimatedCostInr: Math.round(primary.estimatedAnnualValueInr * 0.3),
       valueSignedOff: false,
+      organizationId: user.organizationId ?? null,
       benefitClaims: {
         create: demand.benefitClaims.map(b => ({
           category: b.category,
