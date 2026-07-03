@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { requireRole } from '@/lib/authz';
+import { requireRoleWithOrg } from '@/lib/authz';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 
@@ -34,6 +34,9 @@ export async function signUpAction(formData: FormData): Promise<{ error?: string
 
   // Single-org pilot: self-signups join the one pilot workspace.
   const org = await prisma.organization.findFirst({ orderBy: { createdAt: 'asc' } });
+  if (!org) {
+    return { error: 'Workspace is not configured yet. Contact your administrator.' };
+  }
 
   await prisma.user.create({
     data: {
@@ -41,7 +44,7 @@ export async function signUpAction(formData: FormData): Promise<{ error?: string
       email,
       passwordHash,
       role: 'BUSINESS',
-      organizationId: org?.id ?? null,
+      organizationId: org.id,
     },
   });
 
@@ -62,7 +65,7 @@ export type CreatePilotUserInput = z.infer<typeof CreatePilotUserSchema>;
 export async function createPilotUser(
   input: CreatePilotUserInput,
 ): Promise<{ error?: string }> {
-  const admin = await requireRole('ADMIN' as any);
+  const admin = await requireRoleWithOrg('ADMIN' as any);
 
   const parsed = CreatePilotUserSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
@@ -81,7 +84,7 @@ export async function createPilotUser(
       passwordHash,
       role: role as any,
       verticalHead: role === 'VERTICAL_HEAD' ? (verticalHead ?? name) : null,
-      organizationId: admin.organizationId ?? null,
+      organizationId: admin.organizationId,
     },
   });
 

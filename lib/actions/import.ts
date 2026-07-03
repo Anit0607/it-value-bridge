@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { requireRole } from '@/lib/authz';
+import { requireRoleWithOrg } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -21,7 +21,7 @@ export type ImportRow = z.infer<typeof RowInput>;
 /** Bulk-create demands from an uploaded (Jira/Excel) export. Air-gapped: the
  *  file is parsed in the browser; only validated rows are sent here. */
 export async function importDemands(rows: ImportRow[]): Promise<{ created: number }> {
-  const user = await requireRole('PMO', 'CIO');
+  const user = await requireRoleWithOrg('PMO', 'CIO');
   const parsed = ImportInput.parse(rows);
 
   await prisma.$transaction(
@@ -35,7 +35,7 @@ export async function importDemands(rows: ImportRow[]): Promise<{ created: numbe
           raisedById: user.id,
           status: 'RAISED',
           reviewNote: 'Imported from file',
-          organizationId: user.organizationId ?? null,
+          organizationId: user.organizationId,
           benefitClaims: {
             create: {
               category: r.category,

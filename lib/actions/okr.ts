@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { requireRole } from '@/lib/authz';
+import { requireRoleWithOrg } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { BenefitCategory } from '@prisma/client';
@@ -56,7 +56,7 @@ const OkrInput = z.object({
 export type OkrInput = z.infer<typeof OkrInput>;
 
 async function requireLeadership() {
-  return requireRole('PMO', 'CIO');
+  return requireRoleWithOrg('PMO', 'CIO');
 }
 
 export async function createOkr(input: OkrInput) {
@@ -69,7 +69,7 @@ export async function createOkr(input: OkrInput) {
       category: parsed.category ?? null,
       owner: parsed.owner,
       targetStatement: parsed.targetStatement,
-      organizationId: user.organizationId ?? null,
+      organizationId: user.organizationId,
     },
   });
   revalidatePath('/okrs');
@@ -77,10 +77,10 @@ export async function createOkr(input: OkrInput) {
 }
 
 export async function updateOkr(id: string, input: OkrInput) {
-  await requireLeadership();
+  const user = await requireLeadership();
   const parsed = OkrInput.parse(input);
-  await prisma.okr.update({
-    where: { id },
+  const { count } = await prisma.okr.updateMany({
+    where: { id, organizationId: user.organizationId },
     data: {
       name: parsed.name,
       description: parsed.description,
@@ -89,13 +89,18 @@ export async function updateOkr(id: string, input: OkrInput) {
       targetStatement: parsed.targetStatement,
     },
   });
+  if (count === 0) throw new Error('OKR not found in your organization');
   revalidatePath('/okrs');
   revalidatePath('/value');
 }
 
 export async function setOkrActive(id: string, active: boolean) {
-  await requireLeadership();
-  await prisma.okr.update({ where: { id }, data: { active } });
+  const user = await requireLeadership();
+  const { count } = await prisma.okr.updateMany({
+    where: { id, organizationId: user.organizationId },
+    data: { active },
+  });
+  if (count === 0) throw new Error('OKR not found in your organization');
   revalidatePath('/okrs');
   revalidatePath('/value');
 }

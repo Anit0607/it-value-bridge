@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { requireRole } from '@/lib/authz';
+import { requireRoleWithOrg } from '@/lib/authz';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { STAGE_TO_PROCESS_GROUP } from '@/lib/stage-map';
@@ -27,7 +27,7 @@ const CreateDemandInput = z.object({
 export type CreateDemandInput = z.infer<typeof CreateDemandInput>;
 
 export async function createDemand(input: CreateDemandInput) {
-  const user = await requireRole('PMO', 'CIO', 'BUSINESS', 'VERTICAL_HEAD');
+  const user = await requireRoleWithOrg('PMO', 'CIO', 'BUSINESS', 'VERTICAL_HEAD');
   const parsed = CreateDemandInput.parse(input);
 
   const demand = await prisma.demand.create({
@@ -38,7 +38,7 @@ export async function createDemand(input: CreateDemandInput) {
       raisedByName: user.name,
       raisedById: user.id,
       status: 'RAISED',
-      organizationId: user.organizationId ?? null,
+      organizationId: user.organizationId,
       benefitClaims: {
         create: parsed.benefits.map(b => ({
           category: b.category,
@@ -80,11 +80,12 @@ export async function getDemand(id: string) {
 }
 
 export async function setDemandStatus(id: string, status: DemandStatus, reviewNote: string) {
-  await requireRole('PMO', 'CIO');
-  await prisma.demand.update({
-    where: { id },
+  const user = await requireRoleWithOrg('PMO', 'CIO');
+  const { count } = await prisma.demand.updateMany({
+    where: { id, organizationId: user.organizationId },
     data: { status, reviewNote },
   });
+  if (count === 0) throw new Error('Demand not found in your organization');
   revalidatePath('/demands');
   revalidatePath(`/demands/${id}`);
 }
@@ -100,14 +101,14 @@ const ApproveInput = z.object({
 export type ApproveDemandInput = z.infer<typeof ApproveInput>;
 
 export async function approveDemand(id: string, input: ApproveDemandInput) {
-  const user = await requireRole('PMO', 'CIO');
+  const user = await requireRoleWithOrg('PMO', 'CIO');
   const completion = ApproveInput.parse(input);
 
-  const demand = await prisma.demand.findUnique({
-    where: { id },
+  const demand = await prisma.demand.findFirst({
+    where: { id, organizationId: user.organizationId },
     include: { benefitClaims: true },
   });
-  if (!demand) throw new Error('Demand not found');
+  if (!demand) throw new Error('Demand not found in your organization');
   if (demand.convertedInitiativeId) throw new Error('Demand already converted');
   if (demand.benefitClaims.length === 0) throw new Error('Demand has no benefit claims');
 
@@ -119,7 +120,7 @@ export async function approveDemand(id: string, input: ApproveDemandInput) {
   const today = new Date();
   const expectedDate = new Date(Date.now() + 21 * 86_400_000);
   const okr = await prisma.okr.findFirst({
-    where: { category: primary.category, active: true, organizationId: user.organizationId ?? undefined },
+    where: { category: primary.category, active: true, organizationId: user.organizationId },
   });
 
   const initiative = await prisma.initiative.create({
@@ -142,7 +143,7 @@ export async function approveDemand(id: string, input: ApproveDemandInput) {
       lastUpdated: today,
       estimatedCostInr: Math.round(primary.estimatedAnnualValueInr * 0.3),
       valueSignedOff: false,
-      organizationId: user.organizationId ?? null,
+      organizationId: user.organizationId,
       benefitClaims: {
         create: demand.benefitClaims.map(b => ({
           category: b.category,
