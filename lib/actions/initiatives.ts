@@ -87,10 +87,10 @@ const WITH_RELATIONS = {
 };
 
 // ── Tenant ownership guard ────────────────────────────────────────────────────
-// Pilot-safe: if organizationId is null (unlinked user), skips the check.
-// Once all users are org-linked, change the early return to a throw.
 async function assertOrgAccess(id: string, organizationId: string | null | undefined): Promise<void> {
-  if (!organizationId) return; // Pilot fallback — remove when org enforcement is ready
+  if (!organizationId) {
+    throw new Error('Missing organization context');
+  }
   const exists = await prisma.initiative.findFirst({
     where: { id, organizationId },
     select: { id: true },
@@ -170,11 +170,10 @@ export async function getVisibleInitiativeItem(
     organizationId?: string | null;
   },
 ): Promise<Item | null> {
-  // Pilot fallback: if user has no org yet, use role-only scoping (single-org pilot safe)
-  // Once all users are org-linked, remove this block and enforce strict org isolation.
+  // If the user has no org context, show nothing (safe default for unlinked accounts,
+  // consistent with listVisibleInitiativesForUser).
   if (!user.organizationId) {
-    const row = await prisma.initiative.findUnique({ where: { id }, include: WITH_RELATIONS });
-    return row ? toItem(row) : null;
+    return null;
   }
 
   const row = await prisma.initiative.findFirst({

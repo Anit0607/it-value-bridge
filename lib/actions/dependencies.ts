@@ -117,7 +117,9 @@ async function requireEditor() {
 }
 
 async function assertDependencyOrgAccess(id: string, organizationId: string | null | undefined) {
-  if (!organizationId) return;
+  if (!organizationId) {
+    throw new Error('Missing organization context');
+  }
   const exists = await prisma.initiative.findFirst({ where: { id, organizationId }, select: { id: true } });
   if (!exists) throw new Error('Initiative not found in your organization');
 }

@@ -21,13 +21,14 @@ export async function addValueMeasurement(input: AddMeasurementInput) {
   const user = await requireRole('PMO', 'CIO');
   const parsed = MeasurementInput.parse(input);
   // Org access check on the initiative
-  if (user.organizationId) {
-    const exists = await prisma.initiative.findFirst({
-      where: { id: parsed.initiativeId, organizationId: user.organizationId },
-      select: { id: true },
-    });
-    if (!exists) throw new Error('Initiative not found in your organization');
+  if (!user.organizationId) {
+    throw new Error('Missing organization context');
   }
+  const exists = await prisma.initiative.findFirst({
+    where: { id: parsed.initiativeId, organizationId: user.organizationId },
+    select: { id: true },
+  });
+  if (!exists) throw new Error('Initiative not found in your organization');
 
   // Ensure the claim belongs to the named initiative.
   const claim = await prisma.benefitClaim.findUnique({
