@@ -13,7 +13,7 @@ export default async function VerticalHeadDashboard() {
   if (!session?.user) redirect('/sign-in');
 
   const verticalHead = session.user.verticalHead ?? session.user.name;
-  const { items, counts } = await getVhItems(verticalHead);
+  const { items, counts } = await getVhItems(verticalHead, session.user.organizationId);
 
   return (
     <div className="space-y-6">

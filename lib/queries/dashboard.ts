@@ -1,5 +1,4 @@
 import {
-  listInitiativesAsItems,
   listVisibleInitiativesForUser,
   getInitiativesByVerticalHead,
   getInitiativesBySpoc,
@@ -40,8 +39,11 @@ export interface CioSummary {
 }
 
 /** Everything the CIO dashboard needs, aggregated in one place. */
-export async function getCioSummary(period: Period): Promise<CioSummary> {
-  const items = enrichAll(await listInitiativesAsItems());
+export async function getCioSummary(
+  period: Period,
+  user: Pick<AuthUser, 'role' | 'name' | 'verticalHead'> & { organizationId?: string | null },
+): Promise<CioSummary> {
+  const items = enrichAll(await listVisibleInitiativesForUser(user));
 
   const active = items.filter(i => i.currentStage !== 'Closed');
   const counts = ragCounts(active.map(i => i.rag));
@@ -116,9 +118,10 @@ export interface PmoList {
  * UX over a small dataset) — this returns every enriched item plus headline
  * counts for the KPI cards.
  */
-export async function getPmoList(user?: Pick<AuthUser, 'role' | 'name' | 'verticalHead'>): Promise<PmoList> {
-  const raw = user ? await listVisibleInitiativesForUser(user) : await listInitiativesAsItems();
-  const items = enrichAll(raw);
+export async function getPmoList(
+  user: Pick<AuthUser, 'role' | 'name' | 'verticalHead'> & { organizationId?: string | null },
+): Promise<PmoList> {
+  const items = enrichAll(await listVisibleInitiativesForUser(user));
   const active = items.filter(i => i.currentStage !== 'Closed');
   return {
     items,
@@ -133,8 +136,8 @@ export interface VhItems {
 }
 
 /** Items scoped to one Vertical Head, enriched, with headline counts. */
-export async function getVhItems(verticalHead: string): Promise<VhItems> {
-  const items = enrichAll(await getInitiativesByVerticalHead(verticalHead));
+export async function getVhItems(verticalHead: string, organizationId: string | null | undefined): Promise<VhItems> {
+  const items = enrichAll(await getInitiativesByVerticalHead(verticalHead, organizationId));
   return { items, counts: ragCounts(items.map(i => i.rag)) };
 }
 
@@ -144,8 +147,11 @@ export interface BusinessValidations {
 }
 
 /** Items where the user is Business SPOC, plus the pending-validation subset. */
-export async function getBusinessValidations(spocName: string): Promise<BusinessValidations> {
-  const items = enrichAll(await getInitiativesBySpoc(spocName));
+export async function getBusinessValidations(
+  spocName: string,
+  organizationId: string | null | undefined,
+): Promise<BusinessValidations> {
+  const items = enrichAll(await getInitiativesBySpoc(spocName, organizationId));
   const pending = items.filter(i => i.currentStage === 'Business Validation' && !i.validation);
   return { items, pending };
 }

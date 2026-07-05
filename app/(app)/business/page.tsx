@@ -20,7 +20,7 @@ export default async function BusinessSpocView() {
   if (!session?.user) redirect('/sign-in');
 
   const userName = session.user.name;
-  const { items, pending } = await getBusinessValidations(userName);
+  const { items, pending } = await getBusinessValidations(userName, session.user.organizationId);
 
   return (
     <div className="space-y-6">

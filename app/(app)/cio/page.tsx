@@ -1,6 +1,8 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
 import { getCioSummary } from '@/lib/queries/dashboard';
 import { STAGES } from '@/lib/types';
 import { resolvePeriod } from '@/lib/period';
@@ -29,6 +31,9 @@ export default async function CioDashboard({
 }: {
   searchParams: { period?: string; from?: string; to?: string };
 }) {
+  const session = await auth();
+  if (!session?.user) redirect('/sign-in');
+
   const period = resolvePeriod(searchParams);
   const {
     totalCount,
@@ -41,7 +46,7 @@ export default async function CioDashboard({
     monthly: { committed: monthlyCommitted, delivered, missed },
     regulatory,
     delays,
-  } = await getCioSummary(period);
+  } = await getCioSummary(period, session.user);
 
   const todayIso = new Date().toISOString().slice(0, 10);
 

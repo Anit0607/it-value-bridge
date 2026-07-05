@@ -100,19 +100,11 @@ async function assertOrgAccess(id: string, organizationId: string | null | undef
 
 // ---- Queries ----
 
-export async function listInitiativesAsItems(): Promise<Item[]> {
-  const rows = await prisma.initiative.findMany({
-    include: WITH_RELATIONS,
-    orderBy: { createdAt: 'desc' },
-  });
-  return rows.map(toItem);
-}
-
 /**
- * Role-scoped initiative list. Use this instead of listInitiativesAsItems()
- * in any page where the caller's role should limit what they see.
+ * Role-scoped, org-scoped initiative list. Use this in any page where the
+ * caller's role and organization should limit what they see.
  *
- *  ADMIN / CIO / PMO  → all initiatives
+ *  ADMIN / CIO / PMO  → all initiatives in the caller's org
  *  VERTICAL_HEAD      → initiatives where verticalHeadName = user.verticalHead
  *  BUSINESS           → initiatives where businessSpoc = user.name
  */
@@ -193,18 +185,26 @@ export async function getVisibleInitiativeItem(
   return row ? toItem(row) : null;
 }
 
-export async function getInitiativesByVerticalHead(verticalHead: string): Promise<Item[]> {
+export async function getInitiativesByVerticalHead(
+  verticalHead: string,
+  organizationId: string | null | undefined,
+): Promise<Item[]> {
+  if (!organizationId) return [];
   const rows = await prisma.initiative.findMany({
-    where: { verticalHeadName: verticalHead },
+    where: { verticalHeadName: verticalHead, organizationId },
     include: WITH_RELATIONS,
     orderBy: { createdAt: 'desc' },
   });
   return rows.map(toItem);
 }
 
-export async function getInitiativesBySpoc(spocName: string): Promise<Item[]> {
+export async function getInitiativesBySpoc(
+  spocName: string,
+  organizationId: string | null | undefined,
+): Promise<Item[]> {
+  if (!organizationId) return [];
   const rows = await prisma.initiative.findMany({
-    where: { businessSpoc: spocName },
+    where: { businessSpoc: spocName, organizationId },
     include: WITH_RELATIONS,
     orderBy: { createdAt: 'desc' },
   });
