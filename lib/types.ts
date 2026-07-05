@@ -76,7 +76,15 @@ export interface Item {
 }
 
 // Role type matching Prisma enum (was lowercase in prototype)
-export type Role = 'ADMIN' | 'CIO' | 'PMO' | 'VERTICAL_HEAD' | 'BUSINESS';
+export type Role =
+  | 'ADMIN'
+  | 'CIO'
+  | 'PMO'
+  | 'VERTICAL_HEAD'
+  | 'BUSINESS'
+  | 'PROGRAM_HEAD'
+  | 'PROGRAM_MANAGER'
+  | 'BUSINESS_HEAD';
 
 export interface AuthUser {
   id?: string;

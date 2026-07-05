@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { listDemands, listMyDemands } from '@/lib/actions/demands';
+import { isPmoEquivalent } from '@/lib/rbac';
 import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE } from '@/lib/value';
 import {
   DEMAND_STATUS_LABEL,
@@ -20,7 +21,7 @@ export default async function DemandsPage() {
   if (!session?.user) redirect('/sign-in');
 
   const role = session.user.role;
-  const isTriager = role === 'PMO' || role === 'CIO';
+  const isTriager = isPmoEquivalent(role) || role === 'CIO';
   const demands = isTriager ? await listDemands() : await listMyDemands(session.user.name);
 
   const counts = DEMAND_STATUSES.map(s => ({

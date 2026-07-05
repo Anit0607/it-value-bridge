@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { requireRole, requireRoleWithOrg } from '@/lib/authz';
+import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES } from '@/lib/rbac';
 import { Prisma } from '@prisma/client';
 import { STAGE_LABEL, STAGE_TO_PROCESS_GROUP, nextStage } from '@/lib/stage-map';
 import { revalidatePath } from 'next/cache';
@@ -104,7 +105,9 @@ async function assertOrgAccess(id: string, organizationId: string | null | undef
  * Role-scoped, org-scoped initiative list. Use this in any page where the
  * caller's role and organization should limit what they see.
  *
- *  ADMIN / CIO / PMO  → all initiatives in the caller's org
+ *  ADMIN / CIO / PMO-equivalent (PMO, PROGRAM_HEAD, PROGRAM_MANAGER)
+ *                     → all initiatives in the caller's org
+ *  BUSINESS_HEAD      → all initiatives in the caller's org (sees across every SPOC)
  *  VERTICAL_HEAD      → initiatives where verticalHeadName = user.verticalHead
  *  BUSINESS           → initiatives where businessSpoc = user.name
  */
@@ -229,7 +232,7 @@ const CreateSchema = z.object({
 export type CreateInitiativeInput = z.infer<typeof CreateSchema>;
 
 export async function createInitiative(input: CreateInitiativeInput) {
-  const user = await requireRoleWithOrg('PMO', 'CIO');
+  const user = await requireRoleWithOrg(...PMO_EQUIVALENT_ROLES, 'CIO');
   const userName = user.name;
   const parsed = CreateSchema.parse(input);
 
@@ -301,7 +304,7 @@ export async function createInitiative(input: CreateInitiativeInput) {
 }
 
 export async function advanceStage(id: string, note: string) {
-  const user = await requireRole('PMO', 'CIO', 'VERTICAL_HEAD');
+  const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO', 'VERTICAL_HEAD');
   await assertOrgAccess(id, user.organizationId);
   const userName = user.name;
   const initiative = await prisma.initiative.findUnique({ where: { id } });
@@ -347,7 +350,7 @@ export async function updateNotes(
   delaySource: string | undefined,
   delayReason?: string,
 ) {
-  const user = await requireRole('PMO', 'CIO', 'VERTICAL_HEAD');
+  const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO', 'VERTICAL_HEAD');
   await assertOrgAccess(id, user.organizationId);
   const today = new Date();
 
@@ -405,7 +408,7 @@ export async function updateNotes(
 }
 
 export async function saveValidation(id: string, validation: BusinessValidation) {
-  const user = await requireRole('BUSINESS', 'PMO', 'CIO');
+  const user = await requireRole(...BUSINESS_EQUIVALENT_ROLES, ...PMO_EQUIVALENT_ROLES, 'CIO');
   await assertOrgAccess(id, user.organizationId);
   const initiative = await prisma.initiative.findUnique({ where: { id } });
   if (!initiative || initiative.currentStage !== 'BUSINESS_VALIDATION') {
@@ -508,7 +511,7 @@ export async function getInitiativeValue(
 }
 
 export async function signOffValue(id: string) {
-  const user = await requireRole('PMO', 'CIO');
+  const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO');
   await assertOrgAccess(id, user.organizationId);
   const today = new Date();
   const initiative = await prisma.initiative.findUnique({ where: { id }, select: { currentStage: true } });
@@ -563,7 +566,7 @@ const EditSchema = z.object({
 export type EditInitiativeInput = z.infer<typeof EditSchema>;
 
 export async function updateInitiative(id: string, input: EditInitiativeInput) {
-  const user = await requireRole('PMO', 'CIO');
+  const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO');
   await assertOrgAccess(id, user.organizationId);
   const parsed = EditSchema.parse(input);
   const today = new Date();
@@ -641,7 +644,7 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
 }
 
 export async function setRegulatory(id: string, input: SetRegulatoryInput) {
-  const user = await requireRole('PMO', 'CIO');
+  const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO');
   await assertOrgAccess(id, user.organizationId);
   const parsed = RegulatoryInput.parse(input);
   await prisma.initiative.update({

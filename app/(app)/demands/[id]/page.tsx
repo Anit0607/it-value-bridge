@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { auth } from '@/auth';
 import { redirect, notFound } from 'next/navigation';
 import { getDemand } from '@/lib/actions/demands';
+import { isPmoEquivalent } from '@/lib/rbac';
 import { DemandDetailClient } from './DemandDetailClient';
 
 export default async function DemandDetailPage({ params }: { params: { id: string } }) {
@@ -12,7 +13,7 @@ export default async function DemandDetailPage({ params }: { params: { id: strin
   const demand = await getDemand(params.id);
   if (!demand) notFound();
 
-  const canTriage = session.user.role === 'PMO' || session.user.role === 'CIO';
+  const canTriage = isPmoEquivalent(session.user.role) || session.user.role === 'CIO';
 
   return (
     <DemandDetailClient

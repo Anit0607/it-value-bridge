@@ -1,7 +1,7 @@
 import NextAuth from 'next-auth';
 import { authConfig } from './auth.config';
 import { NextResponse } from 'next/server';
-import { getRoleHome } from '@/lib/rbac';
+import { getRoleHome, PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES } from '@/lib/rbac';
 import type { Role } from '@/lib/types';
 
 const { auth } = NextAuth(authConfig);
@@ -23,28 +23,28 @@ const ROUTE_RULES: RouteRule[] = [
   // CIO — leadership dashboards
   { path: '/cio',           allow: ['CIO'] },
 
-  // PMO — governance control tower
-  { path: '/pmo',           allow: ['PMO'] },
+  // PMO — governance control tower (also reused by PROGRAM_HEAD / PROGRAM_MANAGER)
+  { path: '/pmo',           allow: PMO_EQUIVALENT_ROLES },
 
   // Vertical Head — delivery workspace
   { path: '/vertical-head', allow: ['VERTICAL_HEAD'] },
 
-  // Business SPOC — validation/demand views
-  { path: '/business',      allow: ['BUSINESS'] },
+  // Business SPOC — validation/demand views (also reused by BUSINESS_HEAD)
+  { path: '/business',      allow: BUSINESS_EQUIVALENT_ROLES },
 
-  // Leadership + intelligence — CIO and PMO
-  { path: '/value',         allow: ['CIO', 'PMO'] },
-  { path: '/okrs',          allow: ['CIO', 'PMO'] },
-  { path: '/report',        allow: ['CIO', 'PMO'] },
+  // Leadership + intelligence — CIO and PMO-equivalent
+  { path: '/value',         allow: ['CIO', ...PMO_EQUIVALENT_ROLES] },
+  { path: '/okrs',          allow: ['CIO', ...PMO_EQUIVALENT_ROLES] },
+  { path: '/report',        allow: ['CIO', ...PMO_EQUIVALENT_ROLES] },
 
-  // Governance tools — CIO and PMO
-  { path: '/import',        allow: ['PMO'] },
+  // Governance tools — CIO and PMO-equivalent
+  { path: '/import',        allow: PMO_EQUIVALENT_ROLES },
 
   // Dependencies — everyone except BUSINESS
-  { path: '/dependencies',  allow: ['CIO', 'PMO', 'VERTICAL_HEAD'] },
+  { path: '/dependencies',  allow: ['CIO', ...PMO_EQUIVALENT_ROLES, 'VERTICAL_HEAD'] },
 
   // Initiative edit — governance owners only (not BUSINESS / VH)
-  { path: '/items/',        allow: ['CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS'] },
+  { path: '/items/',        allow: ['CIO', ...PMO_EQUIVALENT_ROLES, 'VERTICAL_HEAD', ...BUSINESS_EQUIVALENT_ROLES] },
   // Note: /items/[id]/edit and /items/[id]/validate are handled below
   // before the /items/ prefix is matched.
 ];
@@ -76,17 +76,17 @@ export default auth(req => {
 
   // ── Fine-grained item sub-routes (checked before prefix /items/) ──────────
 
-  // /items/[id]/edit — PMO and CIO only
+  // /items/[id]/edit — PMO-equivalent and CIO only
   if (ITEM_EDIT_RE.test(pathname)) {
-    if (!(['CIO', 'PMO'] as string[]).includes(roleStr)) {
+    if (!(['CIO', ...PMO_EQUIVALENT_ROLES] as string[]).includes(roleStr)) {
       return NextResponse.redirect(new URL(getRoleHome(role), req.url));
     }
     return NextResponse.next();
   }
 
-  // /items/[id]/validate — Business SPOC, PMO, CIO
+  // /items/[id]/validate — Business-equivalent, PMO-equivalent, CIO
   if (ITEM_VALIDATE_RE.test(pathname)) {
-    if (!(['CIO', 'PMO', 'BUSINESS'] as string[]).includes(roleStr)) {
+    if (!(['CIO', ...PMO_EQUIVALENT_ROLES, ...BUSINESS_EQUIVALENT_ROLES] as string[]).includes(roleStr)) {
       return NextResponse.redirect(new URL(getRoleHome(role), req.url));
     }
     return NextResponse.next();

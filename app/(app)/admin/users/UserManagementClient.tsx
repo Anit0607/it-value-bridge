@@ -29,6 +29,7 @@ interface Props {
 const ROLE_TONE: Record<string, BadgeTone> = {
   ADMIN: 'danger', CIO: 'brand', PMO: 'success',
   VERTICAL_HEAD: 'warning', BUSINESS: 'violet',
+  PROGRAM_HEAD: 'success', PROGRAM_MANAGER: 'success', BUSINESS_HEAD: 'violet',
 };
 
 const ORG_STATUS_TONE: Record<string, BadgeTone> = {
@@ -36,11 +37,14 @@ const ORG_STATUS_TONE: Record<string, BadgeTone> = {
 };
 
 const ROLE_OPTIONS = [
-  { value: 'CIO',          label: 'CIO — Executive Value Command Center' },
-  { value: 'PMO',          label: 'PMO — Governance Control Tower' },
-  { value: 'VERTICAL_HEAD',label: 'Vertical Head — Ownership Workspace' },
-  { value: 'BUSINESS',     label: 'Business SPOC — Value Validation' },
-  { value: 'ADMIN',        label: 'Admin — Platform Administration' },
+  { value: 'CIO',             label: 'CIO — Executive Value Command Center' },
+  { value: 'PMO',             label: 'PMO — Governance Control Tower' },
+  { value: 'PROGRAM_HEAD',    label: 'Program Head — Governance Control Tower' },
+  { value: 'PROGRAM_MANAGER', label: 'Program Manager — Governance Control Tower' },
+  { value: 'VERTICAL_HEAD',   label: 'Vertical Head — Ownership Workspace' },
+  { value: 'BUSINESS',        label: 'Business SPOC — Value Validation' },
+  { value: 'BUSINESS_HEAD',   label: 'Business Head — Value Validation (all SPOCs)' },
+  { value: 'ADMIN',           label: 'Admin — Platform Administration' },
 ];
 
 const EMPTY: CreatePilotUserInput = {

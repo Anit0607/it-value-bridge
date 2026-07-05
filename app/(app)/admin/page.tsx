@@ -31,10 +31,12 @@ function Check({ status, label, detail }: { status: CheckStatus; label: string; 
 
 const ROLE_TONE: Record<string, 'brand' | 'success' | 'warning' | 'violet' | 'slate' | 'danger'> = {
   ADMIN: 'danger', CIO: 'brand', PMO: 'success', VERTICAL_HEAD: 'warning', BUSINESS: 'violet',
+  PROGRAM_HEAD: 'success', PROGRAM_MANAGER: 'success', BUSINESS_HEAD: 'violet',
 };
 
 const ROLE_LABEL: Record<string, string> = {
   ADMIN: 'Administrator', CIO: 'CIO', PMO: 'PMO', VERTICAL_HEAD: 'Vertical Head', BUSINESS: 'Business SPOC',
+  PROGRAM_HEAD: 'Program Head', PROGRAM_MANAGER: 'Program Manager', BUSINESS_HEAD: 'Business Head',
 };
 
 export default async function AdminPage() {

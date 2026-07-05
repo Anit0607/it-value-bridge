@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { requireRoleWithOrg } from '@/lib/authz';
+import { PMO_EQUIVALENT_ROLES } from '@/lib/rbac';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { BenefitCategory } from '@prisma/client';
@@ -56,7 +57,7 @@ const OkrInput = z.object({
 export type OkrInput = z.infer<typeof OkrInput>;
 
 async function requireLeadership() {
-  return requireRoleWithOrg('PMO', 'CIO');
+  return requireRoleWithOrg(...PMO_EQUIVALENT_ROLES, 'CIO');
 }
 
 export async function createOkr(input: OkrInput) {

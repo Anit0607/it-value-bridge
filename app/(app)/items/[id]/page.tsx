@@ -4,6 +4,7 @@ import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getVisibleInitiativeItem, getInitiativeValue } from '@/lib/actions/initiatives';
 import { getInitiativeDependencies, listLinkableInitiatives } from '@/lib/actions/dependencies';
+import { isPmoEquivalent } from '@/lib/rbac';
 import { ItemDetailClient } from './ItemDetailClient';
 import { ValueRealizationPanel } from '@/components/value/ValueRealizationPanel';
 import { DependencyPanel } from '@/components/dependencies/DependencyPanel';
@@ -23,8 +24,8 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
   if (!item) notFound();
 
   const role = session.user.role;
-  const canRecord = role === 'PMO' || role === 'CIO';
-  const canEditDeps = role === 'PMO' || role === 'CIO' || role === 'VERTICAL_HEAD';
+  const canRecord = isPmoEquivalent(role) || role === 'CIO';
+  const canEditDeps = isPmoEquivalent(role) || role === 'CIO' || role === 'VERTICAL_HEAD';
 
   // Benefit-realization status for the value panel (computed at render).
   const goLive = item.history.find(h => h.stage === 'Go Live') ?? item.history.find(h => h.stage === 'Closed');

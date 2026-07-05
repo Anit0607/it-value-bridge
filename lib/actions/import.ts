@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { requireRoleWithOrg } from '@/lib/authz';
+import { PMO_EQUIVALENT_ROLES } from '@/lib/rbac';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -21,7 +22,7 @@ export type ImportRow = z.infer<typeof RowInput>;
 /** Bulk-create demands from an uploaded (Jira/Excel) export. Air-gapped: the
  *  file is parsed in the browser; only validated rows are sent here. */
 export async function importDemands(rows: ImportRow[]): Promise<{ created: number }> {
-  const user = await requireRoleWithOrg('PMO', 'CIO');
+  const user = await requireRoleWithOrg(...PMO_EQUIVALENT_ROLES, 'CIO');
   const parsed = ImportInput.parse(rows);
 
   await prisma.$transaction(

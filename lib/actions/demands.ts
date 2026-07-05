@@ -2,6 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { requireRoleWithOrg } from '@/lib/authz';
+import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES } from '@/lib/rbac';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { STAGE_TO_PROCESS_GROUP } from '@/lib/stage-map';
@@ -27,7 +28,7 @@ const CreateDemandInput = z.object({
 export type CreateDemandInput = z.infer<typeof CreateDemandInput>;
 
 export async function createDemand(input: CreateDemandInput) {
-  const user = await requireRoleWithOrg('PMO', 'CIO', 'BUSINESS', 'VERTICAL_HEAD');
+  const user = await requireRoleWithOrg(...PMO_EQUIVALENT_ROLES, 'CIO', ...BUSINESS_EQUIVALENT_ROLES, 'VERTICAL_HEAD');
   const parsed = CreateDemandInput.parse(input);
 
   const demand = await prisma.demand.create({
@@ -80,7 +81,7 @@ export async function getDemand(id: string) {
 }
 
 export async function setDemandStatus(id: string, status: DemandStatus, reviewNote: string) {
-  const user = await requireRoleWithOrg('PMO', 'CIO');
+  const user = await requireRoleWithOrg(...PMO_EQUIVALENT_ROLES, 'CIO');
   const { count } = await prisma.demand.updateMany({
     where: { id, organizationId: user.organizationId },
     data: { status, reviewNote },
@@ -101,7 +102,7 @@ const ApproveInput = z.object({
 export type ApproveDemandInput = z.infer<typeof ApproveInput>;
 
 export async function approveDemand(id: string, input: ApproveDemandInput) {
-  const user = await requireRoleWithOrg('PMO', 'CIO');
+  const user = await requireRoleWithOrg(...PMO_EQUIVALENT_ROLES, 'CIO');
   const completion = ApproveInput.parse(input);
 
   const demand = await prisma.demand.findFirst({

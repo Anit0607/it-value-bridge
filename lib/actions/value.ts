@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { requireRole } from '@/lib/authz';
+import { PMO_EQUIVALENT_ROLES } from '@/lib/rbac';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
@@ -18,7 +19,7 @@ const MeasurementInput = z.object({
 export type AddMeasurementInput = z.infer<typeof MeasurementInput>;
 
 export async function addValueMeasurement(input: AddMeasurementInput) {
-  const user = await requireRole('PMO', 'CIO');
+  const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO');
   const parsed = MeasurementInput.parse(input);
   // Org access check on the initiative
   if (!user.organizationId) {

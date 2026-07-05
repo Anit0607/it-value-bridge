@@ -3,12 +3,13 @@ export const dynamic = 'force-dynamic';
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getVisibleInitiativeItem } from '@/lib/actions/initiatives';
+import { isPmoEquivalent } from '@/lib/rbac';
 import { EditClient } from './EditClient';
 
 export default async function EditInitiativePage({ params }: { params: { id: string } }) {
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
-  if (session.user.role !== 'PMO' && session.user.role !== 'CIO' && session.user.role !== 'ADMIN') {
+  if (!isPmoEquivalent(session.user.role) && session.user.role !== 'CIO' && session.user.role !== 'ADMIN') {
     redirect(`/items/${params.id}`);
   }
 

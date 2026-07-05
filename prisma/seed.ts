@@ -181,7 +181,30 @@ async function main() {
     create: { name: 'Deepa Nair', email: 'business2@bank.com', passwordHash: password, role: 'BUSINESS', organizationId: org.id },
   });
 
-  console.log('Seeded 7 users:', cio.email, pmo.email, vh.email, vh2.email, business.email, business2.email);
+  // Enterprise role model additions — reuse the PMO / Business dashboards as stand-ins this sprint.
+  const programHead = await prisma.user.upsert({
+    where: { email: 'program-head@bank.com' },
+    update: { organizationId: org.id },
+    create: { name: 'Karan Mehta', email: 'program-head@bank.com', passwordHash: password, role: 'PROGRAM_HEAD', organizationId: org.id },
+  });
+
+  const programManager = await prisma.user.upsert({
+    where: { email: 'program-manager@bank.com' },
+    update: { organizationId: org.id },
+    create: { name: 'Neha Kapoor', email: 'program-manager@bank.com', passwordHash: password, role: 'PROGRAM_MANAGER', organizationId: org.id },
+  });
+
+  const businessHead = await prisma.user.upsert({
+    where: { email: 'business-head@bank.com' },
+    update: { organizationId: org.id },
+    create: { name: 'Rohit Malhotra', email: 'business-head@bank.com', passwordHash: password, role: 'BUSINESS_HEAD', organizationId: org.id },
+  });
+
+  console.log(
+    'Seeded 10 users:',
+    cio.email, pmo.email, vh.email, vh2.email, business.email, business2.email,
+    programHead.email, programManager.email, businessHead.email,
+  );
 
   // --- Clean value-layer data (safe FK order) before re-seeding ---
   await prisma.dependency.deleteMany();

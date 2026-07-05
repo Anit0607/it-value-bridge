@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
 import { requireRole } from '@/lib/authz';
+import { PMO_EQUIVALENT_ROLES } from '@/lib/rbac';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { STAGE_LABEL } from '@/lib/stage-map';
@@ -121,7 +122,7 @@ const AddInput = z.object({
 export type AddDependencyInput = z.infer<typeof AddInput>;
 
 async function requireEditor() {
-  return requireRole('PMO', 'CIO', 'VERTICAL_HEAD');
+  return requireRole(...PMO_EQUIVALENT_ROLES, 'CIO', 'VERTICAL_HEAD');
 }
 
 async function assertDependencyOrgAccess(id: string, organizationId: string | null | undefined) {

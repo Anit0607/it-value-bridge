@@ -15,6 +15,9 @@ enum Role {
   PMO
   VERTICAL_HEAD
   BUSINESS
+  PROGRAM_HEAD
+  PROGRAM_MANAGER
+  BUSINESS_HEAD
 }
 
 enum InitiativeType {

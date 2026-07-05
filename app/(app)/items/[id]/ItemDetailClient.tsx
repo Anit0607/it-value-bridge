@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useRole } from '@/components/RoleProvider';
+import { isPmoEquivalent, isBusinessEquivalent } from '@/lib/rbac';
 import { advanceStage, updateNotes, signOffValue, type InitiativeValue } from '@/lib/actions/initiatives';
 import { computeRAG, daysInStage, daysFromNow, daysSinceUpdate } from '@/lib/rag';
 import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE, BENEFIT_UNIT_LABEL } from '@/lib/value';
@@ -34,6 +35,9 @@ const ROLE_BACK: Record<Role, { href: string; label: string }> = {
   CIO: { href: '/cio', label: 'Command Center' },
   VERTICAL_HEAD: { href: '/vertical-head', label: 'Ownership Workspace' },
   BUSINESS: { href: '/business', label: 'Value Validation' },
+  PROGRAM_HEAD: { href: '/pmo', label: 'PMO Control Tower' },
+  PROGRAM_MANAGER: { href: '/pmo', label: 'PMO Control Tower' },
+  BUSINESS_HEAD: { href: '/business', label: 'Value Validation' },
 };
 
 type AuditEvent = { label: string; tone: BadgeTone };
@@ -87,9 +91,9 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const totalValue = claims.reduce((s, b) => s + b.estimatedAnnualValueInr, 0);
 
   // Role-specific UI permissions (server actions enforce the same rules server-side)
-  const canSignOff     = user?.role === 'PMO' || user?.role === 'CIO';
-  const canUpdateNotes = user?.role === 'PMO' || user?.role === 'CIO' || user?.role === 'VERTICAL_HEAD';
-  const canAdvance     = user?.role === 'PMO' || user?.role === 'CIO' || user?.role === 'VERTICAL_HEAD';
+  const canSignOff     = isPmoEquivalent(user?.role) || user?.role === 'CIO';
+  const canUpdateNotes = isPmoEquivalent(user?.role) || user?.role === 'CIO' || user?.role === 'VERTICAL_HEAD';
+  const canAdvance     = isPmoEquivalent(user?.role) || user?.role === 'CIO' || user?.role === 'VERTICAL_HEAD';
   // canValidate declared below after `closed` is computed
 
   const handleSignOff = () => {
@@ -110,7 +114,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const stageIdx = STAGES.indexOf(item.currentStage);
   const canProgress = stageIdx < STAGES.length - 1;
   const closed = item.currentStage === 'Closed';
-  const canValidate = (user?.role === 'BUSINESS' || user?.role === 'PMO' || user?.role === 'CIO') &&
+  const canValidate = (isBusinessEquivalent(user?.role) || isPmoEquivalent(user?.role) || user?.role === 'CIO') &&
                       item.currentStage === 'Business Validation' && !closed;
   const currentNotes = localNotes ?? item.notes;
   const currentDelayed = localDelayed ?? item.delayed;
@@ -234,7 +238,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
             )}
           </div>
         </div>
-        {(user?.role === 'PMO' || user?.role === 'CIO') && (
+        {(isPmoEquivalent(user?.role) || user?.role === 'CIO') && (
           <Link href={`/items/${item.id}/edit`} className={buttonCls('secondary')}>
             Edit Initiative
           </Link>

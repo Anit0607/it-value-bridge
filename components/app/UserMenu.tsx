@@ -4,15 +4,7 @@ import { useRouter } from 'next/navigation';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import { ChevronDown, LogOut } from 'lucide-react';
 import { useRole } from '@/components/RoleProvider';
-import type { Role } from '@/lib/types';
-
-const ROLE_LABEL: Record<Role, string> = {
-  ADMIN: 'Platform Administrator',
-  CIO: 'Chief Information Officer',
-  PMO: 'PMO Manager',
-  VERTICAL_HEAD: 'Vertical Head',
-  BUSINESS: 'Business SPOC',
-};
+import { ROLE_LABEL } from '@/lib/rbac';
 
 export function UserMenu() {
   const { user, logout } = useRole();

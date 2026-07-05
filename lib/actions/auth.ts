@@ -55,7 +55,7 @@ export async function signUpAction(formData: FormData): Promise<{ error?: string
 const CreatePilotUserSchema = z.object({
   name:        z.string().min(2, 'Name must be at least 2 characters'),
   email:       z.string().email('Valid email required'),
-  role:        z.enum(['ADMIN', 'CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS']),
+  role:        z.enum(['ADMIN', 'CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS', 'PROGRAM_HEAD', 'PROGRAM_MANAGER', 'BUSINESS_HEAD']),
   verticalHead: z.string().optional(),
   password:    z.string().min(8, 'Password must be at least 8 characters'),
 });

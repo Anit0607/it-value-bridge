@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useRole } from './RoleProvider';
+import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES } from '@/lib/rbac';
 import type { Role } from '@/lib/types';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -42,36 +43,36 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Command',
     items: [
       { href: '/cio', label: 'Command Center', icon: LayoutDashboard, roles: ['CIO'] },
-      { href: '/pmo', label: 'PMO Control Tower', icon: ClipboardList, roles: ['PMO'] },
+      { href: '/pmo', label: 'PMO Control Tower', icon: ClipboardList, roles: PMO_EQUIVALENT_ROLES },
     ],
   },
   {
     label: 'Governance',
     items: [
-      { href: '/pmo/new', label: 'New Initiative', icon: PlusCircle, roles: ['PMO'] },
-      { href: '/demands', label: 'Demands', icon: Lightbulb, roles: ['CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS'] },
-      { href: '/dependencies', label: 'Dependencies', icon: Link2, roles: ['CIO', 'PMO', 'VERTICAL_HEAD'] },
+      { href: '/pmo/new', label: 'New Initiative', icon: PlusCircle, roles: PMO_EQUIVALENT_ROLES },
+      { href: '/demands', label: 'Demands', icon: Lightbulb, roles: ['CIO', ...PMO_EQUIVALENT_ROLES, 'VERTICAL_HEAD', ...BUSINESS_EQUIVALENT_ROLES] },
+      { href: '/dependencies', label: 'Dependencies', icon: Link2, roles: ['CIO', ...PMO_EQUIVALENT_ROLES, 'VERTICAL_HEAD'] },
     ],
   },
   {
     label: 'Value Intelligence',
     items: [
-      { href: '/value', label: 'Value Board', icon: TrendingUp, roles: ['CIO', 'PMO'] },
-      { href: '/okrs', label: 'Strategic OKRs', icon: Target, roles: ['CIO', 'PMO'] },
-      { href: '/report', label: 'Value Report', icon: FileBarChart, roles: ['CIO', 'PMO'] },
+      { href: '/value', label: 'Value Board', icon: TrendingUp, roles: ['CIO', ...PMO_EQUIVALENT_ROLES] },
+      { href: '/okrs', label: 'Strategic OKRs', icon: Target, roles: ['CIO', ...PMO_EQUIVALENT_ROLES] },
+      { href: '/report', label: 'Value Report', icon: FileBarChart, roles: ['CIO', ...PMO_EQUIVALENT_ROLES] },
     ],
   },
   {
     label: 'Validation',
     items: [
       { href: '/vertical-head', label: 'Ownership Workspace', icon: Briefcase, roles: ['VERTICAL_HEAD'] },
-      { href: '/business', label: 'Value Validation', icon: CheckSquare, roles: ['BUSINESS'] },
+      { href: '/business', label: 'Value Validation', icon: CheckSquare, roles: BUSINESS_EQUIVALENT_ROLES },
     ],
   },
   {
     label: 'Admin',
     items: [
-      { href: '/import', label: 'Import', icon: Upload, roles: ['PMO'] },
+      { href: '/import', label: 'Import', icon: Upload, roles: PMO_EQUIVALENT_ROLES },
     ],
   },
   {
@@ -94,6 +95,9 @@ const ROLE_LABEL: Record<Role, string> = {
   PMO: 'PMO',
   VERTICAL_HEAD: 'Vertical Head',
   BUSINESS: 'Business SPOC',
+  PROGRAM_HEAD: 'Program Head',
+  PROGRAM_MANAGER: 'Program Manager',
+  BUSINESS_HEAD: 'Business Head',
 };
 
 const ROLE_ACCESS: Record<Role, string> = {
@@ -102,6 +106,9 @@ const ROLE_ACCESS: Record<Role, string> = {
   PMO: 'PMO Governance Control Tower',
   VERTICAL_HEAD: 'Delivery Ownership Workspace',
   BUSINESS: 'Business Value Validation',
+  PROGRAM_HEAD: 'PMO Governance Control Tower',
+  PROGRAM_MANAGER: 'PMO Governance Control Tower',
+  BUSINESS_HEAD: 'Business Value Validation',
 };
 
 export function Sidebar({
