@@ -185,32 +185,6 @@ export async function getVisibleInitiativeItem(
   return row ? toItem(row) : null;
 }
 
-export async function getInitiativesByVerticalHead(
-  verticalHead: string,
-  organizationId: string | null | undefined,
-): Promise<Item[]> {
-  if (!organizationId) return [];
-  const rows = await prisma.initiative.findMany({
-    where: { verticalHeadName: verticalHead, organizationId },
-    include: WITH_RELATIONS,
-    orderBy: { createdAt: 'desc' },
-  });
-  return rows.map(toItem);
-}
-
-export async function getInitiativesBySpoc(
-  spocName: string,
-  organizationId: string | null | undefined,
-): Promise<Item[]> {
-  if (!organizationId) return [];
-  const rows = await prisma.initiative.findMany({
-    where: { businessSpoc: spocName, organizationId },
-    include: WITH_RELATIONS,
-    orderBy: { createdAt: 'desc' },
-  });
-  return rows.map(toItem);
-}
-
 // ---- Mutations ----
 
 const BenefitInput = z.object({
