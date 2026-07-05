@@ -191,8 +191,12 @@ export interface DependencyOverview {
   totalLinks: number;
 }
 
-export async function getDependencyOverview(): Promise<DependencyOverview> {
+export async function getDependencyOverview(organizationId: string): Promise<DependencyOverview> {
   const all = await prisma.dependency.findMany({
+    where: {
+      dependent: { organizationId },
+      blocker: { organizationId },
+    },
     include: { dependent: true, blocker: true },
   });
 

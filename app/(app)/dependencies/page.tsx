@@ -1,13 +1,19 @@
 export const dynamic = 'force-dynamic';
 
 import Link from 'next/link';
+import { notFound, redirect } from 'next/navigation';
+import { auth } from '@/auth';
 import { getDependencyOverview } from '@/lib/actions/dependencies';
 import { PageHeader } from '@/components/PageHeader';
 import { KpiCard } from '@/components/KpiCard';
 import { Link2, AlertTriangle, GitBranch, ArrowUp, Inbox } from 'lucide-react';
 
 export default async function DependenciesPage() {
-  const o = await getDependencyOverview();
+  const session = await auth();
+  if (!session?.user) redirect('/sign-in');
+  if (!session.user.organizationId) notFound();
+
+  const o = await getDependencyOverview(session.user.organizationId);
   const topBlocker = o.topBlockers[0];
 
   return (
