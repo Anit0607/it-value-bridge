@@ -181,7 +181,8 @@
       "Bash(export DATABASE_URL=\"postgresql://itvb:itvb@localhost:5432/itvb\")",
       "Bash(npx tsx *)",
       "Bash(git fetch *)",
-      "Bash(git rev-list *)"
+      "Bash(git rev-list *)",
+      "Bash(gh api *)"
     ]
   }
 }

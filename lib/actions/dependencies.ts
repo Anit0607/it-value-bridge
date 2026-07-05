@@ -49,9 +49,13 @@ export interface InitiativeDependencies {
   upstreamRiskCount: number;
 }
 
-export async function getInitiativeDependencies(id: string): Promise<InitiativeDependencies> {
-  const i = await prisma.initiative.findUnique({
-    where: { id },
+export async function getInitiativeDependencies(
+  id: string,
+  organizationId: string | null | undefined,
+): Promise<InitiativeDependencies> {
+  if (!organizationId) return { upstream: [], downstream: [], upstreamRiskCount: 0 };
+  const i = await prisma.initiative.findFirst({
+    where: { id, organizationId },
     include: {
       dependsOn: { include: { blocker: true } },
       blocking: { include: { dependent: true } },
@@ -75,9 +79,13 @@ export async function getInitiativeDependencies(id: string): Promise<InitiativeD
   return { upstream, downstream, upstreamRiskCount: upstream.filter(u => u.atRisk).length };
 }
 
-export async function listLinkableInitiatives(id: string): Promise<{ id: string; title: string }[]> {
+export async function listLinkableInitiatives(
+  id: string,
+  organizationId: string | null | undefined,
+): Promise<{ id: string; title: string }[]> {
+  if (!organizationId) return [];
   const rows = await prisma.initiative.findMany({
-    where: { id: { not: id } },
+    where: { id: { not: id }, organizationId },
     select: { id: true, title: true },
     orderBy: { title: 'asc' },
   });

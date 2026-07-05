@@ -493,9 +493,13 @@ export interface InitiativeValue {
   }[];
 }
 
-export async function getInitiativeValue(id: string): Promise<InitiativeValue | null> {
-  const i = await prisma.initiative.findUnique({
-    where: { id },
+export async function getInitiativeValue(
+  id: string,
+  organizationId: string | null | undefined,
+): Promise<InitiativeValue | null> {
+  if (!organizationId) return null;
+  const i = await prisma.initiative.findFirst({
+    where: { id, organizationId },
     select: {
       estimatedCostInr: true,
       actualCostInr: true,

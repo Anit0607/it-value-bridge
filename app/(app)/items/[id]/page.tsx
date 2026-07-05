@@ -16,9 +16,9 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
 
   const [item, value, deps, linkOptions] = await Promise.all([
     getVisibleInitiativeItem(params.id, session.user),
-    getInitiativeValue(params.id),
-    getInitiativeDependencies(params.id),
-    listLinkableInitiatives(params.id),
+    getInitiativeValue(params.id, session.user.organizationId),
+    getInitiativeDependencies(params.id, session.user.organizationId),
+    listLinkableInitiatives(params.id, session.user.organizationId),
   ]);
   if (!item) notFound();
 
