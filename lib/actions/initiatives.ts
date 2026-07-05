@@ -41,6 +41,11 @@ function toItem(i: InitiativeWithRelations): Item {
     verticalHead: i.verticalHeadName,
     businessSpoc: i.businessSpoc,
     businessSponsor: i.businessSponsor,
+    programHeadName: i.programHeadName,
+    programManagerName: i.programManagerName,
+    businessHeadName: i.businessHeadName,
+    businessUnit: i.businessUnit,
+    subBusinessUnit: i.subBusinessUnit,
     requirement: i.description,
     outcomeCategory: benefitToOutcome(i.benefitCategory),
     outcomeDescription: i.outcomeDescription,
@@ -101,14 +106,43 @@ async function assertOrgAccess(id: string, organizationId: string | null | undef
 
 // ---- Queries ----
 
+/** Returns the role-based Prisma filter added on top of the org scope. `{}` for roles with unrestricted org-wide visibility. */
+function roleScopeFilter(user: {
+  role: string;
+  name: string;
+  verticalHead?: string | null;
+}): Prisma.InitiativeWhereInput {
+  switch (user.role) {
+    case 'VERTICAL_HEAD':
+      // Sees every initiative in their IT vertical.
+      return { verticalHeadName: user.verticalHead ?? user.name };
+    case 'BUSINESS':
+      // Sees only their own assigned items.
+      return { businessSpoc: user.name };
+    case 'PROGRAM_MANAGER':
+      // Sees only initiatives assigned to them.
+      return { programManagerName: user.name };
+    case 'PROGRAM_HEAD':
+      // Sees every initiative under their program.
+      return { programHeadName: user.name };
+    case 'BUSINESS_HEAD':
+      // Sees every initiative under their business.
+      return { businessHeadName: user.name };
+    default:
+      // ADMIN / CIO / PMO: org-scoped only, no further filter.
+      return {};
+  }
+}
+
 /**
  * Role-scoped, org-scoped initiative list. Use this in any page where the
  * caller's role and organization should limit what they see.
  *
- *  ADMIN / CIO / PMO-equivalent (PMO, PROGRAM_HEAD, PROGRAM_MANAGER)
- *                     → all initiatives in the caller's org
- *  BUSINESS_HEAD      → all initiatives in the caller's org (sees across every SPOC)
+ *  ADMIN / CIO / PMO  → all initiatives in the caller's org
+ *  PROGRAM_HEAD       → initiatives where programHeadName = user.name
+ *  PROGRAM_MANAGER    → initiatives where programManagerName = user.name
  *  VERTICAL_HEAD      → initiatives where verticalHeadName = user.verticalHead
+ *  BUSINESS_HEAD      → initiatives where businessHeadName = user.name
  *  BUSINESS           → initiatives where businessSpoc = user.name
  */
 export async function listVisibleInitiativesForUser(user: {
@@ -122,18 +156,10 @@ export async function listVisibleInitiativesForUser(user: {
     return [];
   }
 
-  // Base scope: always limit to the user's organization
-  let where: Prisma.InitiativeWhereInput = {
+  const where: Prisma.InitiativeWhereInput = {
     organizationId: user.organizationId,
+    ...roleScopeFilter(user),
   };
-
-  // Additional role-based scoping within the org
-  if (user.role === 'VERTICAL_HEAD') {
-    where = { ...where, verticalHeadName: user.verticalHead ?? user.name };
-  } else if (user.role === 'BUSINESS') {
-    where = { ...where, businessSpoc: user.name };
-  }
-  // ADMIN / CIO / PMO: org-scoped only, no further filter
 
   const rows = await prisma.initiative.findMany({
     where,
@@ -141,14 +167,6 @@ export async function listVisibleInitiativesForUser(user: {
     orderBy: { createdAt: 'desc' },
   });
   return rows.map(toItem);
-}
-
-export async function getInitiativeItem(id: string): Promise<Item | null> {
-  const row = await prisma.initiative.findUnique({
-    where: { id },
-    include: WITH_RELATIONS,
-  });
-  return row ? toItem(row) : null;
 }
 
 /**
@@ -175,12 +193,7 @@ export async function getVisibleInitiativeItem(
     where: {
       id,
       organizationId: user.organizationId,
-      ...(user.role === 'VERTICAL_HEAD'
-        ? { verticalHeadName: user.verticalHead ?? user.name }
-        : {}),
-      ...(user.role === 'BUSINESS'
-        ? { businessSpoc: user.name }
-        : {}),
+      ...roleScopeFilter(user),
     },
     include: WITH_RELATIONS,
   });
@@ -554,6 +567,11 @@ const EditSchema = z.object({
   isRegulatory:    z.boolean(),
   regulatoryBody:  z.string().optional(),
   regulatoryDueDate: z.string().optional(),
+  programHeadName:    z.string().optional(),
+  programManagerName: z.string().optional(),
+  businessHeadName:   z.string().optional(),
+  businessUnit:       z.string().optional(),
+  subBusinessUnit:    z.string().optional(),
 }).superRefine((data, ctx) => {
   if (data.isRegulatory) {
     if (!data.regulatoryBody?.trim())
@@ -584,6 +602,11 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
       isRegulatory: true,
       regulatoryBody: true,
       regulatoryDueDate: true,
+      programHeadName: true,
+      programManagerName: true,
+      businessHeadName: true,
+      businessUnit: true,
+      subBusinessUnit: true,
     },
   });
 
@@ -616,6 +639,21 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
       if (oldDue !== newDue)
         changes.push(`Regulatory due date changed from ${oldDue || '—'} to ${newDue || '—'}`);
     }
+
+    const assignmentFields: { key: keyof typeof current; label: string; newValue: string | undefined }[] = [
+      { key: 'programHeadName', label: 'Program Head', newValue: parsed.programHeadName },
+      { key: 'programManagerName', label: 'Program Manager', newValue: parsed.programManagerName },
+      { key: 'businessHeadName', label: 'Business Head', newValue: parsed.businessHeadName },
+      { key: 'businessUnit', label: 'Business Unit', newValue: parsed.businessUnit },
+      { key: 'subBusinessUnit', label: 'Sub Business Unit', newValue: parsed.subBusinessUnit },
+    ];
+    for (const f of assignmentFields) {
+      const oldValue = (current[f.key] as string | null) ?? '';
+      const trimmedNew = f.newValue?.trim() ?? '';
+      if (oldValue !== trimmedNew) {
+        changes.push(`${f.label} changed from ${oldValue || '—'} to ${trimmedNew || '—'}`);
+      }
+    }
   }
   const historyNote = changes.length > 0 ? changes.join('; ') : 'Initiative metadata updated';
 
@@ -631,6 +669,11 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
       isRegulatory: parsed.isRegulatory,
       regulatoryBody: parsed.isRegulatory ? (parsed.regulatoryBody?.trim() || null) : null,
       regulatoryDueDate: parsed.isRegulatory && parsed.regulatoryDueDate ? new Date(parsed.regulatoryDueDate) : null,
+      programHeadName: parsed.programHeadName?.trim() || null,
+      programManagerName: parsed.programManagerName?.trim() || null,
+      businessHeadName: parsed.businessHeadName?.trim() || null,
+      businessUnit: parsed.businessUnit?.trim() || null,
+      subBusinessUnit: parsed.subBusinessUnit?.trim() || null,
       lastUpdated: today,
       history: {
         create: { stage: null, note: historyNote, userName: user.name, createdAt: today },

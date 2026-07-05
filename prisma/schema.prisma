@@ -183,6 +183,16 @@ model Initiative {
   businessSponsor  String
   description      String
 
+  // Enterprise role model — assignment fields for manager-level visibility.
+  // Nullable: existing initiatives predate these and pilot data may leave
+  // them unset. Matched by name against the assignee's session, mirroring
+  // how verticalHeadName/businessSpoc already scope VERTICAL_HEAD/BUSINESS.
+  programHeadName    String?
+  programManagerName String?
+  businessHeadName   String?
+  businessUnit       String?
+  subBusinessUnit    String?
+
   // business value (intent) — benefitCategory/outcomeDescription/targetMetric
   // are the legacy single-benefit summary; structured value lives in BenefitClaim[].
   benefitCategory    BenefitCategory

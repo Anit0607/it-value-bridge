@@ -48,6 +48,14 @@ export interface Item {
   verticalHead: string;
   businessSpoc: string;
   businessSponsor: string;
+
+  // Enterprise role model — manager-level assignment (nullable; may be unset)
+  programHeadName?: string | null;
+  programManagerName?: string | null;
+  businessHeadName?: string | null;
+  businessUnit?: string | null;
+  subBusinessUnit?: string | null;
+
   requirement: string;
   outcomeCategory: OutcomeCategory;
   outcomeDescription: string;

@@ -30,6 +30,11 @@ export default async function EditInitiativePage({ params }: { params: { id: str
         isRegulatory:     item.isRegulatory,
         regulatoryBody:   item.regulatoryBody ?? '',
         regulatoryDueDate: item.regulatoryDueDate ?? '',
+        programHeadName:    item.programHeadName ?? '',
+        programManagerName: item.programManagerName ?? '',
+        businessHeadName:    item.businessHeadName ?? '',
+        businessUnit:        item.businessUnit ?? '',
+        subBusinessUnit:     item.subBusinessUnit ?? '',
       }}
     />
   );

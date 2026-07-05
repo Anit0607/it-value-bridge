@@ -256,6 +256,12 @@ async function main() {
     committedMonth?: string;
     history: { stage: Stage; date: Date; user: string; note: string }[];
     validation?: { outcomeAchieved: 'YES' | 'PARTIALLY' | 'NO'; actualResult: string; actualMetric: string };
+    // Enterprise role model — manager-level assignment (optional demo coverage)
+    programHeadName?: string;
+    programManagerName?: string;
+    businessHeadName?: string;
+    businessUnit?: string;
+    subBusinessUnit?: string;
   };
 
   const d = (s: string) => new Date(s);
@@ -279,6 +285,11 @@ async function main() {
       notes: 'Backend API integration 70% complete. UPI 2.0 module under testing.',
       delayed: false,
       committedMonth: '2026-06',
+      programHeadName: 'Karan Mehta',
+      programManagerName: 'Neha Kapoor',
+      businessHeadName: 'Rohit Malhotra',
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Digital Channels',
       history: [
         { stage: 'BRD', date: d('2026-03-10'), user: 'Anita Desai', note: 'BRD signed off by business' },
         { stage: 'FSD', date: d('2026-04-05'), user: 'Anita Desai', note: 'FSD approved' },
@@ -303,6 +314,11 @@ async function main() {
       lastUpdated: d('2026-06-14'),
       notes: 'SIT cycle 2 in progress. 3 defects pending closure.',
       delayed: false,
+      programHeadName: 'Karan Mehta',
+      programManagerName: 'Neha Kapoor',
+      businessHeadName: 'Rohit Malhotra',
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Digital Channels',
       history: [
         { stage: 'BRD', date: d('2026-04-01'), user: 'Anita Desai', note: 'BRD completed' },
         { stage: 'FSD', date: d('2026-04-20'), user: 'Anita Desai', note: 'FSD finalized' },
@@ -354,6 +370,9 @@ async function main() {
       lastUpdated: d('2026-06-15'),
       notes: 'UAT started. Business team testing video KYC flow.',
       delayed: false,
+      businessHeadName: 'Rohit Malhotra',
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Compliance',
       history: [
         { stage: 'BRD', date: d('2026-01-15'), user: 'Anita Desai', note: 'BRD approved' },
         { stage: 'FSD', date: d('2026-02-20'), user: 'Anita Desai', note: 'FSD finalized with AI vendor' },
@@ -409,6 +428,10 @@ async function main() {
       lastUpdated: d('2026-06-13'),
       notes: 'FSD drafting in progress. NPCI technical specs received.',
       delayed: false,
+      programHeadName: 'Karan Mehta',
+      businessHeadName: 'Rohit Malhotra',
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Digital Channels',
       history: [
         { stage: 'BRD', date: d('2026-05-15'), user: 'Anita Desai', note: 'BRD approved' },
         { stage: 'FSD', date: d('2026-06-10'), user: 'Rajesh Kumar', note: 'FSD drafting started' },
@@ -431,6 +454,10 @@ async function main() {
       lastUpdated: d('2026-06-15'),
       notes: 'BRD workshop completed. Document under review.',
       delayed: false,
+      programHeadName: 'Karan Mehta',
+      businessHeadName: 'Rohit Malhotra',
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Retail Lending',
       history: [
         { stage: 'BRD', date: d('2026-06-12'), user: 'Anita Desai', note: 'BRD workshop conducted' },
       ],
@@ -477,6 +504,9 @@ async function main() {
       lastUpdated: d('2026-06-14'),
       notes: 'AppSec scanning in progress. 2 medium findings to be addressed.',
       delayed: false,
+      businessHeadName: 'Rohit Malhotra',
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Customer Experience',
       history: [
         { stage: 'BRD', date: d('2026-02-01'), user: 'Anita Desai', note: 'BRD approved' },
         { stage: 'FSD', date: d('2026-03-01'), user: 'Anita Desai', note: 'FSD approved' },
@@ -532,6 +562,11 @@ async function main() {
       delaySource: 'IT',
       delayReason: 'UAT slipped — business testing team short on resources for defect verification.',
       committedMonth: '2026-06',
+      programHeadName: 'Karan Mehta',
+      programManagerName: 'Neha Kapoor',
+      businessHeadName: 'Rohit Malhotra',
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Digital Channels',
       history: [
         { stage: 'BRD', date: d('2026-03-01'), user: 'Anita Desai', note: 'BRD approved' },
         { stage: 'FSD', date: d('2026-03-20'), user: 'Anita Desai', note: 'FSD approved' },
@@ -666,6 +701,10 @@ async function main() {
       notes: 'Successfully delivered. 2,500 merchants onboarded in first 2 weeks.',
       delayed: false,
       committedMonth: '2026-05',
+      programHeadName: 'Karan Mehta',
+      businessHeadName: 'Rohit Malhotra',
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Digital Channels',
       validation: {
         outcomeAchieved: 'YES',
         actualResult: 'App launched on time. 2,500 merchants onboarded in first 2 weeks. Payment acceptance working smoothly.',
@@ -914,6 +953,11 @@ async function main() {
         isRegulatory: !!reg,
         regulatoryBody: reg?.body ?? null,
         regulatoryDueDate: reg ? d(reg.due) : null,
+        programHeadName: seed.programHeadName ?? null,
+        programManagerName: seed.programManagerName ?? null,
+        businessHeadName: seed.businessHeadName ?? null,
+        businessUnit: seed.businessUnit ?? null,
+        subBusinessUnit: seed.subBusinessUnit ?? null,
         organizationId: org.id,
         benefitClaims: { create: benefitCreates },
         okrLinks: categoryToOkrId[seed.benefitCategory]

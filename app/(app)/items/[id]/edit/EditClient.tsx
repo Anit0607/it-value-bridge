@@ -35,6 +35,11 @@ interface Props {
     isRegulatory: boolean;
     regulatoryBody: string;
     regulatoryDueDate: string;
+    programHeadName: string;
+    programManagerName: string;
+    businessHeadName: string;
+    businessUnit: string;
+    subBusinessUnit: string;
   };
 }
 
@@ -52,6 +57,11 @@ export function EditClient({ id, defaults }: Props) {
   const [isRegulatory, setIsRegulatory] = useState(defaults.isRegulatory);
   const [regulatoryBody, setRegulatoryBody] = useState(defaults.regulatoryBody);
   const [regulatoryDueDate, setRegulatoryDueDate] = useState(defaults.regulatoryDueDate);
+  const [programHeadName, setProgramHeadName] = useState(defaults.programHeadName);
+  const [programManagerName, setProgramManagerName] = useState(defaults.programManagerName);
+  const [businessHeadName, setBusinessHeadName] = useState(defaults.businessHeadName);
+  const [businessUnit, setBusinessUnit] = useState(defaults.businessUnit);
+  const [subBusinessUnit, setSubBusinessUnit] = useState(defaults.subBusinessUnit);
 
   const validate = (): string => {
     if (!title.trim() || title.trim().length < 5) return 'Title must be at least 5 characters.';
@@ -75,6 +85,11 @@ export function EditClient({ id, defaults }: Props) {
       isRegulatory,
       regulatoryBody: isRegulatory ? regulatoryBody : undefined,
       regulatoryDueDate: isRegulatory ? regulatoryDueDate : undefined,
+      programHeadName: programHeadName || undefined,
+      programManagerName: programManagerName || undefined,
+      businessHeadName: businessHeadName || undefined,
+      businessUnit: businessUnit || undefined,
+      subBusinessUnit: subBusinessUnit || undefined,
     };
 
     startTransition(async () => {
@@ -121,6 +136,31 @@ export function EditClient({ id, defaults }: Props) {
               </Field>
               <Field label="Business Sponsor" required>
                 <input value={businessSponsor} onChange={e => setBusinessSponsor(e.target.value)} className={inputCls} />
+              </Field>
+            </div>
+          </div>
+        </SectionCard>
+
+        {/* Manager-level assignment */}
+        <SectionCard title="Assignment" subtitle="Optional — controls which managers see this initiative in their own workspace">
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Program Head">
+                <input value={programHeadName} onChange={e => setProgramHeadName(e.target.value)} className={inputCls} placeholder="Name of assigned Program Head" />
+              </Field>
+              <Field label="Program Manager">
+                <input value={programManagerName} onChange={e => setProgramManagerName(e.target.value)} className={inputCls} placeholder="Name of assigned Program Manager" />
+              </Field>
+            </div>
+            <Field label="Business Head">
+              <input value={businessHeadName} onChange={e => setBusinessHeadName(e.target.value)} className={inputCls} placeholder="Name of assigned Business Head" />
+            </Field>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <Field label="Business Unit">
+                <input value={businessUnit} onChange={e => setBusinessUnit(e.target.value)} className={inputCls} placeholder="e.g. Retail Banking" />
+              </Field>
+              <Field label="Sub Business Unit">
+                <input value={subBusinessUnit} onChange={e => setSubBusinessUnit(e.target.value)} className={inputCls} placeholder="e.g. Retail Lending" />
               </Field>
             </div>
           </div>
