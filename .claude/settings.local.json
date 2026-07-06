@@ -189,7 +189,8 @@
       "Bash(tasklist //FI \"IMAGENAME eq Docker Desktop.exe\" //FI \"IMAGENAME eq com.docker.backend.exe\")",
       "Bash(taskkill //F //IM \"Docker Desktop.exe\")",
       "Bash(taskkill //F //IM \"com.docker.backend.exe\")",
-      "Bash(taskkill //F //IM \"docker.exe\")"
+      "Bash(taskkill //F //IM \"docker.exe\")",
+      "Bash(awk '/^      title:/{t=$0} /verticalHeadName: .\\(Amit Patel|Sunita Verma|Vikram Singh\\)./{print NR\": \"t\" -> \"$0}' prisma/seed.ts)"
     ]
   }
 }

@@ -175,7 +175,7 @@ async function main() {
   // Second Vertical Head — covers Retail Assets vertical
   const vh2 = await prisma.user.upsert({
     where: { email: 'vh2@bank.com' },
-    update: { organizationId: org.id },
+    update: { organizationId: org.id, businessUnit: 'Retail Banking' },
     create: {
       name: 'Priya Sharma',
       email: 'vh2@bank.com',
@@ -183,14 +183,54 @@ async function main() {
       role: 'VERTICAL_HEAD',
       verticalHead: 'Priya Sharma',
       organizationId: org.id,
+      businessUnit: 'Retail Banking',
     },
   });
 
-  // Second Business SPOC — covers Retail Lending products
+  // Second Business SPOC — covers Payments & Treasury products (was 'Deepa Nair';
+  // renamed to match the SPOC name already used across 5 seeded initiatives so
+  // this account actually has assigned work).
   const business2 = await prisma.user.upsert({
     where: { email: 'business2@bank.com' },
-    update: { organizationId: org.id },
-    create: { name: 'Deepa Nair', email: 'business2@bank.com', passwordHash: password, role: 'BUSINESS', organizationId: org.id },
+    update: { organizationId: org.id, name: 'Priti Sharma', businessUnit: 'Payments & Treasury', subBusinessUnit: 'Cards & Payments' },
+    create: {
+      name: 'Priti Sharma',
+      email: 'business2@bank.com',
+      passwordHash: password,
+      role: 'BUSINESS',
+      organizationId: org.id,
+      businessUnit: 'Payments & Treasury',
+      subBusinessUnit: 'Cards & Payments',
+    },
+  });
+
+  // Third Business SPOC — covers Retail Lending / digital products
+  const business3 = await prisma.user.upsert({
+    where: { email: 'business3@bank.com' },
+    update: { organizationId: org.id, businessUnit: 'Retail Banking', subBusinessUnit: 'Retail Lending' },
+    create: {
+      name: 'Meena Gupta',
+      email: 'business3@bank.com',
+      passwordHash: password,
+      role: 'BUSINESS',
+      organizationId: org.id,
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Retail Lending',
+    },
+  });
+
+  // Fourth Business SPOC — covers Corporate & Treasury products
+  const business4 = await prisma.user.upsert({
+    where: { email: 'business4@bank.com' },
+    update: { organizationId: org.id, businessUnit: 'Corporate & Treasury' },
+    create: {
+      name: 'Rakesh Joshi',
+      email: 'business4@bank.com',
+      passwordHash: password,
+      role: 'BUSINESS',
+      organizationId: org.id,
+      businessUnit: 'Corporate & Treasury',
+    },
   });
 
   // Enterprise role model additions — reuse the PMO / Business dashboards as stand-ins this sprint.
@@ -223,6 +263,23 @@ async function main() {
     },
   });
 
+  // Second Program Manager — reports to the same Program Head, covers the
+  // Retail Lending delivery stream.
+  const programManager2 = await prisma.user.upsert({
+    where: { email: 'program-manager2@bank.com' },
+    update: { organizationId: org.id, programHeadName: 'Karan Mehta', businessUnit: 'Retail Banking', subBusinessUnit: 'Retail Lending' },
+    create: {
+      name: 'Rohan Verma',
+      email: 'program-manager2@bank.com',
+      passwordHash: password,
+      role: 'PROGRAM_MANAGER',
+      organizationId: org.id,
+      programHeadName: 'Karan Mehta',
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Retail Lending',
+    },
+  });
+
   const businessHead = await prisma.user.upsert({
     where: { email: 'business-head@bank.com' },
     update: { organizationId: org.id, businessUnit: 'Retail Banking' },
@@ -236,10 +293,26 @@ async function main() {
     },
   });
 
+  // Second Business Head — covers the Retail Lending / digital products line.
+  const businessHead2 = await prisma.user.upsert({
+    where: { email: 'business-head2@bank.com' },
+    update: { organizationId: org.id, businessUnit: 'Retail Banking' },
+    create: {
+      name: 'Kavita Rao',
+      email: 'business-head2@bank.com',
+      passwordHash: password,
+      role: 'BUSINESS_HEAD',
+      organizationId: org.id,
+      businessUnit: 'Retail Banking',
+    },
+  });
+
   console.log(
-    'Seeded 10 users:',
-    cio.email, pmo.email, vh.email, vh2.email, business.email, business2.email,
-    programHead.email, programManager.email, businessHead.email,
+    'Seeded 14 users:',
+    cio.email, pmo.email, vh.email, vh2.email,
+    business.email, business2.email, business3.email, business4.email,
+    programHead.email, programManager.email, programManager2.email,
+    businessHead.email, businessHead2.email,
   );
 
   // --- Clean value-layer data (safe FK order) before re-seeding ---
@@ -366,7 +439,7 @@ async function main() {
     {
       title: 'CBS Core Integration',
       type: 'PROJECT',
-      verticalHeadName: 'Amit Patel',
+      verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Rakesh Joshi',
       businessSponsor: 'Sunil Agarwal',
       description: 'Integrate new CBS (Core Banking System) with 12 legacy modules including Loans, FD, and Trade Finance.',
@@ -392,7 +465,7 @@ async function main() {
     {
       title: 'KYC Automation System',
       type: 'PROJECT',
-      verticalHeadName: 'Sunita Verma',
+      verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Suman Bose',
       businessSponsor: 'Geeta Krishnan',
       description: 'Implement AI-based KYC verification with video KYC, OCR for documents, and real-time CKYC registry check.',
@@ -421,7 +494,7 @@ async function main() {
     {
       title: 'Payment Gateway Upgrade',
       type: 'CHANGE_REQUEST',
-      verticalHeadName: 'Vikram Singh',
+      verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
       description: 'Upgrade payment gateway to support tokenization, 3DS 2.0, and RuPay credit on UPI.',
@@ -465,7 +538,8 @@ async function main() {
       notes: 'FSD drafting in progress. NPCI technical specs received.',
       delayed: false,
       programHeadName: 'Karan Mehta',
-      businessHeadName: 'Rohit Malhotra',
+      programManagerName: 'Rohan Verma',
+      businessHeadName: 'Kavita Rao',
       businessUnit: 'Retail Banking',
       subBusinessUnit: 'Digital Channels',
       history: [
@@ -491,7 +565,8 @@ async function main() {
       notes: 'BRD workshop completed. Document under review.',
       delayed: false,
       programHeadName: 'Karan Mehta',
-      businessHeadName: 'Rohit Malhotra',
+      programManagerName: 'Rohan Verma',
+      businessHeadName: 'Kavita Rao',
       businessUnit: 'Retail Banking',
       subBusinessUnit: 'Retail Lending',
       history: [
@@ -501,7 +576,7 @@ async function main() {
     {
       title: 'Trade Finance Digitisation',
       type: 'PROJECT',
-      verticalHeadName: 'Amit Patel',
+      verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Rakesh Joshi',
       businessSponsor: 'Sunil Agarwal',
       description: 'Digitize LC issuance, bill discounting, and bank guarantee processes on a blockchain platform.',
@@ -526,7 +601,7 @@ async function main() {
     {
       title: 'Customer 360 Dashboard',
       type: 'PROJECT',
-      verticalHeadName: 'Sunita Verma',
+      verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Suman Bose',
       businessSponsor: 'Geeta Krishnan',
       description: 'Build unified customer 360 view for relationship managers integrating all product holdings, transactions, and interactions.',
@@ -540,7 +615,7 @@ async function main() {
       lastUpdated: d('2026-06-14'),
       notes: 'AppSec scanning in progress. 2 medium findings to be addressed.',
       delayed: false,
-      businessHeadName: 'Rohit Malhotra',
+      businessHeadName: 'Kavita Rao',
       businessUnit: 'Retail Banking',
       subBusinessUnit: 'Customer Experience',
       history: [
@@ -556,7 +631,7 @@ async function main() {
     {
       title: 'SWIFT Message Automation',
       type: 'CHANGE_REQUEST',
-      verticalHeadName: 'Vikram Singh',
+      verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
       description: 'Automate SWIFT MT message processing and reconciliation for correspondent banking operations.',
@@ -639,7 +714,7 @@ async function main() {
     {
       title: 'Digital Onboarding Revamp',
       type: 'PROJECT',
-      verticalHeadName: 'Amit Patel',
+      verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Rakesh Joshi',
       businessSponsor: 'Sunil Agarwal',
       description: 'Revamp end-to-end digital account opening journey with e-KYC, e-sign, and instant account activation.',
@@ -669,7 +744,7 @@ async function main() {
     {
       title: 'Debit Card Management System',
       type: 'CHANGE_REQUEST',
-      verticalHeadName: 'Sunita Verma',
+      verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Suman Bose',
       businessSponsor: 'Geeta Krishnan',
       description: 'Implement self-service debit card management — hotlisting, limit changes, PIN generation via app.',
@@ -700,7 +775,7 @@ async function main() {
     {
       title: 'Forex Rate Feed Integration',
       type: 'CHANGE_REQUEST',
-      verticalHeadName: 'Vikram Singh',
+      verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
       description: 'Integrate real-time forex rate feed from Bloomberg for treasury and retail FX transactions.',
@@ -738,7 +813,8 @@ async function main() {
       delayed: false,
       committedMonth: '2026-05',
       programHeadName: 'Karan Mehta',
-      businessHeadName: 'Rohit Malhotra',
+      programManagerName: 'Rohan Verma',
+      businessHeadName: 'Kavita Rao',
       businessUnit: 'Retail Banking',
       subBusinessUnit: 'Digital Channels',
       validation: {
@@ -788,7 +864,7 @@ async function main() {
     {
       title: 'Treasury Management System Upgrade',
       type: 'PROJECT',
-      verticalHeadName: 'Amit Patel',
+      verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Rakesh Joshi',
       businessSponsor: 'Sunil Agarwal',
       description: 'Upgrade TMS to support ALM, liquidity management, and real-time position monitoring.',
@@ -813,7 +889,7 @@ async function main() {
     {
       title: 'Customer Grievance Portal',
       type: 'PROJECT',
-      verticalHeadName: 'Sunita Verma',
+      verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Suman Bose',
       businessSponsor: 'Geeta Krishnan',
       description: 'Build integrated customer grievance portal with auto-routing, SLA tracking, and RBI reporting.',
@@ -834,7 +910,7 @@ async function main() {
     {
       title: 'IMPS Real-time Settlement Upgrade',
       type: 'CHANGE_REQUEST',
-      verticalHeadName: 'Vikram Singh',
+      verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
       description: 'Upgrade IMPS infrastructure to handle 10x volume growth and achieve 99.99% uptime per NPCI SLA.',
@@ -862,7 +938,7 @@ async function main() {
     {
       title: 'Net Banking 2FA Hardening',
       type: 'CHANGE_REQUEST',
-      verticalHeadName: 'Vikram Singh',
+      verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
       description: 'Risk-based two-factor authentication and device binding for net banking logins.',
@@ -895,7 +971,7 @@ async function main() {
     {
       title: 'Cheque Truncation System (CTS) Upgrade',
       type: 'PROJECT',
-      verticalHeadName: 'Amit Patel',
+      verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Rakesh Joshi',
       businessSponsor: 'Sunil Agarwal',
       description: 'Upgrade CTS for grayscale image clearing and higher daily cheque volumes.',
