@@ -60,6 +60,11 @@ export default function NewItemPage() {
   const [verticalHead, setVerticalHead] = useState<string>(VERTICAL_HEADS[0] ?? '');
   const [businessSpoc, setBusinessSpoc] = useState('');
   const [businessSponsor, setBusinessSponsor] = useState('');
+  const [programHeadName, setProgramHeadName] = useState('');
+  const [programManagerName, setProgramManagerName] = useState('');
+  const [businessHeadName, setBusinessHeadName] = useState('');
+  const [businessUnit, setBusinessUnit] = useState('');
+  const [subBusinessUnit, setSubBusinessUnit] = useState('');
 
   // Step 3 — Delivery Commitment
   const [goLiveDate, setGoLiveDate] = useState('');
@@ -134,6 +139,11 @@ export default function NewItemPage() {
           isRegulatory,
           regulatoryBody: isRegulatory ? regBody : undefined,
           regulatoryDueDate: isRegulatory && regDue ? regDue : undefined,
+          programHeadName: programHeadName || undefined,
+          programManagerName: programManagerName || undefined,
+          businessHeadName: businessHeadName || undefined,
+          businessUnit: businessUnit || undefined,
+          subBusinessUnit: subBusinessUnit || undefined,
         });
         router.push(`/items/${id}?created=1`);
       } catch {
@@ -233,6 +243,28 @@ export default function NewItemPage() {
                 <input value={businessSponsor} onChange={e => setBusinessSponsor(e.target.value)} className={inputCls} placeholder="Full name" />
               </Field>
             </div>
+
+            <div className="border-t border-slate-100 pt-4">
+              <p className="mb-1 text-xs font-semibold uppercase tracking-wider text-slate-500">Portfolio / Reporting</p>
+              <p className="mb-3 text-xs text-slate-400">Optional — controls which Program Head, Program Manager, and Business Head can see this initiative in their own workspace.</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <Field label="Program Head">
+                  <input value={programHeadName} onChange={e => setProgramHeadName(e.target.value)} className={inputCls} placeholder="Name of assigned Program Head" />
+                </Field>
+                <Field label="Program Manager">
+                  <input value={programManagerName} onChange={e => setProgramManagerName(e.target.value)} className={inputCls} placeholder="Name of assigned Program Manager" />
+                </Field>
+                <Field label="Business Head">
+                  <input value={businessHeadName} onChange={e => setBusinessHeadName(e.target.value)} className={inputCls} placeholder="Name of assigned Business Head" />
+                </Field>
+                <Field label="Business Unit">
+                  <input value={businessUnit} onChange={e => setBusinessUnit(e.target.value)} className={inputCls} placeholder="e.g. Retail Banking" />
+                </Field>
+                <Field label="Sub-business Unit">
+                  <input value={subBusinessUnit} onChange={e => setSubBusinessUnit(e.target.value)} className={inputCls} placeholder="e.g. Digital Channels" />
+                </Field>
+              </div>
+            </div>
           </div>
         )}
 
@@ -328,6 +360,11 @@ export default function NewItemPage() {
                   <SummaryRow label="IT Vertical Head" value={verticalHead} />
                   <SummaryRow label="Business SPOC" value={businessSpoc} />
                   <SummaryRow label="Business Sponsor" value={businessSponsor} />
+                  <SummaryRow label="Program Head" value={programHeadName} />
+                  <SummaryRow label="Program Manager" value={programManagerName} />
+                  <SummaryRow label="Business Head" value={businessHeadName} />
+                  <SummaryRow label="Business Unit" value={businessUnit} />
+                  <SummaryRow label="Sub-business Unit" value={subBusinessUnit} />
                 </dl>
               </div>
               <div className="rounded-lg border border-slate-100 bg-slate-50/40 p-4">
@@ -393,6 +430,10 @@ export default function NewItemPage() {
               { label: 'Vertical Head',   value: verticalHead, show: !!verticalHead },
               { label: 'Business SPOC',   value: businessSpoc, show: !!businessSpoc },
               { label: 'Business Sponsor',value: businessSponsor, show: !!businessSponsor },
+              { label: 'Program Head',    value: programHeadName, show: !!programHeadName },
+              { label: 'Program Manager', value: programManagerName, show: !!programManagerName },
+              { label: 'Business Head',   value: businessHeadName, show: !!businessHeadName },
+              { label: 'Business Unit',   value: subBusinessUnit ? `${businessUnit} · ${subBusinessUnit}` : businessUnit, show: !!businessUnit },
               { label: 'Go-Live',         value: goLiveDate, show: !!goLiveDate },
               {
                 label: 'Benefits',

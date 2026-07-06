@@ -184,6 +184,11 @@ const CreateSchema = z.object({
   isRegulatory: z.boolean().optional(),
   regulatoryBody: z.string().optional(),
   regulatoryDueDate: z.string().optional(),
+  programHeadName: z.string().optional(),
+  programManagerName: z.string().optional(),
+  businessHeadName: z.string().optional(),
+  businessUnit: z.string().optional(),
+  subBusinessUnit: z.string().optional(),
 }).superRefine((data, ctx) => {
   // Go-live date must not be in the past
   const today = new Date().toISOString().slice(0, 10);
@@ -246,6 +251,11 @@ export async function createInitiative(input: CreateInitiativeInput) {
       isRegulatory: parsed.isRegulatory ?? false,
       regulatoryBody: parsed.isRegulatory ? (parsed.regulatoryBody?.trim() || null) : null,
       regulatoryDueDate: parsed.isRegulatory && parsed.regulatoryDueDate ? new Date(parsed.regulatoryDueDate) : null,
+      programHeadName: parsed.programHeadName?.trim() || null,
+      programManagerName: parsed.programManagerName?.trim() || null,
+      businessHeadName: parsed.businessHeadName?.trim() || null,
+      businessUnit: parsed.businessUnit?.trim() || null,
+      subBusinessUnit: parsed.subBusinessUnit?.trim() || null,
       benefitClaims: {
         create: parsed.benefits.map(b => ({
           category: b.category,
