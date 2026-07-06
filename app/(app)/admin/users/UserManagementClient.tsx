@@ -52,6 +52,16 @@ const ROLE_OPTIONS = [
   { value: 'ADMIN',           label: 'Admin — Platform Administration' },
 ];
 
+// Which hierarchy fields matter for a given role — mirrors the reporting
+// lines already used for initiative visibility (buildInitiativeVisibilityWhere).
+const HIERARCHY_FIELDS_BY_ROLE: Record<string, string[]> = {
+  PROGRAM_HEAD:    ['businessHeadName', 'businessUnit'],
+  PROGRAM_MANAGER: ['programHeadName', 'businessUnit', 'subBusinessUnit'],
+  VERTICAL_HEAD:   ['verticalHead', 'programManagerName', 'businessHeadName', 'businessUnit', 'subBusinessUnit'],
+  BUSINESS:        ['programManagerName', 'businessHeadName', 'businessUnit', 'subBusinessUnit'],
+  BUSINESS_HEAD:   ['businessUnit'],
+};
+
 const EMPTY: CreatePilotUserInput = {
   name: '', email: '', role: 'PMO', verticalHead: '', password: 'Demo@1234!',
 };
@@ -67,6 +77,8 @@ export function UserManagementClient({ users }: Props) {
   const set = (key: keyof CreatePilotUserInput) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
       setForm(f => ({ ...f, [key]: e.target.value }));
+
+  const visibleHierarchyFields = HIERARCHY_FIELDS_BY_ROLE[form.role] ?? [];
 
   const handleCreate = () => {
     setError(''); setSuccess('');
@@ -114,39 +126,51 @@ export function UserManagementClient({ users }: Props) {
                 {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
               </Select>
             </FormField>
-            {form.role === 'VERTICAL_HEAD' && (
-              <FormField label="Vertical Head Name" required hint="Used to scope initiatives to this vertical">
-                <Select value={form.verticalHead ?? ''} onChange={set('verticalHead')}>
-                  <option value="">Select vertical…</option>
-                  {VERTICAL_HEADS.map(v => <option key={v} value={v}>{v}</option>)}
-                </Select>
-              </FormField>
-            )}
             <FormField label="Initial Password" required hint="User should change on first login">
               <Input value={form.password} onChange={set('password')} placeholder="Min 8 characters" />
             </FormField>
           </div>
 
-          <div className="border-t border-brand-100 pt-4">
-            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-700">Portfolio / Reporting (optional)</p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <FormField label="Program Head">
-                <Input value={form.programHeadName ?? ''} onChange={set('programHeadName')} placeholder="Name of this user's Program Head" />
-              </FormField>
-              <FormField label="Program Manager">
-                <Input value={form.programManagerName ?? ''} onChange={set('programManagerName')} placeholder="Name of this user's Program Manager" />
-              </FormField>
-              <FormField label="Business Head">
-                <Input value={form.businessHeadName ?? ''} onChange={set('businessHeadName')} placeholder="Name of this user's Business Head" />
-              </FormField>
-              <FormField label="Business Unit">
-                <Input value={form.businessUnit ?? ''} onChange={set('businessUnit')} placeholder="e.g. Retail Banking" />
-              </FormField>
-              <FormField label="Sub Business Unit">
-                <Input value={form.subBusinessUnit ?? ''} onChange={set('subBusinessUnit')} placeholder="e.g. Digital Channels" />
-              </FormField>
+          {visibleHierarchyFields.length > 0 && (
+            <div className="border-t border-brand-100 pt-4">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-700">Portfolio / Reporting</p>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {visibleHierarchyFields.includes('verticalHead') && (
+                  <FormField label="IT Vertical Head" required hint="Used to scope initiatives to this vertical">
+                    <Select value={form.verticalHead ?? ''} onChange={set('verticalHead')}>
+                      <option value="">Select vertical…</option>
+                      {VERTICAL_HEADS.map(v => <option key={v} value={v}>{v}</option>)}
+                    </Select>
+                  </FormField>
+                )}
+                {visibleHierarchyFields.includes('programHeadName') && (
+                  <FormField label="Program Head Name">
+                    <Input value={form.programHeadName ?? ''} onChange={set('programHeadName')} placeholder="Name of this user's Program Head" />
+                  </FormField>
+                )}
+                {visibleHierarchyFields.includes('programManagerName') && (
+                  <FormField label="Program Manager Name">
+                    <Input value={form.programManagerName ?? ''} onChange={set('programManagerName')} placeholder="Name of this user's Program Manager" />
+                  </FormField>
+                )}
+                {visibleHierarchyFields.includes('businessHeadName') && (
+                  <FormField label="Business Head">
+                    <Input value={form.businessHeadName ?? ''} onChange={set('businessHeadName')} placeholder="Name of this user's Business Head" />
+                  </FormField>
+                )}
+                {visibleHierarchyFields.includes('businessUnit') && (
+                  <FormField label="Business Unit">
+                    <Input value={form.businessUnit ?? ''} onChange={set('businessUnit')} placeholder="e.g. Retail Banking" />
+                  </FormField>
+                )}
+                {visibleHierarchyFields.includes('subBusinessUnit') && (
+                  <FormField label="Sub-business Unit">
+                    <Input value={form.subBusinessUnit ?? ''} onChange={set('subBusinessUnit')} placeholder="e.g. Digital Channels" />
+                  </FormField>
+                )}
+              </div>
             </div>
-          </div>
+          )}
 
           {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</p>}
           <div className="flex gap-3">
