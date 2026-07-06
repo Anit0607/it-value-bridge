@@ -2,8 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { requireRole, requireRoleWithOrg } from '@/lib/authz';
-import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES } from '@/lib/rbac';
-import { Prisma } from '@prisma/client';
+import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES, buildInitiativeVisibilityWhere } from '@/lib/rbac';
 import { STAGE_LABEL, STAGE_TO_PROCESS_GROUP, nextStage } from '@/lib/stage-map';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -106,44 +105,10 @@ async function assertOrgAccess(id: string, organizationId: string | null | undef
 
 // ---- Queries ----
 
-/** Returns the role-based Prisma filter added on top of the org scope. `{}` for roles with unrestricted org-wide visibility. */
-function roleScopeFilter(user: {
-  role: string;
-  name: string;
-  verticalHead?: string | null;
-}): Prisma.InitiativeWhereInput {
-  switch (user.role) {
-    case 'VERTICAL_HEAD':
-      // Sees every initiative in their IT vertical.
-      return { verticalHeadName: user.verticalHead ?? user.name };
-    case 'BUSINESS':
-      // Sees only their own assigned items.
-      return { businessSpoc: user.name };
-    case 'PROGRAM_MANAGER':
-      // Sees only initiatives assigned to them.
-      return { programManagerName: user.name };
-    case 'PROGRAM_HEAD':
-      // Sees every initiative under their program.
-      return { programHeadName: user.name };
-    case 'BUSINESS_HEAD':
-      // Sees every initiative under their business.
-      return { businessHeadName: user.name };
-    default:
-      // ADMIN / CIO / PMO: org-scoped only, no further filter.
-      return {};
-  }
-}
-
 /**
  * Role-scoped, org-scoped initiative list. Use this in any page where the
- * caller's role and organization should limit what they see.
- *
- *  ADMIN / CIO / PMO  → all initiatives in the caller's org
- *  PROGRAM_HEAD       → initiatives where programHeadName = user.name
- *  PROGRAM_MANAGER    → initiatives where programManagerName = user.name
- *  VERTICAL_HEAD      → initiatives where verticalHeadName = user.verticalHead
- *  BUSINESS_HEAD      → initiatives where businessHeadName = user.name
- *  BUSINESS           → initiatives where businessSpoc = user.name
+ * caller's role and organization should limit what they see. See
+ * buildInitiativeVisibilityWhere() (lib/rbac.ts) for the exact per-role rules.
  */
 export async function listVisibleInitiativesForUser(user: {
   role: string;
@@ -156,13 +121,8 @@ export async function listVisibleInitiativesForUser(user: {
     return [];
   }
 
-  const where: Prisma.InitiativeWhereInput = {
-    organizationId: user.organizationId,
-    ...roleScopeFilter(user),
-  };
-
   const rows = await prisma.initiative.findMany({
-    where,
+    where: buildInitiativeVisibilityWhere({ ...user, organizationId: user.organizationId }),
     include: WITH_RELATIONS,
     orderBy: { createdAt: 'desc' },
   });
@@ -192,8 +152,7 @@ export async function getVisibleInitiativeItem(
   const row = await prisma.initiative.findFirst({
     where: {
       id,
-      organizationId: user.organizationId,
-      ...roleScopeFilter(user),
+      ...buildInitiativeVisibilityWhere({ ...user, organizationId: user.organizationId }),
     },
     include: WITH_RELATIONS,
   });
