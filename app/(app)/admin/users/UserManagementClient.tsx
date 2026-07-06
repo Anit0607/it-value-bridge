@@ -20,6 +20,11 @@ interface UserRow {
   createdAt: string;
   organizationName: string | null;
   organizationStatus: string | null;
+  programHeadName: string | null;
+  programManagerName: string | null;
+  businessHeadName: string | null;
+  businessUnit: string | null;
+  subBusinessUnit: string | null;
 }
 
 interface Props {
@@ -121,6 +126,28 @@ export function UserManagementClient({ users }: Props) {
               <Input value={form.password} onChange={set('password')} placeholder="Min 8 characters" />
             </FormField>
           </div>
+
+          <div className="border-t border-brand-100 pt-4">
+            <p className="mb-3 text-xs font-semibold uppercase tracking-wider text-brand-700">Portfolio / Reporting (optional)</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <FormField label="Program Head">
+                <Input value={form.programHeadName ?? ''} onChange={set('programHeadName')} placeholder="Name of this user's Program Head" />
+              </FormField>
+              <FormField label="Program Manager">
+                <Input value={form.programManagerName ?? ''} onChange={set('programManagerName')} placeholder="Name of this user's Program Manager" />
+              </FormField>
+              <FormField label="Business Head">
+                <Input value={form.businessHeadName ?? ''} onChange={set('businessHeadName')} placeholder="Name of this user's Business Head" />
+              </FormField>
+              <FormField label="Business Unit">
+                <Input value={form.businessUnit ?? ''} onChange={set('businessUnit')} placeholder="e.g. Retail Banking" />
+              </FormField>
+              <FormField label="Sub Business Unit">
+                <Input value={form.subBusinessUnit ?? ''} onChange={set('subBusinessUnit')} placeholder="e.g. Digital Channels" />
+              </FormField>
+            </div>
+          </div>
+
           {error && <p className="rounded-lg bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700">{error}</p>}
           <div className="flex gap-3">
             <Button variant="primary" icon={UserPlus} onClick={handleCreate} loading={isPending}>
@@ -137,7 +164,7 @@ export function UserManagementClient({ users }: Props) {
           <table className="min-w-full text-sm">
             <thead>
               <tr className="bg-slate-50">
-                {['Name', 'Email', 'Role', 'Vertical Head', 'Organization', 'Created', 'Status'].map(h => (
+                {['Name', 'Email', 'Role', 'Vertical Head', 'Portfolio', 'Organization', 'Created', 'Status'].map(h => (
                   <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">{h}</th>
                 ))}
               </tr>
@@ -151,6 +178,14 @@ export function UserManagementClient({ users }: Props) {
                     <Badge tone={ROLE_TONE[u.role] ?? 'slate'} size="sm">{u.role}</Badge>
                   </td>
                   <td className="px-4 py-3 text-xs text-slate-500">{u.verticalHead ?? '—'}</td>
+                  <td className="px-4 py-3 text-xs text-slate-500">
+                    {u.businessUnit ? (
+                      <>
+                        <div className="font-medium text-slate-600">{u.businessUnit}</div>
+                        {u.subBusinessUnit && <div className="text-[11px] text-slate-400">{u.subBusinessUnit}</div>}
+                      </>
+                    ) : '—'}
+                  </td>
                   <td className="px-4 py-3">
                     {u.organizationName ? (
                       <div className="flex items-center gap-1.5">

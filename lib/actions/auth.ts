@@ -58,6 +58,11 @@ const CreatePilotUserSchema = z.object({
   role:        z.enum(['ADMIN', 'CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS', 'PROGRAM_HEAD', 'PROGRAM_MANAGER', 'BUSINESS_HEAD']),
   verticalHead: z.string().optional(),
   password:    z.string().min(8, 'Password must be at least 8 characters'),
+  programHeadName:    z.string().optional(),
+  programManagerName: z.string().optional(),
+  businessHeadName:   z.string().optional(),
+  businessUnit:       z.string().optional(),
+  subBusinessUnit:    z.string().optional(),
 });
 
 export type CreatePilotUserInput = z.infer<typeof CreatePilotUserSchema>;
@@ -70,7 +75,10 @@ export async function createPilotUser(
   const parsed = CreatePilotUserSchema.safeParse(input);
   if (!parsed.success) return { error: parsed.error.issues[0].message };
 
-  const { name, email, role, verticalHead, password } = parsed.data;
+  const {
+    name, email, role, verticalHead, password,
+    programHeadName, programManagerName, businessHeadName, businessUnit, subBusinessUnit,
+  } = parsed.data;
 
   const existing = await prisma.user.findUnique({ where: { email } });
   if (existing) return { error: 'An account with this email already exists.' };
@@ -85,6 +93,11 @@ export async function createPilotUser(
       role: role as any,
       verticalHead: role === 'VERTICAL_HEAD' ? (verticalHead ?? name) : null,
       organizationId: admin.organizationId,
+      programHeadName: programHeadName?.trim() || null,
+      programManagerName: programManagerName?.trim() || null,
+      businessHeadName: businessHeadName?.trim() || null,
+      businessUnit: businessUnit?.trim() || null,
+      subBusinessUnit: subBusinessUnit?.trim() || null,
     },
   });
 

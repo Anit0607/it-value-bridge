@@ -21,6 +21,11 @@ export default async function UserManagementPage() {
       verticalHead: true,
       createdAt: true,
       organization: { select: { name: true, status: true } },
+      programHeadName: true,
+      programManagerName: true,
+      businessHeadName: true,
+      businessUnit: true,
+      subBusinessUnit: true,
     },
   });
 
@@ -40,6 +45,11 @@ export default async function UserManagementPage() {
           createdAt: u.createdAt.toISOString().slice(0, 10),
           organizationName: u.organization?.name ?? null,
           organizationStatus: u.organization?.status ?? null,
+          programHeadName: u.programHeadName,
+          programManagerName: u.programManagerName,
+          businessHeadName: u.businessHeadName,
+          businessUnit: u.businessUnit,
+          subBusinessUnit: u.subBusinessUnit,
         }))}
       />
     </div>

@@ -182,7 +182,14 @@
       "Bash(npx tsx *)",
       "Bash(git fetch *)",
       "Bash(git rev-list *)",
-      "Bash(gh api *)"
+      "Bash(gh api *)",
+      "Bash(tasklist)",
+      "Bash(timeout 10 docker ps --filter name=itvb-db --format \"{{.Status}}\")",
+      "Bash(echo \"---exit:$?\")",
+      "Bash(tasklist //FI \"IMAGENAME eq Docker Desktop.exe\" //FI \"IMAGENAME eq com.docker.backend.exe\")",
+      "Bash(taskkill //F //IM \"Docker Desktop.exe\")",
+      "Bash(taskkill //F //IM \"com.docker.backend.exe\")",
+      "Bash(taskkill //F //IM \"docker.exe\")"
     ]
   }
 }

@@ -161,6 +161,16 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  // Enterprise role model — which portfolio/reporting line this user belongs
+  // to. Directory/reporting metadata: who this user's Program Head, Program
+  // Manager, and Business Head are, and their business unit / sub-unit.
+  // Nullable — most pilot users won't have these set.
+  programHeadName    String?
+  programManagerName String?
+  businessHeadName   String?
+  businessUnit       String?
+  subBusinessUnit    String?
+
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
 

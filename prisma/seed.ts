@@ -143,7 +143,7 @@ async function main() {
 
   const vh = await prisma.user.upsert({
     where: { email: 'vh@bank.com' },
-    update: { organizationId: org.id },
+    update: { organizationId: org.id, businessHeadName: 'Rohit Malhotra', businessUnit: 'Retail Banking', subBusinessUnit: 'Digital Channels' },
     create: {
       name: 'Rajesh Kumar',
       email: 'vh@bank.com',
@@ -151,13 +151,25 @@ async function main() {
       role: 'VERTICAL_HEAD',
       verticalHead: 'Rajesh Kumar',
       organizationId: org.id,
+      businessHeadName: 'Rohit Malhotra',
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Digital Channels',
     },
   });
 
   const business = await prisma.user.upsert({
     where: { email: 'business@bank.com' },
-    update: { organizationId: org.id },
-    create: { name: 'Anil Kumar', email: 'business@bank.com', passwordHash: password, role: 'BUSINESS', organizationId: org.id },
+    update: { organizationId: org.id, businessHeadName: 'Rohit Malhotra', businessUnit: 'Retail Banking', subBusinessUnit: 'Digital Channels' },
+    create: {
+      name: 'Anil Kumar',
+      email: 'business@bank.com',
+      passwordHash: password,
+      role: 'BUSINESS',
+      organizationId: org.id,
+      businessHeadName: 'Rohit Malhotra',
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Digital Channels',
+    },
   });
 
   // Second Vertical Head — covers Retail Assets vertical
@@ -184,20 +196,44 @@ async function main() {
   // Enterprise role model additions — reuse the PMO / Business dashboards as stand-ins this sprint.
   const programHead = await prisma.user.upsert({
     where: { email: 'program-head@bank.com' },
-    update: { organizationId: org.id },
-    create: { name: 'Karan Mehta', email: 'program-head@bank.com', passwordHash: password, role: 'PROGRAM_HEAD', organizationId: org.id },
+    update: { organizationId: org.id, businessHeadName: 'Rohit Malhotra', businessUnit: 'Retail Banking' },
+    create: {
+      name: 'Karan Mehta',
+      email: 'program-head@bank.com',
+      passwordHash: password,
+      role: 'PROGRAM_HEAD',
+      organizationId: org.id,
+      businessHeadName: 'Rohit Malhotra',
+      businessUnit: 'Retail Banking',
+    },
   });
 
   const programManager = await prisma.user.upsert({
     where: { email: 'program-manager@bank.com' },
-    update: { organizationId: org.id },
-    create: { name: 'Neha Kapoor', email: 'program-manager@bank.com', passwordHash: password, role: 'PROGRAM_MANAGER', organizationId: org.id },
+    update: { organizationId: org.id, programHeadName: 'Karan Mehta', businessUnit: 'Retail Banking', subBusinessUnit: 'Digital Channels' },
+    create: {
+      name: 'Neha Kapoor',
+      email: 'program-manager@bank.com',
+      passwordHash: password,
+      role: 'PROGRAM_MANAGER',
+      organizationId: org.id,
+      programHeadName: 'Karan Mehta',
+      businessUnit: 'Retail Banking',
+      subBusinessUnit: 'Digital Channels',
+    },
   });
 
   const businessHead = await prisma.user.upsert({
     where: { email: 'business-head@bank.com' },
-    update: { organizationId: org.id },
-    create: { name: 'Rohit Malhotra', email: 'business-head@bank.com', passwordHash: password, role: 'BUSINESS_HEAD', organizationId: org.id },
+    update: { organizationId: org.id, businessUnit: 'Retail Banking' },
+    create: {
+      name: 'Rohit Malhotra',
+      email: 'business-head@bank.com',
+      passwordHash: password,
+      role: 'BUSINESS_HEAD',
+      organizationId: org.id,
+      businessUnit: 'Retail Banking',
+    },
   });
 
   console.log(
