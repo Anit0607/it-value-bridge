@@ -52,7 +52,7 @@ export default async function CioDashboard({
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Executive Value Command Center" subtitle="Where is delivery risk threatening business outcomes? — real-time across all verticals">
+      <PageHeader title="Executive View" subtitle="Where is delivery risk threatening business outcomes? — real-time across all verticals">
         <div className="flex flex-wrap items-center gap-2">
           <PeriodPicker />
           <Link href="/report" className={buttonCls('primary')}>

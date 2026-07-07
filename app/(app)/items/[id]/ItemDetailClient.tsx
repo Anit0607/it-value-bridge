@@ -30,14 +30,14 @@ import {
 const DELAY_SOURCES: DelaySource[] = ['IT', 'Business', 'Vendor', 'External'];
 
 const ROLE_BACK: Record<Role, { href: string; label: string }> = {
-  ADMIN: { href: '/admin', label: 'Workspace' },
-  PMO: { href: '/pmo', label: 'PMO Control Tower' },
-  CIO: { href: '/cio', label: 'Command Center' },
-  VERTICAL_HEAD: { href: '/vertical-head', label: 'Ownership Workspace' },
-  BUSINESS: { href: '/business', label: 'Value Validation' },
-  PROGRAM_HEAD: { href: '/pmo', label: 'PMO Control Tower' },
-  PROGRAM_MANAGER: { href: '/pmo', label: 'PMO Control Tower' },
-  BUSINESS_HEAD: { href: '/business', label: 'Value Validation' },
+  ADMIN: { href: '/admin', label: 'Admin' },
+  PMO: { href: '/pmo', label: 'Program / Governance View' },
+  CIO: { href: '/cio', label: 'Executive View' },
+  VERTICAL_HEAD: { href: '/vertical-head', label: 'Delivery Ownership View' },
+  BUSINESS: { href: '/business', label: 'Business View' },
+  PROGRAM_HEAD: { href: '/pmo', label: 'Program / Governance View' },
+  PROGRAM_MANAGER: { href: '/pmo', label: 'Program / Governance View' },
+  BUSINESS_HEAD: { href: '/business', label: 'Business View' },
 };
 
 type AuditEvent = { label: string; tone: BadgeTone };

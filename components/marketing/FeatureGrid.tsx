@@ -36,7 +36,7 @@ const FEATURES: Feature[] = [
   {
     icon: Users,
     title: 'Role-Based Leadership Views',
-    body: 'Executive Command Center for the CIO, Governance Control Tower for PMO, Delivery Ownership View for Vertical Heads, Business Impact Validation for SPOCs.',
+    body: 'Executive View for the CIO, Program / Governance View for PMO, Delivery Ownership View for Vertical Heads, Business View for SPOCs.',
   },
   {
     icon: GitBranch,

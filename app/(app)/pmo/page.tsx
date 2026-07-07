@@ -18,7 +18,7 @@ export default async function PmoDashboard() {
 
   return (
     <div className="space-y-6">
-      <PageHeader title="PMO Governance Control Tower" subtitle={`${items.length} initiatives translating delivery into business value`}>
+      <PageHeader title="Program / Governance View" subtitle={`${items.length} initiatives translating delivery into business value`}>
         <Link href="/pmo/new" className={buttonCls('primary')}>
           <PlusCircle className="h-4 w-4" />
           New Initiative

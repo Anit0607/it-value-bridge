@@ -42,14 +42,14 @@ const ORG_STATUS_TONE: Record<string, BadgeTone> = {
 };
 
 const ROLE_OPTIONS = [
-  { value: 'CIO',             label: 'CIO — Executive Value Command Center' },
-  { value: 'PMO',             label: 'PMO — Governance Control Tower' },
-  { value: 'PROGRAM_HEAD',    label: 'Program Head — Governance Control Tower' },
-  { value: 'PROGRAM_MANAGER', label: 'Program Manager — Governance Control Tower' },
-  { value: 'VERTICAL_HEAD',   label: 'Vertical Head — Ownership Workspace' },
-  { value: 'BUSINESS',        label: 'Business SPOC — Value Validation' },
-  { value: 'BUSINESS_HEAD',   label: 'Business Head — Value Validation (all SPOCs)' },
-  { value: 'ADMIN',           label: 'Admin — Platform Administration' },
+  { value: 'CIO',             label: 'CIO — Executive View' },
+  { value: 'PMO',             label: 'PMO — Program / Governance View' },
+  { value: 'PROGRAM_HEAD',    label: 'Program Head — Program / Governance View' },
+  { value: 'PROGRAM_MANAGER', label: 'Program Manager — Program / Governance View' },
+  { value: 'VERTICAL_HEAD',   label: 'Vertical Head — Delivery Ownership View' },
+  { value: 'BUSINESS',        label: 'Business SPOC — Business View' },
+  { value: 'BUSINESS_HEAD',   label: 'Business Head — Business View (all SPOCs)' },
+  { value: 'ADMIN',           label: 'Admin' },
 ];
 
 // Which hierarchy fields matter for a given role — mirrors the reporting

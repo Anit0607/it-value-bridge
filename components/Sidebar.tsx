@@ -42,8 +42,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Command',
     items: [
-      { href: '/cio', label: 'Command Center', icon: LayoutDashboard, roles: ['CIO'] },
-      { href: '/pmo', label: 'PMO Control Tower', icon: ClipboardList, roles: PMO_EQUIVALENT_ROLES },
+      { href: '/cio', label: 'Executive View', icon: LayoutDashboard, roles: ['CIO'] },
+      { href: '/pmo', label: 'Program / Governance View', icon: ClipboardList, roles: PMO_EQUIVALENT_ROLES },
     ],
   },
   {
@@ -65,8 +65,8 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Validation',
     items: [
-      { href: '/vertical-head', label: 'Ownership Workspace', icon: Briefcase, roles: ['VERTICAL_HEAD'] },
-      { href: '/business', label: 'Value Validation', icon: CheckSquare, roles: BUSINESS_EQUIVALENT_ROLES },
+      { href: '/vertical-head', label: 'Delivery Ownership View', icon: Briefcase, roles: ['VERTICAL_HEAD'] },
+      { href: '/business', label: 'Business View', icon: CheckSquare, roles: BUSINESS_EQUIVALENT_ROLES },
     ],
   },
   {
@@ -101,14 +101,14 @@ const ROLE_LABEL: Record<Role, string> = {
 };
 
 const ROLE_ACCESS: Record<Role, string> = {
-  ADMIN: 'Platform Administration',
-  CIO: 'Executive Value Command Center',
-  PMO: 'PMO Governance Control Tower',
-  VERTICAL_HEAD: 'Delivery Ownership Workspace',
-  BUSINESS: 'Business Value Validation',
-  PROGRAM_HEAD: 'PMO Governance Control Tower',
-  PROGRAM_MANAGER: 'PMO Governance Control Tower',
-  BUSINESS_HEAD: 'Business Value Validation',
+  ADMIN: 'Admin',
+  CIO: 'Executive View',
+  PMO: 'Program / Governance View',
+  VERTICAL_HEAD: 'Delivery Ownership View',
+  BUSINESS: 'Business View',
+  PROGRAM_HEAD: 'Program / Governance View',
+  PROGRAM_MANAGER: 'Program / Governance View',
+  BUSINESS_HEAD: 'Business View',
 };
 
 export function Sidebar({

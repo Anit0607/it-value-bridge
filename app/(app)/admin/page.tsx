@@ -135,7 +135,7 @@ export default async function AdminPage() {
     <div className="space-y-6">
       <PageHeader
         title="Admin Console"
-        subtitle={`${org?.name ?? 'IT Value Bridge Pilot Workspace'} · Platform Administration`}
+        subtitle={`${org?.name ?? 'IT Value Bridge Pilot Workspace'} · Admin`}
       />
 
       {/* ── 1. Workspace Overview ─────────────────────────────────────────────── */}
