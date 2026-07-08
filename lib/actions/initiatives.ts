@@ -1,7 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/db';
-import { requireRole, requireRoleWithOrg } from '@/lib/authz';
+import { requireRole, requireRoleWithOrg, assertVisibleInitiativeAccess } from '@/lib/authz';
 import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES, buildInitiativeVisibilityWhere } from '@/lib/rbac';
 import { STAGE_LABEL, STAGE_TO_PROCESS_GROUP, nextStage } from '@/lib/stage-map';
 import { revalidatePath } from 'next/cache';
@@ -90,18 +90,6 @@ const WITH_RELATIONS = {
   history: { orderBy: { createdAt: 'asc' as const } },
   valueRealization: true,
 };
-
-// ── Tenant ownership guard ────────────────────────────────────────────────────
-async function assertOrgAccess(id: string, organizationId: string | null | undefined): Promise<void> {
-  if (!organizationId) {
-    throw new Error('Missing organization context');
-  }
-  const exists = await prisma.initiative.findFirst({
-    where: { id, organizationId },
-    select: { id: true },
-  });
-  if (!exists) throw new Error('Initiative not found in your organization');
-}
 
 // ---- Queries ----
 
@@ -287,7 +275,7 @@ export async function createInitiative(input: CreateInitiativeInput) {
 
 export async function advanceStage(id: string, note: string) {
   const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO', 'VERTICAL_HEAD');
-  await assertOrgAccess(id, user.organizationId);
+  await assertVisibleInitiativeAccess(id, user);
   const userName = user.name;
   const initiative = await prisma.initiative.findUnique({ where: { id } });
   if (!initiative) throw new Error('Initiative not found');
@@ -333,7 +321,7 @@ export async function updateNotes(
   delayReason?: string,
 ) {
   const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO', 'VERTICAL_HEAD');
-  await assertOrgAccess(id, user.organizationId);
+  await assertVisibleInitiativeAccess(id, user);
   const today = new Date();
 
   // Diff current state to build a meaningful audit history entry
@@ -391,7 +379,7 @@ export async function updateNotes(
 
 export async function saveValidation(id: string, validation: BusinessValidation) {
   const user = await requireRole(...BUSINESS_EQUIVALENT_ROLES, ...PMO_EQUIVALENT_ROLES, 'CIO');
-  await assertOrgAccess(id, user.organizationId);
+  await assertVisibleInitiativeAccess(id, user);
   const initiative = await prisma.initiative.findUnique({ where: { id } });
   if (!initiative || initiative.currentStage !== 'BUSINESS_VALIDATION') {
     throw new Error('Item not in Business Validation stage');
@@ -494,7 +482,7 @@ export async function getInitiativeValue(
 
 export async function signOffValue(id: string) {
   const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO');
-  await assertOrgAccess(id, user.organizationId);
+  await assertVisibleInitiativeAccess(id, user);
   const today = new Date();
   const initiative = await prisma.initiative.findUnique({ where: { id }, select: { currentStage: true } });
   await prisma.initiative.update({
@@ -554,7 +542,7 @@ export type EditInitiativeInput = z.infer<typeof EditSchema>;
 
 export async function updateInitiative(id: string, input: EditInitiativeInput) {
   const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO');
-  await assertOrgAccess(id, user.organizationId);
+  await assertVisibleInitiativeAccess(id, user);
   const parsed = EditSchema.parse(input);
   const today = new Date();
 
@@ -657,7 +645,7 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
 
 export async function setRegulatory(id: string, input: SetRegulatoryInput) {
   const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO');
-  await assertOrgAccess(id, user.organizationId);
+  await assertVisibleInitiativeAccess(id, user);
   const parsed = RegulatoryInput.parse(input);
   await prisma.initiative.update({
     where: { id },

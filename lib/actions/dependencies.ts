@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { auth } from '@/auth';
-import { requireRole } from '@/lib/authz';
+import { requireRole, assertVisibleInitiativeAccess } from '@/lib/authz';
 import { PMO_EQUIVALENT_ROLES } from '@/lib/rbac';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
@@ -125,20 +125,12 @@ async function requireEditor() {
   return requireRole(...PMO_EQUIVALENT_ROLES, 'CIO', 'VERTICAL_HEAD');
 }
 
-async function assertDependencyOrgAccess(id: string, organizationId: string | null | undefined) {
-  if (!organizationId) {
-    throw new Error('Missing organization context');
-  }
-  const exists = await prisma.initiative.findFirst({ where: { id, organizationId }, select: { id: true } });
-  if (!exists) throw new Error('Initiative not found in your organization');
-}
-
 export async function addDependency(input: AddDependencyInput) {
   const user = await requireEditor();
   const parsed = AddInput.parse(input);
   if (parsed.dependentId === parsed.blockerId) throw new Error('An item cannot depend on itself');
-  await assertDependencyOrgAccess(parsed.dependentId, user.organizationId);
-  await assertDependencyOrgAccess(parsed.blockerId, user.organizationId);
+  await assertVisibleInitiativeAccess(parsed.dependentId, user);
+  await assertVisibleInitiativeAccess(parsed.blockerId, user);
 
   const existing = await prisma.dependency.findUnique({
     where: { dependentId_blockerId: { dependentId: parsed.dependentId, blockerId: parsed.blockerId } },
@@ -170,7 +162,8 @@ export async function removeDependency(dependencyId: string) {
   const user = await requireEditor();
   const dep = await prisma.dependency.findUnique({ where: { id: dependencyId }, select: { dependentId: true, blockerId: true } });
   if (dep) {
-    await assertDependencyOrgAccess(dep.dependentId, user.organizationId);
+    await assertVisibleInitiativeAccess(dep.dependentId, user);
+    await assertVisibleInitiativeAccess(dep.blockerId, user);
   }
   await prisma.dependency.delete({ where: { id: dependencyId } });
   if (dep) {

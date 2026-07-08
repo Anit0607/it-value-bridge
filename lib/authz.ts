@@ -1,4 +1,6 @@
 import { auth } from '@/auth';
+import { prisma } from '@/lib/db';
+import { buildInitiativeVisibilityWhere } from '@/lib/rbac';
 import type { Role } from '@prisma/client';
 
 /**
@@ -40,4 +42,35 @@ export async function requireRoleWithOrg(...roles: Role[]) {
   }
 
   return user as typeof user & { organizationId: string };
+}
+
+/**
+ * Throws unless `id` resolves to an initiative visible to `user` under
+ * buildInitiativeVisibilityWhere() (lib/rbac.ts). Dashboards aren't the only
+ * place hierarchy visibility must be enforced — every mutating server action
+ * that takes an initiative id (advance stage, edit, validate, sign off, set
+ * regulatory, link/unlink dependency, etc.) must call this, not just check
+ * organization membership, or a role like PROGRAM_MANAGER could mutate any
+ * initiative in the org by guessing/reusing an id outside their assignment.
+ */
+export async function assertVisibleInitiativeAccess(
+  id: string,
+  user: {
+    role: string;
+    name: string;
+    verticalHead?: string | null;
+    organizationId?: string | null;
+  },
+): Promise<void> {
+  if (!user.organizationId) throw new Error('Missing organization context');
+
+  const exists = await prisma.initiative.findFirst({
+    where: {
+      id,
+      ...buildInitiativeVisibilityWhere({ ...user, organizationId: user.organizationId }),
+    },
+    select: { id: true },
+  });
+
+  if (!exists) throw new Error('Initiative not found in your permitted scope');
 }
