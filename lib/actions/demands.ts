@@ -58,24 +58,25 @@ export async function createDemand(input: CreateDemandInput) {
   return demand.id;
 }
 
-export async function listDemands() {
+export async function listDemands(organizationId: string) {
   return prisma.demand.findMany({
+    where: { organizationId },
     include: { benefitClaims: true, convertedInitiative: { select: { id: true } } },
     orderBy: { createdAt: 'desc' },
   });
 }
 
-export async function listMyDemands(raisedByName: string) {
+export async function listMyDemands(raisedByName: string, organizationId: string) {
   return prisma.demand.findMany({
-    where: { raisedByName },
+    where: { raisedByName, organizationId },
     include: { benefitClaims: true, convertedInitiative: { select: { id: true } } },
     orderBy: { createdAt: 'desc' },
   });
 }
 
-export async function getDemand(id: string) {
-  return prisma.demand.findUnique({
-    where: { id },
+export async function getDemand(id: string, organizationId: string) {
+  return prisma.demand.findFirst({
+    where: { id, organizationId },
     include: { benefitClaims: true, convertedInitiative: { select: { id: true, title: true } } },
   });
 }

@@ -1,7 +1,7 @@
 export const dynamic = 'force-dynamic';
 
 import { auth } from '@/auth';
-import { redirect } from 'next/navigation';
+import { redirect, notFound } from 'next/navigation';
 import Link from 'next/link';
 import { listDemands, listMyDemands } from '@/lib/actions/demands';
 import { isPmoEquivalent } from '@/lib/rbac';
@@ -19,10 +19,13 @@ import { PlusCircle, Inbox } from 'lucide-react';
 export default async function DemandsPage() {
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
+  if (!session.user.organizationId) notFound();
 
   const role = session.user.role;
   const isTriager = isPmoEquivalent(role) || role === 'CIO';
-  const demands = isTriager ? await listDemands() : await listMyDemands(session.user.name);
+  const demands = isTriager
+    ? await listDemands(session.user.organizationId)
+    : await listMyDemands(session.user.name, session.user.organizationId);
 
   const counts = DEMAND_STATUSES.map(s => ({
     status: s,

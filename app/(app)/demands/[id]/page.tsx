@@ -9,8 +9,9 @@ import { DemandDetailClient } from './DemandDetailClient';
 export default async function DemandDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
+  if (!session.user.organizationId) notFound();
 
-  const demand = await getDemand(params.id);
+  const demand = await getDemand(params.id, session.user.organizationId);
   if (!demand) notFound();
 
   const canTriage = isPmoEquivalent(session.user.role) || session.user.role === 'CIO';
