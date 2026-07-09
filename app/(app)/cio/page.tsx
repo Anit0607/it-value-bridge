@@ -24,6 +24,7 @@ import {
   FileBarChart,
   CalendarClock,
   ShieldAlert,
+  PackageCheck,
 } from 'lucide-react';
 
 export default async function CioDashboard({
@@ -43,6 +44,7 @@ export default async function CioDashboard({
     pipelineByStage,
     vhSummary,
     periodLabel,
+    deliveredProjects,
     monthly: { committed: monthlyCommitted, delivered, missed },
     regulatory,
     delays,
@@ -74,11 +76,12 @@ export default async function CioDashboard({
           ]}
         />
 
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
           <KpiCard label="Active Items" value={total} sub={`of ${totalCount} total`} icon={Activity} accent="brand" />
+          <KpiCard label="Delivered Projects" value={deliveredProjects.length} sub={`closed in ${periodLabel}`} icon={PackageCheck} accent="emerald" />
           <KpiCard label="On Track" value={counts.green} sub={`${pct(counts.green)}%`} icon={CheckCircle2} accent="emerald" />
-          <KpiCard label="At Risk" value={counts.amber} sub={`${pct(counts.amber)}%`} icon={AlertTriangle} accent="amber" />
           <KpiCard label="Value at Risk" value={counts.red} sub={`${pct(counts.red)}%`} icon={AlertOctagon} accent="rose" />
+          <KpiCard label="At Risk" value={counts.amber} sub={`${pct(counts.amber)}%`} icon={AlertTriangle} accent="amber" />
         </div>
 
         {/* Delivery commitments */}

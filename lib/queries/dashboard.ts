@@ -25,6 +25,10 @@ export interface CioSummary {
   pipelineByStage: { stage: Stage; count: number }[];
   vhSummary: VhSummaryRow[];
   periodLabel: string;
+  /** Initiatives closed within the selected period — delivery completion,
+   *  not to be confused with monthly.delivered (business-value confirmation
+   *  against what was promised for the period). */
+  deliveredProjects: EnrichedItem[];
   monthly: {
     committed: EnrichedItem[];
     delivered: EnrichedItem[];
@@ -60,6 +64,12 @@ export async function getCioSummary(
       return { vh, total: vhItems.length, ...c, lastUpdated };
     })
     .sort((a, b) => b.red - a.red || b.amber - a.amber);
+
+  // Delivery completion: initiatives closed within the selected period,
+  // regardless of when they were originally promised. Distinct from
+  // "delivered" below, which is a business-value confirmation against what
+  // was committed for the period.
+  const deliveredProjects = items.filter(i => inPeriod(closureDate(i), period));
 
   // Promised to go live in the window; delivered = closed by the window's end.
   const committed = items.filter(i => inPeriod(i.goLiveDate, period));
@@ -97,6 +107,7 @@ export async function getCioSummary(
     pipelineByStage,
     vhSummary,
     periodLabel: period.label,
+    deliveredProjects,
     monthly: { committed, delivered, missed },
     regulatory,
     delays,
