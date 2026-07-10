@@ -10,6 +10,7 @@ import { KpiCard } from '@/components/KpiCard';
 import { Layers, CheckCircle2, AlertTriangle, AlertOctagon, PlusCircle } from 'lucide-react';
 import { TodaysFocus } from '@/components/TodaysFocus';
 import { buttonCls } from '@/components/ui/Button';
+import { KPI_DEFINITIONS } from '@/lib/kpiDefinitions';
 
 export default async function PmoDashboard() {
   const session = await auth();
@@ -36,10 +37,10 @@ export default async function PmoDashboard() {
       />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <KpiCard label="Active Items" value={activeCount} sub={`of ${items.length} total`} icon={Layers} accent="brand" />
-        <KpiCard label="On Track" value={counts.green} icon={CheckCircle2} accent="emerald" />
-        <KpiCard label="At Risk" value={counts.amber} icon={AlertTriangle} accent="amber" />
-        <KpiCard label="Value at Risk" value={counts.red} icon={AlertOctagon} accent="rose" />
+        <KpiCard label="Active Items" value={activeCount} sub={`of ${items.length} total`} icon={Layers} accent="brand" tooltip={KPI_DEFINITIONS.activeItems} />
+        <KpiCard label="On Track" value={counts.green} icon={CheckCircle2} accent="emerald" tooltip={KPI_DEFINITIONS.onTrack} />
+        <KpiCard label="At Risk" value={counts.amber} icon={AlertTriangle} accent="amber" tooltip={KPI_DEFINITIONS.atRisk} />
+        <KpiCard label="Value at Risk" value={counts.red} icon={AlertOctagon} accent="rose" tooltip={KPI_DEFINITIONS.valueAtRisk} />
       </div>
 
       <PmoDashboardClient items={items} />

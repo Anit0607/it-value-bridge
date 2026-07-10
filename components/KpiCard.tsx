@@ -1,4 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
 
 type Accent = 'brand' | 'emerald' | 'amber' | 'rose' | 'slate';
 
@@ -9,6 +10,8 @@ interface Props {
   icon: LucideIcon;
   accent?: Accent;
   onClick?: () => void;
+  /** Definition shown via an info icon next to the label — use for terms that could confuse leadership. */
+  tooltip?: string;
 }
 
 const ACCENT_BAR: Record<Accent, string> = {
@@ -43,7 +46,7 @@ const VALUE_TONE: Record<Accent, string> = {
   slate:   'text-slate-900',
 };
 
-export function KpiCard({ label, value, sub, icon: Icon, accent = 'brand', onClick }: Props) {
+export function KpiCard({ label, value, sub, icon: Icon, accent = 'brand', onClick, tooltip }: Props) {
   const Tag = onClick ? 'button' : 'div';
   return (
     <Tag
@@ -57,7 +60,10 @@ export function KpiCard({ label, value, sub, icon: Icon, accent = 'brand', onCli
 
       {/* Label + icon row */}
       <div className="flex items-start justify-between gap-2">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</span>
+        <span className="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          {label}
+          {tooltip && <InfoTooltip text={tooltip} />}
+        </span>
         <span className={`flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg ${ICON_WRAP[accent]}`}>
           <Icon className="h-[20px] w-[20px]" strokeWidth={2} />
         </span>

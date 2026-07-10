@@ -10,12 +10,16 @@ import { KpiCard } from '@/components/KpiCard';
 import { PageHeader } from '@/components/PageHeader';
 import { PeriodPicker } from '@/components/PeriodPicker';
 import { StageFunnel } from '@/components/StageFunnel';
+import { CompletedByMonthChart } from '@/components/CompletedByMonthChart';
 import { RagDot } from '@/components/RagBadge';
 import { TodaysFocus } from '@/components/TodaysFocus';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Badge } from '@/components/ui/Badge';
+import { InfoTooltip } from '@/components/ui/InfoTooltip';
 import { buttonCls } from '@/components/ui/Button';
 import { computeRAG } from '@/lib/rag';
+import { KPI_DEFINITIONS } from '@/lib/kpiDefinitions';
+import { formatInr } from '@/lib/value';
 import {
   Activity,
   CheckCircle2,
@@ -25,6 +29,7 @@ import {
   CalendarClock,
   ShieldAlert,
   PackageCheck,
+  Star,
 } from 'lucide-react';
 
 export default async function CioDashboard({
@@ -43,8 +48,11 @@ export default async function CioDashboard({
     pct,
     pipelineByStage,
     vhSummary,
+    businessOwnership,
     periodLabel,
     deliveredProjects,
+    completedByMonth,
+    strategicInitiatives,
     monthly: { committed: monthlyCommitted, delivered, missed },
     regulatory,
     delays,
@@ -77,11 +85,11 @@ export default async function CioDashboard({
         />
 
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-          <KpiCard label="Active Items" value={total} sub={`of ${totalCount} total`} icon={Activity} accent="brand" />
-          <KpiCard label="Delivered Projects" value={deliveredProjects.length} sub={`closed in ${periodLabel}`} icon={PackageCheck} accent="emerald" />
-          <KpiCard label="On Track" value={counts.green} sub={`${pct(counts.green)}%`} icon={CheckCircle2} accent="emerald" />
-          <KpiCard label="Value at Risk" value={counts.red} sub={`${pct(counts.red)}%`} icon={AlertOctagon} accent="rose" />
-          <KpiCard label="At Risk" value={counts.amber} sub={`${pct(counts.amber)}%`} icon={AlertTriangle} accent="amber" />
+          <KpiCard label="Active Items" value={total} sub={`of ${totalCount} total`} icon={Activity} accent="brand" tooltip={KPI_DEFINITIONS.activeItems} />
+          <KpiCard label="Delivered Projects" value={deliveredProjects.length} sub={`closed in ${periodLabel}`} icon={PackageCheck} accent="emerald" tooltip={KPI_DEFINITIONS.deliveredProjects} />
+          <KpiCard label="On Track" value={counts.green} sub={`${pct(counts.green)}%`} icon={CheckCircle2} accent="emerald" tooltip={KPI_DEFINITIONS.onTrack} />
+          <KpiCard label="Value at Risk" value={counts.red} sub={`${pct(counts.red)}%`} icon={AlertOctagon} accent="rose" tooltip={KPI_DEFINITIONS.valueAtRisk} />
+          <KpiCard label="At Risk" value={counts.amber} sub={`${pct(counts.amber)}%`} icon={AlertTriangle} accent="amber" tooltip={KPI_DEFINITIONS.atRisk} />
         </div>
 
         {/* Delivery commitments */}
@@ -99,13 +107,19 @@ export default async function CioDashboard({
             </div>
             <div className="rounded-xl border border-rose-200 bg-rose-50/70 p-4">
               <div className="tabular text-3xl font-semibold text-rose-700">{missed.length}</div>
-              <div className="mt-2 text-xs font-semibold text-rose-700">Commitment Slippage</div>
+              <div className="mt-2 inline-flex items-center gap-1 text-xs font-semibold text-rose-700">
+                Commitment Slippage
+                <InfoTooltip text={KPI_DEFINITIONS.commitmentSlippage} />
+              </div>
               <div className="mt-0.5 text-[11px] leading-snug text-rose-600/70">Missed or delayed commitments</div>
             </div>
           </div>
           {missed.length > 0 && (
             <div className="mt-4 border-t border-slate-100 pt-3">
-              <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-rose-600">Commitment Slippage</p>
+              <p className="mb-2 inline-flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wider text-rose-600">
+                Commitment Slippage
+                <InfoTooltip text={KPI_DEFINITIONS.commitmentSlippage} />
+              </p>
               <ul className="space-y-1.5">
                 {missed.map(i => (
                   <li key={i.id} className="flex items-center justify-between gap-2 text-xs">
@@ -151,7 +165,7 @@ export default async function CioDashboard({
       )}
 
       {regulatory.length > 0 && (
-        <SectionCard title="Regulatory Watch" icon={ShieldAlert} tone="risk" count={regulatory.length} subtitle="Externally-mandated deadlines" noPad>
+        <SectionCard title="Regulatory Watch" icon={ShieldAlert} tone="risk" count={regulatory.length} subtitle="Externally-mandated deadlines" tooltip={KPI_DEFINITIONS.regulatoryWatch} noPad>
           <div>
             {regulatory.map(i => {
               const rag = computeRAG(i);
@@ -181,6 +195,63 @@ export default async function CioDashboard({
                 </div>
               );
             })}
+          </div>
+        </SectionCard>
+      )}
+
+      {strategicInitiatives.length > 0 && (
+        <SectionCard
+          title="Strategic / High-Impact Initiatives"
+          icon={Star}
+          subtitle="Top by projected value + regulatory mandate"
+          tooltip={KPI_DEFINITIONS.strategicInitiatives}
+          count={strategicInitiatives.length}
+          noPad
+        >
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/60">
+                  <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Initiative</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Stage</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">RAG</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Go-live</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">Value</th>
+                  <th className="px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500">Regulatory</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Owner</th>
+                </tr>
+              </thead>
+              <tbody>
+                {strategicInitiatives.map((i, idx) => (
+                  <tr key={i.id} className={`border-t border-slate-100 transition-colors hover:bg-brand-50/40 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
+                    <td className="px-5 py-2.5">
+                      <Link href={`/items/${i.id}`} className="font-medium text-slate-800 hover:text-brand-700">
+                        {i.title}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-2.5 text-slate-600">{i.currentStage}</td>
+                    <td className="px-4 py-2.5">
+                      <span className="inline-flex items-center gap-1.5">
+                        <RagDot rag={i.rag} size="sm" />
+                        {i.rag}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2.5 tabular text-slate-600">{i.goLiveDate}</td>
+                    <td className="px-4 py-2.5 text-right tabular font-semibold text-slate-800">
+                      {i.projectedValue > 0 ? formatInr(i.projectedValue) : '—'}
+                    </td>
+                    <td className="px-4 py-2.5 text-center">
+                      {i.isRegulatory ? (
+                        <Badge tone="danger" size="sm">{i.regulatoryBody || 'Yes'}</Badge>
+                      ) : (
+                        <span className="text-xs text-slate-300">—</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-slate-600">{i.owner}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </SectionCard>
       )}
@@ -229,10 +300,66 @@ export default async function CioDashboard({
         </div>
       </SectionCard>
 
-      {/* Governance Lifecycle View — context section, last in executive order */}
-      <SectionCard title="Governance Lifecycle View" subtitle={`${totalCount} items across ${STAGES.length} stages`}>
-        <StageFunnel counts={pipelineByStage} />
+      <SectionCard title="Business Ownership Summary" subtitle="By Business Head, sorted by risk" noPad>
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/60">
+                <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Business Owner</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Business Unit</th>
+                <th className="px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500">Total</th>
+                <th className="px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500">Green</th>
+                <th className="px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500">Amber</th>
+                <th className="px-4 py-2.5 text-center text-[11px] font-semibold uppercase tracking-wider text-slate-500">Red</th>
+                <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">Last Updated</th>
+              </tr>
+            </thead>
+            <tbody>
+              {businessOwnership.map((row, i) => (
+                <tr key={row.owner} className={`border-t border-slate-100 transition-colors hover:bg-brand-50/40 ${i % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
+                  <td className="px-5 py-2.5 font-medium text-slate-800">{row.owner}</td>
+                  <td className="px-4 py-2.5 text-slate-600">{row.businessUnit}</td>
+                  <td className="px-4 py-2.5 text-center tabular text-slate-600">{row.total}</td>
+                  <td className="px-4 py-2.5 text-center">
+                    <span className="inline-flex items-center gap-1.5 tabular font-medium text-slate-700">
+                      <RagDot rag="Green" size="sm" />
+                      {row.green}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-center">
+                    <span className="inline-flex items-center gap-1.5 tabular font-medium text-slate-700">
+                      <RagDot rag="Amber" size="sm" />
+                      {row.amber}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-center">
+                    <span className="inline-flex items-center gap-1.5 tabular font-medium text-slate-700">
+                      <RagDot rag="Red" size="sm" />
+                      {row.red}
+                    </span>
+                  </td>
+                  <td className="px-4 py-2.5 text-right tabular text-slate-500">{row.lastUpdated}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </SectionCard>
+
+      {/* Governance Lifecycle View + delivery trend — context sections, last in executive order */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <SectionCard
+          title="Governance Lifecycle View"
+          subtitle="BRD → FSD → Commercial → Development → SIT → UAT → AppSec → CAB → Go Live → Business Validation → Closed"
+          tooltip={KPI_DEFINITIONS.governanceLifecycleView}
+        >
+          <StageFunnel counts={pipelineByStage} />
+        </SectionCard>
+
+        <SectionCard title="Completed Projects by Month" icon={PackageCheck} subtitle={periodLabel} tooltip={KPI_DEFINITIONS.deliveredProjects}>
+          <CompletedByMonthChart data={completedByMonth} />
+        </SectionCard>
+      </div>
     </div>
   );
 }

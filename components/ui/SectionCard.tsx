@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
+import { InfoTooltip } from './InfoTooltip';
 
 export type SectionCardTone = 'default' | 'brand' | 'risk' | 'success' | 'warning';
 
@@ -70,6 +71,8 @@ interface SectionCardProps {
   action?: ReactNode;
   /** Remove body padding for tables/lists that need edge-to-edge layout */
   noPad?: boolean;
+  /** Definition shown via an info icon next to the title — use for terms that could confuse leadership. */
+  tooltip?: string;
   children: ReactNode;
 }
 
@@ -81,6 +84,7 @@ export function SectionCard({
   count,
   action,
   noPad = false,
+  tooltip,
   children,
 }: SectionCardProps) {
   const t = TONE[tone];
@@ -92,6 +96,7 @@ export function SectionCard({
         <h2 className={`flex items-center gap-2 text-sm font-semibold ${t.titleCls}`}>
           {Icon && <Icon className={`h-4 w-4 ${t.iconCls}`} strokeWidth={2} />}
           {title}
+          {tooltip && <InfoTooltip text={tooltip} />}
           {count !== undefined && (
             <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${t.badgeCls}`}>
               {count}
