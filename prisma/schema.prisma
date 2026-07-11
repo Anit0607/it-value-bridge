@@ -271,6 +271,12 @@ model Initiative {
   @@index([currentStage])
   @@index([type])
   @@index([classification])
+  @@index([organizationId, classification])
+  @@index([organizationId, isRegulatory])
+  @@index([organizationId, businessUnit])
+  @@index([organizationId, businessHeadName])
+  @@index([organizationId, programHeadName])
+  @@index([organizationId, programManagerName])
 }
 
 model WaterfallStage {
