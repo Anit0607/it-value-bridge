@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateInitiative, type EditInitiativeInput } from '@/lib/actions/initiatives';
-import { VERTICAL_HEADS } from '@/lib/types';
+import { VERTICAL_HEADS, CLASSIFICATIONS, type ItemClassification } from '@/lib/types';
 import { PageHeader } from '@/components/PageHeader';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Button } from '@/components/ui/Button';
@@ -28,6 +28,7 @@ interface Props {
   defaults: {
     title: string;
     requirement: string;
+    classification: ItemClassification;
     verticalHead: string;
     businessSpoc: string;
     businessSponsor: string;
@@ -50,6 +51,7 @@ export function EditClient({ id, defaults }: Props) {
 
   const [title, setTitle] = useState(defaults.title);
   const [requirement, setRequirement] = useState(defaults.requirement);
+  const [classification, setClassification] = useState<ItemClassification>(defaults.classification);
   const [verticalHead, setVerticalHead] = useState<string>(defaults.verticalHead);
   const [businessSpoc, setBusinessSpoc] = useState(defaults.businessSpoc);
   const [businessSponsor, setBusinessSponsor] = useState(defaults.businessSponsor);
@@ -80,7 +82,7 @@ export function EditClient({ id, defaults }: Props) {
     setError('');
 
     const input: EditInitiativeInput = {
-      title, requirement, verticalHead,
+      title, requirement, classification, verticalHead,
       businessSpoc, businessSponsor, goLiveDate,
       isRegulatory,
       regulatoryBody: isRegulatory ? regulatoryBody : undefined,
@@ -118,6 +120,11 @@ export function EditClient({ id, defaults }: Props) {
             </Field>
             <Field label="Requirement Description" required>
               <textarea value={requirement} onChange={e => setRequirement(e.target.value)} rows={4} className={inputCls + ' resize-none'} />
+            </Field>
+            <Field label="Classification" required>
+              <select value={classification} onChange={e => setClassification(e.target.value as ItemClassification)} className={inputCls}>
+                {CLASSIFICATIONS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
             </Field>
           </div>
         </SectionCard>

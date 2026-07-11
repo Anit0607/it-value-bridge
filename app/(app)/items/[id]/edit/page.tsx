@@ -23,6 +23,7 @@ export default async function EditInitiativePage({ params }: { params: { id: str
       defaults={{
         title:            item.title,
         requirement:      item.requirement ?? '',
+        classification:   item.classification,
         verticalHead:     item.verticalHead ?? '',
         businessSpoc:     item.businessSpoc ?? '',
         businessSponsor:  item.businessSponsor ?? '',

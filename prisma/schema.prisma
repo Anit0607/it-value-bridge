@@ -25,6 +25,16 @@ enum InitiativeType {
   PROJECT
 }
 
+// Leadership importance, independent of delivery type (InitiativeType) and
+// regulatory criticality (isRegulatory) — a regulatory initiative can be
+// Strategic, Major Project, Tactical, or BAU.
+enum InitiativeClassification {
+  STRATEGIC
+  MAJOR_PROJECT
+  TACTICAL
+  BAU
+}
+
 enum Methodology {
   WATERFALL
   AGILE
@@ -181,10 +191,11 @@ model User {
 
 // ---------- Core ----------
 model Initiative {
-  id          String         @id @default(cuid())
-  title       String
-  type        InitiativeType
-  methodology Methodology    @default(WATERFALL)
+  id             String                    @id @default(cuid())
+  title          String
+  type           InitiativeType
+  classification InitiativeClassification @default(TACTICAL)
+  methodology    Methodology               @default(WATERFALL)
 
   verticalHeadName String
   verticalHead     User?   @relation("VerticalHeadInitiatives", fields: [verticalHeadId], references: [id])
@@ -259,6 +270,7 @@ model Initiative {
   @@index([verticalHeadName])
   @@index([currentStage])
   @@index([type])
+  @@index([classification])
 }
 
 model WaterfallStage {

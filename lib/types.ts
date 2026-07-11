@@ -1,5 +1,12 @@
 export type ItemType = 'Change Request' | 'Project';
 
+// Leadership importance — independent of ItemType (delivery kind) and
+// isRegulatory (compliance criticality); a regulatory initiative can carry
+// any classification.
+export type ItemClassification = 'Strategic' | 'Major Project' | 'Tactical' | 'BAU';
+
+export const CLASSIFICATIONS: ItemClassification[] = ['Strategic', 'Major Project', 'Tactical', 'BAU'];
+
 export const STAGES = [
   'BRD',
   'FSD',
@@ -45,6 +52,7 @@ export interface Item {
   id: string;
   title: string;
   type: ItemType;
+  classification: ItemClassification;
   verticalHead: string;
   businessSpoc: string;
   businessSponsor: string;

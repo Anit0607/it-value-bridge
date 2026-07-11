@@ -14,7 +14,7 @@ import { StageProgress } from '@/components/StageProgress';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Button, buttonCls } from '@/components/ui/Button';
 import { STAGES } from '@/lib/types';
-import type { Item, DelaySource, Role } from '@/lib/types';
+import type { Item, DelaySource, Role, ItemClassification } from '@/lib/types';
 import type { BenefitCategory, BenefitUnit } from '@prisma/client';
 import {
   ChevronRight,
@@ -38,6 +38,14 @@ const ROLE_BACK: Record<Role, { href: string; label: string }> = {
   PROGRAM_HEAD: { href: '/pmo', label: 'Program / Governance View' },
   PROGRAM_MANAGER: { href: '/pmo', label: 'Program / Governance View' },
   BUSINESS_HEAD: { href: '/business', label: 'Business View' },
+};
+
+// Descending leadership importance — matches classification's badge weight.
+const CLASSIFICATION_TONE: Record<ItemClassification, BadgeTone> = {
+  'Strategic': 'brand',
+  'Major Project': 'violet',
+  'Tactical': 'sky',
+  'BAU': 'slate',
 };
 
 type AuditEvent = { label: string; tone: BadgeTone };
@@ -229,6 +237,9 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
             <RagBadge rag={rag} />
             <Badge tone={item.type === 'Project' ? 'violet' : 'sky'} size="sm">
               {item.type === 'Project' ? 'Project' : 'CR'}
+            </Badge>
+            <Badge tone={CLASSIFICATION_TONE[item.classification]} size="sm">
+              {item.classification}
             </Badge>
             {item.isRegulatory && (
               <Badge tone="danger" size="sm">

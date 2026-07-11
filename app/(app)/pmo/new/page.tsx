@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useRole } from '@/components/RoleProvider';
 import { createInitiative } from '@/lib/actions/initiatives';
-import { VERTICAL_HEADS } from '@/lib/types';
+import { VERTICAL_HEADS, CLASSIFICATIONS, type ItemClassification } from '@/lib/types';
 import { PageHeader } from '@/components/PageHeader';
 import { BenefitPicker, type BenefitDraft } from '@/components/value/BenefitPicker';
 import { Button } from '@/components/ui/Button';
@@ -54,6 +54,7 @@ export default function NewItemPage() {
   // Step 1 — Initiative Identity
   const [title, setTitle] = useState('');
   const [type, setType] = useState<'Change Request' | 'Project'>('Change Request');
+  const [classification, setClassification] = useState<ItemClassification>('Tactical');
   const [requirement, setRequirement] = useState('');
 
   // Step 2 — Ownership
@@ -133,7 +134,7 @@ export default function NewItemPage() {
     startTransition(async () => {
       try {
         const id = await createInitiative({
-          title, type, requirement,
+          title, type, classification, requirement,
           verticalHead, businessSpoc, businessSponsor,
           goLiveDate, benefits,
           isRegulatory,
@@ -218,6 +219,12 @@ export default function NewItemPage() {
                 <option value="Change Request">Change Request (CR)</option>
                 <option value="Project">Project</option>
               </select>
+            </Field>
+            <Field label="Classification" required>
+              <select value={classification} onChange={e => setClassification(e.target.value as ItemClassification)} className={inputCls}>
+                {CLASSIFICATIONS.map(c => <option key={c} value={c}>{c}</option>)}
+              </select>
+              <p className="mt-1 text-xs text-slate-400">Leadership importance — independent of Type and Regulatory status.</p>
             </Field>
             <Field label="Brief Requirement Description" required>
               <textarea value={requirement} onChange={e => setRequirement(e.target.value)} rows={4} className={inputCls + ' resize-none'} placeholder="Describe what needs to be built or changed, and why it is needed…" />
@@ -351,6 +358,7 @@ export default function NewItemPage() {
                 <dl className="divide-y divide-slate-100">
                   <SummaryRow label="Title" value={title} />
                   <SummaryRow label="Type" value={type} />
+                  <SummaryRow label="Classification" value={classification} />
                   <SummaryRow label="Requirement" value={requirement} />
                 </dl>
               </div>
@@ -426,6 +434,7 @@ export default function NewItemPage() {
           <dl className="divide-y divide-slate-100 px-5 py-2">
             {[
               { label: 'Type',            value: type === 'Change Request' ? 'CR' : 'Project', show: true },
+              { label: 'Classification',  value: classification, show: true },
               { label: 'Title',           value: title, show: !!title },
               { label: 'Vertical Head',   value: verticalHead, show: !!verticalHead },
               { label: 'Business SPOC',   value: businessSpoc, show: !!businessSpoc },
