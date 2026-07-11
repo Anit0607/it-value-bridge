@@ -6,6 +6,7 @@ import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES, buildInitiativeVisibil
 import { STAGE_LABEL, STAGE_TO_PROCESS_GROUP, nextStage } from '@/lib/stage-map';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
+import { CLASSIFICATION_LABEL } from '@/lib/types';
 import type { Item, Stage, OutcomeCategory, DelaySource, BusinessValidation, ItemClassification } from '@/lib/types';
 import type { BenefitCategory, Stage as PrismaStage, InitiativeClassification } from '@prisma/client';
 
@@ -28,13 +29,6 @@ function benefitToOutcome(cat: BenefitCategory): OutcomeCategory {
   return map[cat];
 }
 
-const CLASSIFICATION_FROM_DB: Record<InitiativeClassification, ItemClassification> = {
-  STRATEGIC: 'Strategic',
-  MAJOR_PROJECT: 'Major Project',
-  TACTICAL: 'Tactical',
-  BAU: 'BAU',
-};
-
 const CLASSIFICATION_TO_DB: Record<ItemClassification, InitiativeClassification> = {
   'Strategic': 'STRATEGIC',
   'Major Project': 'MAJOR_PROJECT',
@@ -51,7 +45,7 @@ function toItem(i: InitiativeWithRelations): Item {
     id: i.id,
     title: i.title,
     type: i.type === 'PROJECT' ? 'Project' : 'Change Request',
-    classification: CLASSIFICATION_FROM_DB[i.classification],
+    classification: CLASSIFICATION_LABEL[i.classification],
     verticalHead: i.verticalHeadName,
     businessSpoc: i.businessSpoc,
     businessSponsor: i.businessSponsor,
@@ -596,7 +590,7 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
     if ((current.description ?? '') !== parsed.requirement.trim())
       changes.push(`Requirement updated`);
     if (current.classification !== CLASSIFICATION_TO_DB[parsed.classification])
-      changes.push(`Classification changed from ${CLASSIFICATION_FROM_DB[current.classification]} to ${parsed.classification}`);
+      changes.push(`Classification changed from ${CLASSIFICATION_LABEL[current.classification]} to ${parsed.classification}`);
     if ((current.verticalHeadName ?? '') !== parsed.verticalHead)
       changes.push(`Vertical head changed from ${current.verticalHeadName} to ${parsed.verticalHead}`);
     if ((current.businessSpoc ?? '') !== parsed.businessSpoc.trim())

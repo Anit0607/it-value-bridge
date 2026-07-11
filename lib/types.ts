@@ -7,6 +7,16 @@ export type ItemClassification = 'Strategic' | 'Major Project' | 'Tactical' | 'B
 
 export const CLASSIFICATIONS: ItemClassification[] = ['Strategic', 'Major Project', 'Tactical', 'BAU'];
 
+// Keyed by the raw Prisma InitiativeClassification enum values so any
+// caller reading Initiative rows directly (not just via the Item adapter)
+// can render a label without importing @prisma/client.
+export const CLASSIFICATION_LABEL: Record<'STRATEGIC' | 'MAJOR_PROJECT' | 'TACTICAL' | 'BAU', ItemClassification> = {
+  STRATEGIC: 'Strategic',
+  MAJOR_PROJECT: 'Major Project',
+  TACTICAL: 'Tactical',
+  BAU: 'BAU',
+};
+
 export const STAGES = [
   'BRD',
   'FSD',
