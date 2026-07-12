@@ -111,6 +111,24 @@ export interface CioSummary {
 
 const RAG_RANK: Record<RAG, number> = { Red: 0, Amber: 1, Green: 2 };
 
+/**
+ * Dropdown option lists for PortfolioFilterBar, derived from the full
+ * visible set BEFORE filters are applied, so choices never shrink as the
+ * user narrows the view. Shared by every dashboard that mounts the bar.
+ */
+function computeFilterOptions(items: EnrichedItem[]): PortfolioFilterOptions {
+  const distinct = (values: (string | null | undefined)[]) =>
+    [...new Set(values.filter((v): v is string => !!v))].sort();
+  return {
+    verticalHeads: distinct(items.map(i => i.verticalHead)),
+    programHeads: distinct(items.map(i => i.programHeadName)),
+    programManagers: distinct(items.map(i => i.programManagerName)),
+    businessHeads: distinct(items.map(i => i.businessHeadName)),
+    businessUnits: distinct(items.map(i => i.businessUnit)),
+    businessSpocs: distinct(items.map(i => i.businessSpoc)),
+  };
+}
+
 /** Everything the CIO dashboard needs, aggregated in one place. */
 export async function getCioSummary(
   period: Period,
@@ -119,19 +137,7 @@ export async function getCioSummary(
 ): Promise<CioSummary> {
   // Org + role-hierarchy scoped (5B/5C) — the ONLY read of all initiatives.
   const items = enrichAll(await listVisibleInitiativesForUser(user));
-
-  // Dropdown option lists reflect the full visible set, before filters are
-  // applied, so choices never shrink as the user narrows the view.
-  const distinct = (values: (string | null | undefined)[]) =>
-    [...new Set(values.filter((v): v is string => !!v))].sort();
-  const filterOptions: PortfolioFilterOptions = {
-    verticalHeads: distinct(items.map(i => i.verticalHead)),
-    programHeads: distinct(items.map(i => i.programHeadName)),
-    programManagers: distinct(items.map(i => i.programManagerName)),
-    businessHeads: distinct(items.map(i => i.businessHeadName)),
-    businessUnits: distinct(items.map(i => i.businessUnit)),
-    businessSpocs: distinct(items.map(i => i.businessSpoc)),
-  };
+  const filterOptions = computeFilterOptions(items);
 
   // Everything below this line is scoped by the portfolio filter bar, ON TOP
   // OF the org/role visibility above — filtering narrows an already-visible
@@ -275,24 +281,35 @@ export async function getCioSummary(
 
 export interface PmoList {
   items: EnrichedItem[];
+  totalCount: number;
   activeCount: number;
   counts: { green: number; amber: number; red: number };
+  filterOptions: PortfolioFilterOptions;
 }
 
 /**
- * Full portfolio for the PMO dashboard. Filtering stays client-side (instant
- * UX over a small dataset) — this returns every enriched item plus headline
- * counts for the KPI cards.
+ * Portfolio for the PMO dashboard — PMO/CIO/ADMIN get the full org
+ * portfolio, PROGRAM_HEAD/PROGRAM_MANAGER get their own hierarchy-scoped
+ * subset via listVisibleInitiativesForUser() (5B/5C). The optional
+ * PortfolioFilterBar filters narrow that already-scoped set further;
+ * PmoDashboardClient's own quick filters/chips then operate client-side on
+ * top of whatever this returns. Filtering never widens or re-queries the
+ * visible set.
  */
 export async function getPmoList(
   user: Pick<AuthUser, 'role' | 'name' | 'verticalHead'> & { organizationId?: string | null },
+  filters: PortfolioFilters = {},
 ): Promise<PmoList> {
   const items = enrichAll(await listVisibleInitiativesForUser(user));
-  const active = items.filter(i => i.currentStage !== 'Closed');
+  const filterOptions = computeFilterOptions(items);
+  const filteredItems = applyPortfolioFilters(items, filters);
+  const active = filteredItems.filter(i => i.currentStage !== 'Closed');
   return {
-    items,
+    items: filteredItems,
+    totalCount: items.length,
     activeCount: active.length,
     counts: ragCounts(active.map(i => i.rag)),
+    filterOptions,
   };
 }
 
