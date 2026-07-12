@@ -443,7 +443,7 @@ async function main() {
     {
       title: 'CBS Core Integration',
       type: 'PROJECT',
-      classification: 'STRATEGIC',
+      classification: 'MAJOR_PROJECT',
       verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Rakesh Joshi',
       businessSponsor: 'Sunil Agarwal',
@@ -500,7 +500,7 @@ async function main() {
     {
       title: 'Payment Gateway Upgrade',
       type: 'CHANGE_REQUEST',
-      classification: 'MAJOR_PROJECT',
+      classification: 'TACTICAL',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
@@ -703,7 +703,7 @@ async function main() {
     {
       title: 'AML Transaction Monitoring',
       type: 'PROJECT',
-      classification: 'STRATEGIC',
+      classification: 'MAJOR_PROJECT',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Meena Gupta',
       businessSponsor: 'Ramesh Jain',
@@ -759,7 +759,7 @@ async function main() {
     {
       title: 'Debit Card Management System',
       type: 'CHANGE_REQUEST',
-      classification: 'BAU',
+      classification: 'TACTICAL',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Suman Bose',
       businessSponsor: 'Geeta Krishnan',
@@ -931,7 +931,7 @@ async function main() {
     {
       title: 'IMPS Real-time Settlement Upgrade',
       type: 'CHANGE_REQUEST',
-      classification: 'STRATEGIC',
+      classification: 'MAJOR_PROJECT',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
@@ -960,7 +960,7 @@ async function main() {
     {
       title: 'Net Banking 2FA Hardening',
       type: 'CHANGE_REQUEST',
-      classification: 'MAJOR_PROJECT',
+      classification: 'TACTICAL',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
