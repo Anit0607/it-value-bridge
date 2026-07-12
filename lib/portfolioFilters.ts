@@ -1,9 +1,13 @@
 import type { EnrichedItem } from '@/lib/queries/enrich';
-import { STAGES, CLASSIFICATIONS, OUTCOME_CATEGORIES } from '@/lib/types';
+import { STAGES, OUTCOME_CATEGORIES, CLASSIFICATION_LABEL } from '@/lib/types';
 import type { Stage, ItemType, ItemClassification, RAG, OutcomeCategory } from '@/lib/types';
 
-const ITEM_TYPES: ItemType[] = ['Change Request', 'Project'];
-const RAG_VALUES: RAG[] = ['Green', 'Amber', 'Red'];
+export const ITEM_TYPES: ItemType[] = ['Change Request', 'Project'];
+export const RAG_VALUES: RAG[] = ['Green', 'Amber', 'Red'];
+// Raw InitiativeClassification enum casing — used in URLs/dropdown values
+// (e.g. ?classification=STRATEGIC) and translated to the friendly
+// ItemClassification stored on EnrichedItem via CLASSIFICATION_LABEL.
+export const CLASSIFICATION_KEYS = Object.keys(CLASSIFICATION_LABEL) as (keyof typeof CLASSIFICATION_LABEL)[];
 
 export interface PortfolioFilters {
   classification?: ItemClassification;
@@ -35,9 +39,9 @@ function first(v: string | string[] | undefined): string | undefined {
 export function parsePortfolioFilters(searchParams: SearchParams): PortfolioFilters {
   const filters: PortfolioFilters = {};
 
-  const classification = first(searchParams.classification);
-  if (classification && (CLASSIFICATIONS as string[]).includes(classification)) {
-    filters.classification = classification as ItemClassification;
+  const classification = first(searchParams.classification)?.toUpperCase();
+  if (classification && (CLASSIFICATION_KEYS as string[]).includes(classification)) {
+    filters.classification = CLASSIFICATION_LABEL[classification as keyof typeof CLASSIFICATION_LABEL];
   }
 
   const type = first(searchParams.type);
