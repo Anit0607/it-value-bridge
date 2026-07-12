@@ -40,6 +40,7 @@ export default async function CioDashboard({
   searchParams: {
     period?: string; from?: string; to?: string;
     classification?: string; rag?: string; stage?: string; isRegulatory?: string;
+    type?: string; benefitCategory?: string;
     verticalHead?: string; programHead?: string; programManager?: string;
     businessHead?: string; businessUnit?: string; businessSpoc?: string;
   };

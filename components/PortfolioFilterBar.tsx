@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { STAGES, CLASSIFICATION_LABEL } from '@/lib/types';
+import { STAGES, CLASSIFICATION_LABEL, OUTCOME_CATEGORIES } from '@/lib/types';
 import { RAG_VALUES, CLASSIFICATION_KEYS } from '@/lib/portfolioFilters';
 import { Badge } from '@/components/ui/Badge';
 import { Filter, RotateCcw } from 'lucide-react';
@@ -9,13 +9,15 @@ import { Filter, RotateCcw } from 'lucide-react';
 const selectCls =
   'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400';
 
-// The 10 filter dimensions this bar drives — kept in one place so
+// The 12 filter dimensions this bar drives — kept in one place so
 // active-count and reset both stay in sync with what's actually rendered.
 const FILTER_KEYS = [
   'classification',
   'rag',
   'stage',
   'isRegulatory',
+  'type',
+  'benefitCategory',
   'verticalHead',
   'programHead',
   'programManager',
@@ -48,8 +50,8 @@ interface Props {
 
 /**
  * Reusable, URL-driven portfolio filter bar (Classification, RAG, Stage,
- * Regulatory, IT Vertical Head, Program Head, Program Manager, Business
- * Head, Business Unit, Business SPOC).
+ * Regulatory, Type, Business Value Category, IT Vertical Head, Program
+ * Head, Program Manager, Business Head, Business Unit, Business SPOC).
  *
  * GET/search-param based by design: every change is a real navigation via
  * router.push(), so the address bar always reflects the current filter
@@ -130,6 +132,29 @@ export function PortfolioFilterBar({ options = {} }: Props) {
         <option value="">Regulatory: Any</option>
         <option value="true">Regulatory: Yes</option>
         <option value="false">Regulatory: No</option>
+      </select>
+
+      <select
+        value={searchParams.get('type') ?? ''}
+        onChange={e => setParam('type', e.target.value)}
+        className={selectCls}
+        aria-label="Type"
+      >
+        <option value="">Type: Any</option>
+        <option value="Project">Project</option>
+        <option value="Change Request">Change Request</option>
+      </select>
+
+      <select
+        value={searchParams.get('benefitCategory') ?? ''}
+        onChange={e => setParam('benefitCategory', e.target.value)}
+        className={selectCls}
+        aria-label="Business Value Category"
+      >
+        <option value="">Value Category: Any</option>
+        {OUTCOME_CATEGORIES.map(c => (
+          <option key={c} value={c}>{c}</option>
+        ))}
       </select>
 
       <HierarchySelect label="IT Vertical Head" paramKey="verticalHead" options={options.verticalHeads} searchParams={searchParams} onChange={setParam} />

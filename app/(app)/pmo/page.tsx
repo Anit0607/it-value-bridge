@@ -19,6 +19,7 @@ export default async function PmoDashboard({
 }: {
   searchParams: {
     classification?: string; rag?: string; stage?: string; isRegulatory?: string;
+    type?: string; benefitCategory?: string;
     verticalHead?: string; programHead?: string; programManager?: string;
     businessHead?: string; businessUnit?: string; businessSpoc?: string;
   };
