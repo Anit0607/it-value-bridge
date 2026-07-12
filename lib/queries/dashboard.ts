@@ -56,6 +56,13 @@ export interface PortfolioFilterOptions {
   businessSpocs: string[];
 }
 
+export interface ClassificationCounts {
+  strategic: number;
+  majorProject: number;
+  tactical: number;
+  bau: number;
+}
+
 export interface VhSummaryRow {
   vh: string;
   total: number;
@@ -96,6 +103,11 @@ export interface CioSummary {
   /** Initiatives with formal classification = Strategic, within the active
    *  portfolio filters (5E). */
   strategicProjects: StrategicProjectRow[];
+  /** Count per classification tier, within the active portfolio filters.
+   *  5E: primarily feeds the filter bar and Strategic Projects Status —
+   *  Executive View can surface the full distribution as its own widget
+   *  later. */
+  classificationCounts: ClassificationCounts;
   /** Distinct hierarchy values across the full org-visible set (before
    *  portfolio filters are applied) — feeds PortfolioFilterBar's dropdowns
    *  so options never shrink as filters narrow results. */
@@ -126,6 +138,18 @@ function computeFilterOptions(items: EnrichedItem[]): PortfolioFilterOptions {
     businessHeads: distinct(items.map(i => i.businessHeadName)),
     businessUnits: distinct(items.map(i => i.businessUnit)),
     businessSpocs: distinct(items.map(i => i.businessSpoc)),
+  };
+}
+
+/** Count per classification tier, over whatever item set is passed in
+ *  (callers pass the portfolio-filtered set so counts track the active
+ *  filters, same scope as Strategic Projects Status). */
+function computeClassificationCounts(items: EnrichedItem[]): ClassificationCounts {
+  return {
+    strategic: items.filter(i => i.classification === 'Strategic').length,
+    majorProject: items.filter(i => i.classification === 'Major Project').length,
+    tactical: items.filter(i => i.classification === 'Tactical').length,
+    bau: items.filter(i => i.classification === 'BAU').length,
   };
 }
 
@@ -212,6 +236,8 @@ export async function getCioSummary(
       owner: item.verticalHead,
     }));
 
+  const classificationCounts = computeClassificationCounts(filteredItems);
+
   // Delivery completion: initiatives closed within the selected period,
   // regardless of when they were originally promised. Distinct from
   // "delivered" below, which is a business-value confirmation against what
@@ -272,6 +298,7 @@ export async function getCioSummary(
     deliveredProjects,
     completedByMonth,
     strategicProjects,
+    classificationCounts,
     filterOptions,
     monthly: { committed, delivered, missed },
     regulatory,
