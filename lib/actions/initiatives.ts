@@ -83,14 +83,12 @@ function toItem(i: InitiativeWithRelations): Item {
           actualMetric: i.valueRealization.actualMetric,
         }
       : undefined,
-    history: i.history
-      .filter(h => h.stage !== null)
-      .map(h => ({
-        stage: STAGE_LABEL[h.stage!] as Stage,
-        date: iso(h.createdAt),
-        user: h.userName,
-        note: h.note,
-      })),
+    history: i.history.map(h => ({
+      stage: h.stage ? (STAGE_LABEL[h.stage] as Stage) : null,
+      date: iso(h.createdAt),
+      user: h.userName,
+      note: h.note,
+    })),
     createdAt: iso(i.createdAt),
   };
 }

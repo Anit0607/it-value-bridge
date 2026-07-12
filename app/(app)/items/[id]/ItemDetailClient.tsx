@@ -446,7 +446,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge tone={tone} size="sm">{label}</Badge>
-                      <span className="text-[11px] text-slate-400">{h.stage}</span>
+                      {h.stage && <span className="text-[11px] text-slate-400">{h.stage}</span>}
                     </div>
                     {h.note && <p className="mt-0.5 text-xs text-slate-600">{h.note}</p>}
                     <p className="mt-0.5 text-[10px] text-slate-400">{h.date} · {h.user}</p>

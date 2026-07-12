@@ -46,7 +46,9 @@ export type OutcomeCategory =
 export type DelaySource = 'IT' | 'Business' | 'Vendor' | 'External';
 
 export interface HistoryEntry {
-  stage: Stage;
+  // null for metadata-only edits (title, classification, ownership, etc.)
+  // that aren't tied to a stage transition — see updateInitiative().
+  stage: Stage | null;
   date: string;
   user: string;
   note?: string;
