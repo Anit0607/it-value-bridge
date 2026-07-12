@@ -129,6 +129,10 @@ export async function approveDemand(id: string, input: ApproveDemandInput) {
     data: {
       title: demand.title,
       type: completion.type === 'Project' ? 'PROJECT' : 'CHANGE_REQUEST',
+      // Demand approval doesn't collect classification yet — defaults to
+      // TACTICAL (schema default) until the approval form gains its own
+      // field. PMO can reclassify via Edit Initiative once created.
+      classification: 'TACTICAL',
       methodology: 'WATERFALL',
       verticalHeadName: completion.verticalHead,
       businessSpoc: completion.businessSpoc,

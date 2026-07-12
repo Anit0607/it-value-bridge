@@ -5,6 +5,7 @@ import type {
   ProcessGroup,
   BenefitCategory,
   InitiativeType,
+  InitiativeClassification,
   DelaySource,
   BenefitUnit,
   Confidence,
@@ -346,6 +347,7 @@ async function main() {
   type InitiativeSeed = {
     title: string;
     type: InitiativeType;
+    classification: InitiativeClassification;
     verticalHeadName: string;
     businessSpoc: string;
     businessSponsor: string;
@@ -379,6 +381,7 @@ async function main() {
     {
       title: 'Mobile Banking App Upgrade',
       type: 'PROJECT',
+      classification: 'STRATEGIC',
       verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Anil Kumar',
       businessSponsor: 'Deepak Mehta',
@@ -409,6 +412,7 @@ async function main() {
     {
       title: 'UPI Enhancement v2.0',
       type: 'CHANGE_REQUEST',
+      classification: 'STRATEGIC',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Meena Gupta',
       businessSponsor: 'Ramesh Jain',
@@ -439,6 +443,7 @@ async function main() {
     {
       title: 'CBS Core Integration',
       type: 'PROJECT',
+      classification: 'STRATEGIC',
       verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Rakesh Joshi',
       businessSponsor: 'Sunil Agarwal',
@@ -465,6 +470,7 @@ async function main() {
     {
       title: 'KYC Automation System',
       type: 'PROJECT',
+      classification: 'MAJOR_PROJECT',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Suman Bose',
       businessSponsor: 'Geeta Krishnan',
@@ -494,6 +500,7 @@ async function main() {
     {
       title: 'Payment Gateway Upgrade',
       type: 'CHANGE_REQUEST',
+      classification: 'MAJOR_PROJECT',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
@@ -523,6 +530,7 @@ async function main() {
     {
       title: 'NACH Mandate Processing',
       type: 'CHANGE_REQUEST',
+      classification: 'TACTICAL',
       verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Anil Kumar',
       businessSponsor: 'Deepak Mehta',
@@ -550,6 +558,7 @@ async function main() {
     {
       title: 'Retail Loan Origination Portal',
       type: 'PROJECT',
+      classification: 'STRATEGIC',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Meena Gupta',
       businessSponsor: 'Ramesh Jain',
@@ -576,6 +585,7 @@ async function main() {
     {
       title: 'Trade Finance Digitisation',
       type: 'PROJECT',
+      classification: 'MAJOR_PROJECT',
       verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Rakesh Joshi',
       businessSponsor: 'Sunil Agarwal',
@@ -601,6 +611,7 @@ async function main() {
     {
       title: 'Customer 360 Dashboard',
       type: 'PROJECT',
+      classification: 'MAJOR_PROJECT',
       verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Suman Bose',
       businessSponsor: 'Geeta Krishnan',
@@ -631,6 +642,7 @@ async function main() {
     {
       title: 'SWIFT Message Automation',
       type: 'CHANGE_REQUEST',
+      classification: 'TACTICAL',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
@@ -656,6 +668,7 @@ async function main() {
     {
       title: 'BBPS Bill Payment Integration',
       type: 'CHANGE_REQUEST',
+      classification: 'TACTICAL',
       verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Anil Kumar',
       businessSponsor: 'Deepak Mehta',
@@ -690,6 +703,7 @@ async function main() {
     {
       title: 'AML Transaction Monitoring',
       type: 'PROJECT',
+      classification: 'STRATEGIC',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Meena Gupta',
       businessSponsor: 'Ramesh Jain',
@@ -714,6 +728,7 @@ async function main() {
     {
       title: 'Digital Onboarding Revamp',
       type: 'PROJECT',
+      classification: 'MAJOR_PROJECT',
       verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Rakesh Joshi',
       businessSponsor: 'Sunil Agarwal',
@@ -744,6 +759,7 @@ async function main() {
     {
       title: 'Debit Card Management System',
       type: 'CHANGE_REQUEST',
+      classification: 'BAU',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Suman Bose',
       businessSponsor: 'Geeta Krishnan',
@@ -775,6 +791,7 @@ async function main() {
     {
       title: 'Forex Rate Feed Integration',
       type: 'CHANGE_REQUEST',
+      classification: 'BAU',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
@@ -797,6 +814,7 @@ async function main() {
     {
       title: 'Mobile POS Merchant App',
       type: 'PROJECT',
+      classification: 'MAJOR_PROJECT',
       verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Anil Kumar',
       businessSponsor: 'Deepak Mehta',
@@ -839,6 +857,7 @@ async function main() {
     {
       title: 'Loan Account Statement API',
       type: 'CHANGE_REQUEST',
+      classification: 'TACTICAL',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Meena Gupta',
       businessSponsor: 'Ramesh Jain',
@@ -864,6 +883,7 @@ async function main() {
     {
       title: 'Treasury Management System Upgrade',
       type: 'PROJECT',
+      classification: 'MAJOR_PROJECT',
       verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Rakesh Joshi',
       businessSponsor: 'Sunil Agarwal',
@@ -889,6 +909,7 @@ async function main() {
     {
       title: 'Customer Grievance Portal',
       type: 'PROJECT',
+      classification: 'TACTICAL',
       verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Suman Bose',
       businessSponsor: 'Geeta Krishnan',
@@ -910,6 +931,7 @@ async function main() {
     {
       title: 'IMPS Real-time Settlement Upgrade',
       type: 'CHANGE_REQUEST',
+      classification: 'STRATEGIC',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
@@ -938,6 +960,7 @@ async function main() {
     {
       title: 'Net Banking 2FA Hardening',
       type: 'CHANGE_REQUEST',
+      classification: 'MAJOR_PROJECT',
       verticalHeadName: 'Priya Sharma',
       businessSpoc: 'Priti Sharma',
       businessSponsor: 'Arvind Nair',
@@ -971,6 +994,7 @@ async function main() {
     {
       title: 'Cheque Truncation System (CTS) Upgrade',
       type: 'PROJECT',
+      classification: 'BAU',
       verticalHeadName: 'Rajesh Kumar',
       businessSpoc: 'Rakesh Joshi',
       businessSponsor: 'Sunil Agarwal',
@@ -1038,6 +1062,7 @@ async function main() {
       data: {
         title: seed.title,
         type: seed.type,
+        classification: seed.classification,
         methodology: 'WATERFALL',
         verticalHeadName: seed.verticalHeadName,
         businessSpoc: seed.businessSpoc,
