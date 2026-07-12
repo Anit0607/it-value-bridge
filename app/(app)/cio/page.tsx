@@ -9,6 +9,8 @@ import { resolvePeriod } from '@/lib/period';
 import { KpiCard } from '@/components/KpiCard';
 import { PageHeader } from '@/components/PageHeader';
 import { PeriodPicker } from '@/components/PeriodPicker';
+import { PortfolioFilterBar } from '@/components/PortfolioFilterBar';
+import { parsePortfolioFilters } from '@/lib/portfolioFilters';
 import { StageFunnel } from '@/components/StageFunnel';
 import { CompletedByMonthChart } from '@/components/CompletedByMonthChart';
 import { RagDot } from '@/components/RagBadge';
@@ -35,12 +37,18 @@ import {
 export default async function CioDashboard({
   searchParams,
 }: {
-  searchParams: { period?: string; from?: string; to?: string };
+  searchParams: {
+    period?: string; from?: string; to?: string;
+    classification?: string; rag?: string; stage?: string; isRegulatory?: string;
+    verticalHead?: string; programHead?: string; programManager?: string;
+    businessHead?: string; businessUnit?: string; businessSpoc?: string;
+  };
 }) {
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
 
   const period = resolvePeriod(searchParams);
+  const filters = parsePortfolioFilters(searchParams);
   const {
     totalCount,
     activeCount: total,
@@ -52,11 +60,12 @@ export default async function CioDashboard({
     periodLabel,
     deliveredProjects,
     completedByMonth,
-    strategicInitiatives,
+    strategicProjects,
+    filterOptions,
     monthly: { committed: monthlyCommitted, delivered, missed },
     regulatory,
     delays,
-  } = await getCioSummary(period, session.user);
+  } = await getCioSummary(period, session.user, filters);
 
   const todayIso = new Date().toISOString().slice(0, 10);
 
@@ -71,6 +80,8 @@ export default async function CioDashboard({
           </Link>
         </div>
       </PageHeader>
+
+      <PortfolioFilterBar options={filterOptions} />
 
       {/* ── Executive Summary Zone ── */}
       <div className="space-y-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
@@ -199,13 +210,13 @@ export default async function CioDashboard({
         </SectionCard>
       )}
 
-      {strategicInitiatives.length > 0 && (
+      {strategicProjects.length > 0 && (
         <SectionCard
-          title="Strategic / High-Impact Initiatives"
+          title="Strategic Projects Status"
           icon={Star}
-          subtitle="Top by projected value + regulatory mandate"
-          tooltip={KPI_DEFINITIONS.strategicInitiatives}
-          count={strategicInitiatives.length}
+          subtitle="Classification = Strategic"
+          tooltip={KPI_DEFINITIONS.strategicProjects}
+          count={strategicProjects.length}
           noPad
         >
           <div className="overflow-x-auto">
@@ -222,7 +233,7 @@ export default async function CioDashboard({
                 </tr>
               </thead>
               <tbody>
-                {strategicInitiatives.map((i, idx) => (
+                {strategicProjects.map((i, idx) => (
                   <tr key={i.id} className={`border-t border-slate-100 transition-colors hover:bg-brand-50/40 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
                     <td className="px-5 py-2.5">
                       <Link href={`/items/${i.id}`} className="font-medium text-slate-800 hover:text-brand-700">

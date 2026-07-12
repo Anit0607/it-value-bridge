@@ -10,5 +10,5 @@ export const KPI_DEFINITIONS = {
   commitmentSlippage: 'Initiatives committed for the selected period but not closed by the period end.',
   regulatoryWatch: 'Initiatives with externally-mandated regulatory deadlines that require close monitoring.',
   governanceLifecycleView: 'Snapshot of how initiatives are distributed across each stage of the governance/delivery lifecycle.',
-  strategicInitiatives: 'Interim view: initiatives ranked by projected annual value and/or regulatory mandate. Formal strategic classification is planned for a future phase.',
+  strategicProjects: 'Initiatives with formal classification = Strategic — the highest leadership-importance tier, independent of delivery type (Project/CR) and regulatory status.',
 } as const;

@@ -4,6 +4,7 @@ import type { AuthUser } from '@/lib/types';
 import { ragCounts } from '@/lib/rag';
 import { STAGES, type Stage, type RAG } from '@/lib/types';
 import { inPeriod, onOrBeforeEnd, type Period } from '@/lib/period';
+import { applyPortfolioFilters, type PortfolioFilters } from '@/lib/portfolioFilters';
 import { enrichAll, type EnrichedItem } from './enrich';
 
 const closureDate = (i: EnrichedItem) => i.history.find(h => h.stage === 'Closed')?.date ?? null;
@@ -33,9 +34,8 @@ export interface MonthlyCompletedPoint {
   count: number;
 }
 
-// Interim ranking until 5E's formal strategic classification lands (PROJECT_BRIEF §5E).
-// "Strategic" here just means: has a regulatory mandate, or carries quantified projected value.
-export interface StrategicInitiative {
+// Strategic Projects Status: formal classification = STRATEGIC (5E).
+export interface StrategicProjectRow {
   id: string;
   title: string;
   currentStage: Stage;
@@ -47,7 +47,14 @@ export interface StrategicInitiative {
   owner: string;
 }
 
-const STRATEGIC_LIMIT = 10;
+export interface PortfolioFilterOptions {
+  verticalHeads: string[];
+  programHeads: string[];
+  programManagers: string[];
+  businessHeads: string[];
+  businessUnits: string[];
+  businessSpocs: string[];
+}
 
 export interface VhSummaryRow {
   vh: string;
@@ -86,8 +93,13 @@ export interface CioSummary {
   deliveredProjects: EnrichedItem[];
   /** Closed-initiative count per calendar month, respecting the selected period. */
   completedByMonth: MonthlyCompletedPoint[];
-  /** Top initiatives by projected value + regulatory flag — interim stand-in for 5E classification. */
-  strategicInitiatives: StrategicInitiative[];
+  /** Initiatives with formal classification = Strategic, within the active
+   *  portfolio filters (5E). */
+  strategicProjects: StrategicProjectRow[];
+  /** Distinct hierarchy values across the full org-visible set (before
+   *  portfolio filters are applied) — feeds PortfolioFilterBar's dropdowns
+   *  so options never shrink as filters narrow results. */
+  filterOptions: PortfolioFilterOptions;
   monthly: {
     committed: EnrichedItem[];
     delivered: EnrichedItem[];
@@ -97,27 +109,49 @@ export interface CioSummary {
   delays: EnrichedItem[];
 }
 
+const RAG_RANK: Record<RAG, number> = { Red: 0, Amber: 1, Green: 2 };
+
 /** Everything the CIO dashboard needs, aggregated in one place. */
 export async function getCioSummary(
   period: Period,
   user: Pick<AuthUser, 'role' | 'name' | 'verticalHead'> & { organizationId?: string | null },
+  filters: PortfolioFilters = {},
 ): Promise<CioSummary> {
+  // Org + role-hierarchy scoped (5B/5C) — the ONLY read of all initiatives.
   const items = enrichAll(await listVisibleInitiativesForUser(user));
 
-  const active = items.filter(i => i.currentStage !== 'Closed');
+  // Dropdown option lists reflect the full visible set, before filters are
+  // applied, so choices never shrink as the user narrows the view.
+  const distinct = (values: (string | null | undefined)[]) =>
+    [...new Set(values.filter((v): v is string => !!v))].sort();
+  const filterOptions: PortfolioFilterOptions = {
+    verticalHeads: distinct(items.map(i => i.verticalHead)),
+    programHeads: distinct(items.map(i => i.programHeadName)),
+    programManagers: distinct(items.map(i => i.programManagerName)),
+    businessHeads: distinct(items.map(i => i.businessHeadName)),
+    businessUnits: distinct(items.map(i => i.businessUnit)),
+    businessSpocs: distinct(items.map(i => i.businessSpoc)),
+  };
+
+  // Everything below this line is scoped by the portfolio filter bar, ON TOP
+  // OF the org/role visibility above — filtering narrows an already-visible
+  // set, it never widens or re-queries it (5B/5C stays intact).
+  const filteredItems = applyPortfolioFilters(items, filters);
+
+  const active = filteredItems.filter(i => i.currentStage !== 'Closed');
   const counts = ragCounts(active.map(i => i.rag));
   const total = active.length;
   const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
 
   const pipelineByStage = STAGES.map(s => ({
     stage: s,
-    count: items.filter(i => i.currentStage === s).length,
+    count: filteredItems.filter(i => i.currentStage === s).length,
   }));
 
-  const activeVHs = [...new Set(items.map(i => i.verticalHead))].sort();
+  const activeVHs = [...new Set(filteredItems.map(i => i.verticalHead))].sort();
   const vhSummary: VhSummaryRow[] = activeVHs
     .map(vh => {
-      const vhItems = items.filter(i => i.verticalHead === vh);
+      const vhItems = filteredItems.filter(i => i.verticalHead === vh);
       const c = ragCounts(vhItems.map(i => i.rag));
       const lastUpdated = vhItems.map(i => i.lastUpdated).sort().reverse()[0] ?? '—';
       return { vh, total: vhItems.length, ...c, lastUpdated };
@@ -128,10 +162,10 @@ export async function getCioSummary(
   // Interim grouping ahead of 5E's full filter toggle — no new classification
   // rules, just a re-slice of the same items by who owns them on the business side.
   const businessOwner = (i: EnrichedItem) => i.businessHeadName || i.businessSponsor;
-  const activeOwners = [...new Set(items.map(businessOwner))].sort();
+  const activeOwners = [...new Set(filteredItems.map(businessOwner))].sort();
   const businessOwnership: BusinessOwnershipRow[] = activeOwners
     .map(owner => {
-      const ownerItems = items.filter(i => businessOwner(i) === owner);
+      const ownerItems = filteredItems.filter(i => businessOwner(i) === owner);
       const c = ragCounts(ownerItems.map(i => i.rag));
       const lastUpdated = ownerItems.map(i => i.lastUpdated).sort().reverse()[0] ?? '—';
       const unitCounts = new Map<string, number>();
@@ -144,23 +178,22 @@ export async function getCioSummary(
     })
     .sort((a, b) => b.red - a.red || b.amber - a.amber);
 
-  // Strategic / high-impact: interim ranking by projected annual value + regulatory
-  // flag, ahead of the formal 5E classification. Value pulled separately since
+  // Strategic Projects Status: formal classification = STRATEGIC (5E),
+  // within the active portfolio filters. Value pulled separately since
   // Item/EnrichedItem doesn't carry benefit claims.
-  const valueRows = items.length
+  const strategicItems = filteredItems.filter(i => i.classification === 'Strategic');
+  const strategicValueRows = strategicItems.length
     ? await prisma.initiative.findMany({
-        where: { id: { in: items.map(i => i.id) } },
+        where: { id: { in: strategicItems.map(i => i.id) } },
         select: { id: true, benefitClaims: { select: { estimatedAnnualValueInr: true } } },
       })
     : [];
-  const valueById = new Map(
-    valueRows.map(r => [r.id, r.benefitClaims.reduce((s, b) => s + b.estimatedAnnualValueInr, 0)]),
+  const strategicValueById = new Map(
+    strategicValueRows.map(r => [r.id, r.benefitClaims.reduce((s, b) => s + b.estimatedAnnualValueInr, 0)]),
   );
-  const strategicInitiatives: StrategicInitiative[] = items
-    .map(i => ({ item: i, value: valueById.get(i.id) ?? 0 }))
-    .filter(({ item, value }) => item.isRegulatory || value > 0)
-    .sort((a, b) => b.value - a.value)
-    .slice(0, STRATEGIC_LIMIT)
+  const strategicProjects: StrategicProjectRow[] = strategicItems
+    .map(item => ({ item, value: strategicValueById.get(item.id) ?? 0 }))
+    .sort((a, b) => RAG_RANK[a.item.rag] - RAG_RANK[b.item.rag] || b.value - a.value)
     .map(({ item, value }) => ({
       id: item.id,
       title: item.title,
@@ -177,7 +210,7 @@ export async function getCioSummary(
   // regardless of when they were originally promised. Distinct from
   // "delivered" below, which is a business-value confirmation against what
   // was committed for the period.
-  const deliveredProjects = items.filter(i => inPeriod(closureDate(i), period));
+  const deliveredProjects = filteredItems.filter(i => inPeriod(closureDate(i), period));
 
   // Month-wise trend of the same closed items. When the period has bounds,
   // zero-fill every month in range so the chart reads as a continuous
@@ -194,7 +227,7 @@ export async function getCioSummary(
   }));
 
   // Promised to go live in the window; delivered = closed by the window's end.
-  const committed = items.filter(i => inPeriod(i.goLiveDate, period));
+  const committed = filteredItems.filter(i => inPeriod(i.goLiveDate, period));
   const delivered = committed.filter(i => {
     const cd = closureDate(i);
     return !!cd && onOrBeforeEnd(cd, period);
@@ -205,7 +238,7 @@ export async function getCioSummary(
   });
 
   // Regulatory commitments, open ones first, soonest external deadline first.
-  const regulatory = items
+  const regulatory = filteredItems
     .filter(i => i.isRegulatory)
     .sort((a, b) => {
       const ac = a.currentStage === 'Closed' ? 1 : 0;
@@ -216,12 +249,12 @@ export async function getCioSummary(
 
   // Delays flagged on active items, worst slip first.
   const slip = (i: EnrichedItem) => (i.etaDays < 0 ? -i.etaDays : i.staleDays);
-  const delays = items
+  const delays = filteredItems
     .filter(i => i.delayed && i.currentStage !== 'Closed')
     .sort((a, b) => slip(b) - slip(a));
 
   return {
-    items,
+    items: filteredItems,
     totalCount: items.length,
     activeCount: total,
     counts,
@@ -232,7 +265,8 @@ export async function getCioSummary(
     periodLabel: period.label,
     deliveredProjects,
     completedByMonth,
-    strategicInitiatives,
+    strategicProjects,
+    filterOptions,
     monthly: { committed, delivered, missed },
     regulatory,
     delays,
