@@ -2,29 +2,12 @@
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import { STAGES, CLASSIFICATION_LABEL, OUTCOME_CATEGORIES } from '@/lib/types';
-import { RAG_VALUES, CLASSIFICATION_KEYS } from '@/lib/portfolioFilters';
+import { RAG_VALUES, CLASSIFICATION_KEYS, PORTFOLIO_FILTER_KEYS } from '@/lib/portfolioFilters';
 import { Badge } from '@/components/ui/Badge';
 import { Filter, RotateCcw } from 'lucide-react';
 
 const selectCls =
   'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400';
-
-// The 12 filter dimensions this bar drives — kept in one place so
-// active-count and reset both stay in sync with what's actually rendered.
-const FILTER_KEYS = [
-  'classification',
-  'rag',
-  'stage',
-  'isRegulatory',
-  'type',
-  'benefitCategory',
-  'verticalHead',
-  'programHead',
-  'programManager',
-  'businessHead',
-  'businessUnit',
-  'businessSpoc',
-] as const;
 
 export interface PortfolioFilterBarOptions {
   verticalHeads?: string[];
@@ -67,7 +50,7 @@ export function PortfolioFilterBar({ options = {} }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  const activeCount = FILTER_KEYS.filter(k => searchParams.get(k)).length;
+  const activeCount = PORTFOLIO_FILTER_KEYS.filter(k => searchParams.get(k)).length;
 
   const setParam = (key: string, value: string) => {
     const next = new URLSearchParams(searchParams.toString());
@@ -79,7 +62,7 @@ export function PortfolioFilterBar({ options = {} }: Props) {
 
   const reset = () => {
     const next = new URLSearchParams(searchParams.toString());
-    FILTER_KEYS.forEach(k => next.delete(k));
+    PORTFOLIO_FILTER_KEYS.forEach(k => next.delete(k));
     const qs = next.toString();
     router.push(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
   };

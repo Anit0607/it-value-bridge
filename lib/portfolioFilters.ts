@@ -24,6 +24,27 @@ export interface PortfolioFilters {
   benefitCategory?: OutcomeCategory;
 }
 
+// The 12 URL search-param keys PortfolioFilterBar reads/writes — the single
+// source of truth for its active-filter count, Reset behavior, and for any
+// other caller (e.g. saved views) that needs to build/validate filter
+// query strings against the same key set.
+export const PORTFOLIO_FILTER_KEYS = [
+  'classification',
+  'rag',
+  'stage',
+  'isRegulatory',
+  'type',
+  'benefitCategory',
+  'verticalHead',
+  'programHead',
+  'programManager',
+  'businessHead',
+  'businessUnit',
+  'businessSpoc',
+] as const;
+
+export type PortfolioFilterParamKey = (typeof PORTFOLIO_FILTER_KEYS)[number];
+
 type SearchParams = { [key: string]: string | string[] | undefined };
 
 function first(v: string | string[] | undefined): string | undefined {
