@@ -2,27 +2,34 @@ import type { BadgeTone } from '@/components/ui/Badge';
 import type { PortfolioFilterParamKey } from '@/lib/portfolioFilters';
 
 /**
- * Dashboards that currently mount PortfolioFilterBar. Extend this union
- * (and add the matching entry to DASHBOARD_VIEW_PATH below) as more views
- * adopt the filter bar — vertical-head and business don't yet.
+ * Dashboards a saved view can target. cio and pmo mount PortfolioFilterBar
+ * and fully apply these query params server-side today; business does not
+ * parse portfolio-filter query params yet — it's included here because two
+ * of the recommended presets are explicitly "Best For" Business too, and
+ * the preset should exist and be ready the moment that page adopts the
+ * filter bar, rather than being modelled twice later.
  */
-export type DashboardView = 'cio' | 'pmo';
+export type DashboardView = 'cio' | 'pmo' | 'business';
 
 export const DASHBOARD_VIEW_PATH: Record<DashboardView, string> = {
   cio: '/cio',
   pmo: '/pmo',
+  business: '/business',
 };
 
 /**
  * A named, reusable slice of the portfolio — a preset combination of
  * PortfolioFilterBar query params with a label a user can click instead of
- * setting each dropdown by hand.
+ * setting each dropdown by hand. These are curated, developer-defined
+ * presets (this file), not user-created persistent saved views — there is
+ * no save/edit/delete UI, and none is planned here.
  *
  * queryParams values use the same on-the-wire casing PortfolioFilterBar
  * itself writes (e.g. classification is the raw InitiativeClassification
  * enum casing — 'STRATEGIC', not the friendly 'Strategic' — because that's
  * what parsePortfolioFilters() expects in the URL; rag/type/benefitCategory
  * use their natural friendly casing, e.g. 'Red', 'Project', 'Revenue').
+ * classification supports a comma-separated OR list, e.g. 'BAU,TACTICAL'.
  */
 export interface SavedView {
   id: string;
@@ -56,49 +63,58 @@ export const SAVED_VIEWS: SavedView[] = [
     tone: 'danger',
   },
   {
-    id: 'major-project-portfolio',
-    label: 'Major Project Portfolio',
-    description: 'Large-scale initiatives classified as Major Project',
+    id: 'this-month-golive',
+    label: 'This Month Go-Live',
+    description: 'Initiatives with an expected go-live date in the current calendar month',
     targetPath: '/pmo',
-    allowedViews: ['cio', 'pmo'],
-    queryParams: { classification: 'MAJOR_PROJECT' },
+    allowedViews: ['pmo'],
+    queryParams: { goLiveThisMonth: 'true' },
     tone: 'brand',
   },
   {
-    id: 'tactical-at-risk',
-    label: 'Tactical At Risk',
-    description: 'Tactical initiatives currently in Amber status',
+    id: 'business-pending',
+    label: 'Business Pending',
+    description: 'Initiatives currently delayed on the business side',
     targetPath: '/pmo',
-    allowedViews: ['cio', 'pmo'],
-    queryParams: { classification: 'TACTICAL', rag: 'Amber' },
-    tone: 'warning',
+    allowedViews: ['pmo', 'business'],
+    queryParams: { delaySource: 'Business' },
+    tone: 'violet',
   },
   {
-    id: 'bau-portfolio',
-    label: 'BAU Portfolio',
-    description: 'Routine, business-as-usual initiatives',
+    id: 'vendor-delays',
+    label: 'Vendor Delays',
+    description: 'Initiatives currently blocked on a vendor',
     targetPath: '/pmo',
     allowedViews: ['pmo'],
-    queryParams: { classification: 'BAU' },
+    queryParams: { delaySource: 'Vendor' },
     tone: 'slate',
   },
   {
-    id: 'projects-only',
-    label: 'Projects Only',
-    description: 'Delivery type = Project, excluding Change Requests',
-    targetPath: '/pmo',
-    allowedViews: ['cio', 'pmo'],
-    queryParams: { type: 'Project' },
-    tone: 'sky',
-  },
-  {
-    id: 'revenue-value',
-    label: 'Revenue-Driving Initiatives',
-    description: 'Initiatives whose primary business value category is Revenue',
+    id: 'major-projects',
+    label: 'Major Projects',
+    description: 'Large-scale initiatives classified as Major Project',
     targetPath: '/cio',
     allowedViews: ['cio', 'pmo'],
+    queryParams: { classification: 'MAJOR_PROJECT' },
+    tone: 'violet',
+  },
+  {
+    id: 'revenue-impact',
+    label: 'Revenue Impact',
+    description: 'Initiatives whose primary business value category is Revenue',
+    targetPath: '/cio',
+    allowedViews: ['cio', 'business'],
     queryParams: { benefitCategory: 'Revenue' },
     tone: 'success',
+  },
+  {
+    id: 'bau-tactical-queue',
+    label: 'BAU / Tactical Queue',
+    description: 'Routine and medium-sized initiatives — BAU or Tactical classification',
+    targetPath: '/pmo',
+    allowedViews: ['pmo'],
+    queryParams: { classification: 'BAU,TACTICAL' },
+    tone: 'slate',
   },
 ];
 
