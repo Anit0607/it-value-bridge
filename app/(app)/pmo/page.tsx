@@ -7,6 +7,7 @@ import { getPmoList } from '@/lib/queries/dashboard';
 import { PmoDashboardClient } from './PmoDashboardClient';
 import { PageHeader } from '@/components/PageHeader';
 import { PortfolioFilterBar } from '@/components/PortfolioFilterBar';
+import { SavedViewsBar } from '@/components/SavedViewsBar';
 import { parsePortfolioFilters } from '@/lib/portfolioFilters';
 import { KpiCard } from '@/components/KpiCard';
 import { Layers, CheckCircle2, AlertTriangle, AlertOctagon, PlusCircle } from 'lucide-react';
@@ -39,6 +40,7 @@ export default async function PmoDashboard({
       </PageHeader>
 
       <PortfolioFilterBar options={filterOptions} />
+      <SavedViewsBar view="pmo" />
 
       <TodaysFocus
         title="Today's governance actions"

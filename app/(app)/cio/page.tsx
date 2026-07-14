@@ -10,6 +10,7 @@ import { KpiCard } from '@/components/KpiCard';
 import { PageHeader } from '@/components/PageHeader';
 import { PeriodPicker } from '@/components/PeriodPicker';
 import { PortfolioFilterBar } from '@/components/PortfolioFilterBar';
+import { SavedViewsBar } from '@/components/SavedViewsBar';
 import { parsePortfolioFilters } from '@/lib/portfolioFilters';
 import { StageFunnel } from '@/components/StageFunnel';
 import { CompletedByMonthChart } from '@/components/CompletedByMonthChart';
@@ -83,6 +84,7 @@ export default async function CioDashboard({
       </PageHeader>
 
       <PortfolioFilterBar options={filterOptions} />
+      <SavedViewsBar view="cio" />
 
       {/* ── Executive Summary Zone ── */}
       <div className="space-y-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
