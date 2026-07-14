@@ -24,6 +24,8 @@ export interface PortfolioFilters {
   delaySource?: DelaySource;
   /** Go-live date falls within the current calendar month. */
   goLiveThisMonth?: boolean;
+  /** Not updated in the last 7 days (and not Closed) — mirrors the PMO "Stale Updates" rule. */
+  staleOnly?: boolean;
   verticalHead?: string;
   programHead?: string;
   programManager?: string;
@@ -33,7 +35,7 @@ export interface PortfolioFilters {
   benefitCategory?: OutcomeCategory;
 }
 
-// The 14 URL search-param keys PortfolioFilterBar reads/writes — the single
+// The 15 URL search-param keys PortfolioFilterBar reads/writes — the single
 // source of truth for its active-filter count, Reset behavior, and for any
 // other caller (e.g. saved views) that needs to build/validate filter
 // query strings against the same key set.
@@ -46,6 +48,7 @@ export const PORTFOLIO_FILTER_KEYS = [
   'benefitCategory',
   'delaySource',
   'goLiveThisMonth',
+  'staleOnly',
   'verticalHead',
   'programHead',
   'programManager',
@@ -108,6 +111,9 @@ export function parsePortfolioFilters(searchParams: SearchParams): PortfolioFilt
   const goLiveThisMonth = first(searchParams.goLiveThisMonth);
   if (goLiveThisMonth === 'true') filters.goLiveThisMonth = true;
 
+  const staleOnly = first(searchParams.staleOnly);
+  if (staleOnly === 'true') filters.staleOnly = true;
+
   const verticalHead = first(searchParams.verticalHead);
   if (verticalHead) filters.verticalHead = verticalHead;
 
@@ -158,6 +164,7 @@ export function applyPortfolioFilters(items: EnrichedItem[], filters: PortfolioF
     if (filters.isRegulatory !== undefined && item.isRegulatory !== filters.isRegulatory) return false;
     if (filters.delaySource && item.delaySource !== filters.delaySource) return false;
     if (filters.goLiveThisMonth && !item.goLiveDate?.startsWith(thisMonth)) return false;
+    if (filters.staleOnly && (item.currentStage === 'Closed' || item.staleDays <= 7)) return false;
     if (filters.verticalHead && item.verticalHead !== filters.verticalHead) return false;
     if (filters.programHead && item.programHeadName !== filters.programHead) return false;
     if (filters.programManager && item.programManagerName !== filters.programManager) return false;

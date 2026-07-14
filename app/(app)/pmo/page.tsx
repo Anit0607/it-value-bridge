@@ -21,6 +21,7 @@ export default async function PmoDashboard({
   searchParams: {
     classification?: string; rag?: string; stage?: string; isRegulatory?: string;
     type?: string; benefitCategory?: string;
+    delaySource?: string; goLiveThisMonth?: string; staleOnly?: string;
     verticalHead?: string; programHead?: string; programManager?: string;
     businessHead?: string; businessUnit?: string; businessSpoc?: string;
   };
@@ -39,8 +40,8 @@ export default async function PmoDashboard({
         </Link>
       </PageHeader>
 
-      <PortfolioFilterBar options={filterOptions} />
       <SavedViewsBar view="pmo" />
+      <PortfolioFilterBar options={filterOptions} />
 
       <TodaysFocus
         title="Today's governance actions"

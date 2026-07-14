@@ -42,6 +42,7 @@ export default async function CioDashboard({
     period?: string; from?: string; to?: string;
     classification?: string; rag?: string; stage?: string; isRegulatory?: string;
     type?: string; benefitCategory?: string;
+    delaySource?: string; goLiveThisMonth?: string; staleOnly?: string;
     verticalHead?: string; programHead?: string; programManager?: string;
     businessHead?: string; businessUnit?: string; businessSpoc?: string;
   };
