@@ -26,16 +26,21 @@ export interface PortfolioFilters {
   goLiveThisMonth?: boolean;
   /** Not updated in the last 7 days (and not Closed) — mirrors the PMO "Stale Updates" rule. */
   staleOnly?: boolean;
+  /** Business Validation stage with no validation recorded yet. */
+  pendingValidation?: boolean;
   verticalHead?: string;
   programHead?: string;
   programManager?: string;
   businessHead?: string;
   businessUnit?: string;
   businessSpoc?: string;
-  benefitCategory?: OutcomeCategory;
+  // Array so a preset can express an OR across categories (e.g. Business
+  // View's "Revenue / Customer Impact" needs Revenue or Customer Experience).
+  // Same comma-separated-on-the-wire convention as classification above.
+  benefitCategory?: OutcomeCategory[];
 }
 
-// The 15 URL search-param keys PortfolioFilterBar reads/writes — the single
+// The 16 URL search-param keys PortfolioFilterBar reads/writes — the single
 // source of truth for its active-filter count, Reset behavior, and for any
 // other caller (e.g. saved views) that needs to build/validate filter
 // query strings against the same key set.
@@ -49,6 +54,7 @@ export const PORTFOLIO_FILTER_KEYS = [
   'delaySource',
   'goLiveThisMonth',
   'staleOnly',
+  'pendingValidation',
   'verticalHead',
   'programHead',
   'programManager',
@@ -114,6 +120,9 @@ export function parsePortfolioFilters(searchParams: SearchParams): PortfolioFilt
   const staleOnly = first(searchParams.staleOnly);
   if (staleOnly === 'true') filters.staleOnly = true;
 
+  const pendingValidation = first(searchParams.pendingValidation);
+  if (pendingValidation === 'true') filters.pendingValidation = true;
+
   const verticalHead = first(searchParams.verticalHead);
   if (verticalHead) filters.verticalHead = verticalHead;
 
@@ -132,9 +141,13 @@ export function parsePortfolioFilters(searchParams: SearchParams): PortfolioFilt
   const businessSpoc = first(searchParams.businessSpoc);
   if (businessSpoc) filters.businessSpoc = businessSpoc;
 
-  const benefitCategory = first(searchParams.benefitCategory);
-  if (benefitCategory && (OUTCOME_CATEGORIES as string[]).includes(benefitCategory)) {
-    filters.benefitCategory = benefitCategory as OutcomeCategory;
+  const benefitCategoryRaw = first(searchParams.benefitCategory);
+  if (benefitCategoryRaw) {
+    const valid = benefitCategoryRaw
+      .split(',')
+      .map(v => v.trim())
+      .filter((v): v is OutcomeCategory => (OUTCOME_CATEGORIES as string[]).includes(v));
+    if (valid.length > 0) filters.benefitCategory = valid;
   }
 
   return filters;
@@ -165,13 +178,14 @@ export function applyPortfolioFilters(items: EnrichedItem[], filters: PortfolioF
     if (filters.delaySource && item.delaySource !== filters.delaySource) return false;
     if (filters.goLiveThisMonth && !item.goLiveDate?.startsWith(thisMonth)) return false;
     if (filters.staleOnly && (item.currentStage === 'Closed' || item.staleDays <= 7)) return false;
+    if (filters.pendingValidation && !(item.currentStage === 'Business Validation' && !item.validation)) return false;
     if (filters.verticalHead && item.verticalHead !== filters.verticalHead) return false;
     if (filters.programHead && item.programHeadName !== filters.programHead) return false;
     if (filters.programManager && item.programManagerName !== filters.programManager) return false;
     if (filters.businessHead && item.businessHeadName !== filters.businessHead) return false;
     if (filters.businessUnit && item.businessUnit !== filters.businessUnit) return false;
     if (filters.businessSpoc && item.businessSpoc !== filters.businessSpoc) return false;
-    if (filters.benefitCategory && item.outcomeCategory !== filters.benefitCategory) return false;
+    if (filters.benefitCategory && !filters.benefitCategory.includes(item.outcomeCategory)) return false;
     return true;
   });
 }

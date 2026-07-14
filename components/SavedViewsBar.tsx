@@ -30,6 +30,13 @@ const CHIP_ACTIVE: Record<BadgeTone, string> = {
 const chipCls = (active: boolean, tone: BadgeTone) =>
   `rounded-full border px-3 py-1.5 text-xs font-medium transition-colors ${active ? CHIP_ACTIVE[tone] : CHIP[tone]}`;
 
+/** Label for the reset-to-unfiltered chip, per dashboard. */
+const RESET_LABEL: Record<DashboardView, string> = {
+  cio: 'All Portfolio',
+  pmo: 'All Portfolio',
+  business: 'My Business Portfolio',
+};
+
 interface Props {
   view: DashboardView;
 }
@@ -63,7 +70,7 @@ export function SavedViewsBar({ view }: Props) {
       </span>
 
       <Link href={pathname} className={chipCls(isAllPortfolio, 'slate')}>
-        All Portfolio
+        {RESET_LABEL[view]}
       </Link>
 
       {views.map(v => (

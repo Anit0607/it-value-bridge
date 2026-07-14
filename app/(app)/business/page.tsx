@@ -6,6 +6,8 @@ import { getBusinessValidations } from '@/lib/queries/dashboard';
 import Link from 'next/link';
 import { RagDot } from '@/components/RagBadge';
 import { PageHeader } from '@/components/PageHeader';
+import { SavedViewsBar } from '@/components/SavedViewsBar';
+import { parsePortfolioFilters, applyPortfolioFilters } from '@/lib/portfolioFilters';
 import { ClipboardCheck, ArrowRight, Inbox } from 'lucide-react';
 import { TodaysFocus } from '@/components/TodaysFocus';
 
@@ -15,18 +17,26 @@ const ACHIEVED_TONE: Record<string, string> = {
   No: 'text-rose-600',
 };
 
-export default async function BusinessSpocView() {
+export default async function BusinessSpocView({
+  searchParams,
+}: {
+  searchParams: { pendingValidation?: string; benefitCategory?: string; delaySource?: string };
+}) {
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
 
   const { items, pending } = await getBusinessValidations(session.user);
+  const filters = parsePortfolioFilters(searchParams);
+  const filteredItems = applyPortfolioFilters(items, filters);
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Business View"
-        subtitle={`Your delivery commitments and outcome confirmations · ${items.length} total`}
+        subtitle={`Your delivery commitments and outcome confirmations · ${filteredItems.length} of ${items.length} total`}
       />
+
+      <SavedViewsBar view="business" />
 
       <TodaysFocus
         title="Pending validations"
@@ -77,12 +87,14 @@ export default async function BusinessSpocView() {
         <div className="border-b border-slate-100 px-5 py-3.5">
           <h2 className="text-sm font-semibold text-slate-800">All My Items</h2>
         </div>
-        {items.length === 0 ? (
+        {filteredItems.length === 0 ? (
           <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
             <div className="mb-3 flex h-11 w-11 items-center justify-center rounded-full bg-slate-100 text-slate-400">
               <Inbox className="h-5 w-5" />
             </div>
-            <p className="text-sm font-medium text-slate-700">No items assigned</p>
+            <p className="text-sm font-medium text-slate-700">
+              {items.length === 0 ? 'No items assigned' : 'No items match this saved view'}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -99,7 +111,7 @@ export default async function BusinessSpocView() {
                 </tr>
               </thead>
               <tbody>
-                {items.map((i, idx) => {
+                {filteredItems.map((i, idx) => {
                   const rag = i.rag;
                   return (
                     <tr key={i.id} className={`border-t border-slate-100 transition-colors hover:bg-brand-50/40 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>

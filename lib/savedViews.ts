@@ -2,12 +2,11 @@ import type { BadgeTone } from '@/components/ui/Badge';
 import type { PortfolioFilterParamKey } from '@/lib/portfolioFilters';
 
 /**
- * Dashboards a saved view can target. cio and pmo mount PortfolioFilterBar
- * and fully apply these query params server-side today; business does not
- * parse portfolio-filter query params yet — it's included here because two
- * of the recommended presets are explicitly "Best For" Business too, and
- * the preset should exist and be ready the moment that page adopts the
- * filter bar, rather than being modelled twice later.
+ * Dashboards a saved view can target. cio and pmo mount the full
+ * PortfolioFilterBar dropdown UI; business intentionally does not — it only
+ * renders SavedViewsBar (a handful of presets, no manual dropdowns) to stay
+ * simpler than PMO, but it still parses/applies the same query params
+ * server-side via parsePortfolioFilters()/applyPortfolioFilters().
  */
 export type DashboardView = 'cio' | 'pmo' | 'business';
 
@@ -29,7 +28,8 @@ export const DASHBOARD_VIEW_PATH: Record<DashboardView, string> = {
  * enum casing — 'STRATEGIC', not the friendly 'Strategic' — because that's
  * what parsePortfolioFilters() expects in the URL; rag/type/benefitCategory
  * use their natural friendly casing, e.g. 'Red', 'Project', 'Revenue').
- * classification supports a comma-separated OR list, e.g. 'BAU,TACTICAL'.
+ * classification and benefitCategory both support a comma-separated OR
+ * list, e.g. 'BAU,TACTICAL' or 'Revenue,Customer Experience'.
  */
 export interface SavedView {
   id: string;
@@ -85,7 +85,7 @@ export const SAVED_VIEWS: SavedView[] = [
     label: 'Business Pending',
     description: 'Initiatives currently delayed on the business side',
     targetPath: '/pmo',
-    allowedViews: ['pmo', 'business'],
+    allowedViews: ['pmo'],
     queryParams: { delaySource: 'Business' },
     tone: 'violet',
   },
@@ -121,7 +121,7 @@ export const SAVED_VIEWS: SavedView[] = [
     label: 'Revenue Impact',
     description: 'Initiatives whose primary business value category is Revenue',
     targetPath: '/cio',
-    allowedViews: ['cio', 'business'],
+    allowedViews: ['cio'],
     queryParams: { benefitCategory: 'Revenue' },
     tone: 'success',
   },
@@ -133,6 +133,33 @@ export const SAVED_VIEWS: SavedView[] = [
     allowedViews: ['pmo'],
     queryParams: { classification: 'BAU,TACTICAL' },
     tone: 'slate',
+  },
+  {
+    id: 'pending-validation',
+    label: 'Pending Validation',
+    description: 'Items awaiting business validation',
+    targetPath: '/business',
+    allowedViews: ['business'],
+    queryParams: { pendingValidation: 'true' },
+    tone: 'warning',
+  },
+  {
+    id: 'revenue-customer-impact',
+    label: 'Revenue / Customer Impact',
+    description: 'Value category focus — Revenue or Customer Experience',
+    targetPath: '/business',
+    allowedViews: ['business'],
+    queryParams: { benefitCategory: 'Revenue,Customer Experience' },
+    tone: 'success',
+  },
+  {
+    id: 'delayed-by-business',
+    label: 'Delayed by Business',
+    description: 'Business-owned delays',
+    targetPath: '/business',
+    allowedViews: ['business'],
+    queryParams: { delaySource: 'Business' },
+    tone: 'violet',
   },
 ];
 
