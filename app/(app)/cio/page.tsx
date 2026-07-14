@@ -83,8 +83,8 @@ export default async function CioDashboard({
         </div>
       </PageHeader>
 
-      <PortfolioFilterBar options={filterOptions} />
       <SavedViewsBar view="cio" />
+      <PortfolioFilterBar options={filterOptions} />
 
       {/* ── Executive Summary Zone ── */}
       <div className="space-y-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
