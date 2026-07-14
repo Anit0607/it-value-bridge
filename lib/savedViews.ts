@@ -35,7 +35,13 @@ export interface SavedView {
   id: string;
   label: string;
   description: string;
-  /** Where clicking this saved view navigates to. */
+  /**
+   * The dashboard this preset was authored for. NOT used to build the link —
+   * SavedViewsBar always links within the CURRENT page's pathname, so a
+   * saved view allowed on multiple dashboards (e.g. Regulatory Watch on both
+   * cio and pmo) keeps the user on whichever one they clicked it from. Kept
+   * as documentation/default-context metadata only.
+   */
   targetPath: string;
   /** Which dashboards should offer this saved view (e.g. in a picker). */
   allowedViews: DashboardView[];
@@ -166,11 +172,4 @@ export const SAVED_VIEWS: SavedView[] = [
 /** Saved views offered on a given dashboard, in definition order. */
 export function savedViewsFor(view: DashboardView): SavedView[] {
   return SAVED_VIEWS.filter(v => v.allowedViews.includes(view));
-}
-
-/** Build the navigable URL (path + query string) for a saved view. */
-export function savedViewUrl(view: SavedView): string {
-  const params = new URLSearchParams(view.queryParams as Record<string, string>);
-  const qs = params.toString();
-  return qs ? `${view.targetPath}?${qs}` : view.targetPath;
 }

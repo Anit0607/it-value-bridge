@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { LayoutGrid } from 'lucide-react';
 import { PORTFOLIO_FILTER_KEYS } from '@/lib/portfolioFilters';
-import { savedViewsFor, savedViewUrl, type DashboardView, type SavedView } from '@/lib/savedViews';
+import { savedViewsFor, type DashboardView, type SavedView } from '@/lib/savedViews';
 import type { BadgeTone } from '@/components/ui/Badge';
 
 const CHIP: Record<BadgeTone, string> = {
@@ -43,19 +43,33 @@ interface Props {
 
 /**
  * Preset saved-view chips (lib/savedViews.ts) for a dashboard. Each chip is a
- * plain navigation to that view's query string on the SAME PortfolioFilterBar
- * model every manual dropdown reads/writes (lib/portfolioFilters.ts) — there
- * is no separate saved-view filtering logic here, just a shortcut into it.
- * Clicking a chip replaces the current filter state entirely (it does not
- * merge with whatever the manual filter bar currently has set), matching the
- * "click a saved view" mental model: e.g. Strategic Red Items always goes to
- * exactly /cio?classification=STRATEGIC&rag=Red.
+ * plain navigation on the SAME PortfolioFilterBar model every manual
+ * dropdown reads/writes (lib/portfolioFilters.ts) — there is no separate
+ * saved-view filtering logic here, just a shortcut into it.
+ *
+ * Links are always built from the CURRENT pathname, never a saved view's own
+ * targetPath — a view allowed on multiple dashboards (e.g. Regulatory Watch
+ * on both cio and pmo) must keep the user on whichever dashboard they
+ * clicked it from, never bounce them to a different workspace. Non-portfolio
+ * params already on the URL (period, from, to) are preserved; only the
+ * PORTFOLIO_FILTER_KEYS are replaced, matching the "click a saved view"
+ * mental model of resetting filters, not the whole page's context.
  */
 export function SavedViewsBar({ view }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const views = savedViewsFor(view);
   if (views.length === 0) return null;
+
+  const buildHref = (queryParams: SavedView['queryParams']) => {
+    const next = new URLSearchParams(searchParams.toString());
+    PORTFOLIO_FILTER_KEYS.forEach(k => next.delete(k));
+    Object.entries(queryParams).forEach(([key, value]) => {
+      if (value) next.set(key, value);
+    });
+    const qs = next.toString();
+    return qs ? `${pathname}?${qs}` : pathname;
+  };
 
   const matches = (queryParams: SavedView['queryParams']) =>
     PORTFOLIO_FILTER_KEYS.every(k => (searchParams.get(k) ?? '') === (queryParams[k] ?? ''));
@@ -69,14 +83,14 @@ export function SavedViewsBar({ view }: Props) {
         Saved Views
       </span>
 
-      <Link href={pathname} className={chipCls(isAllPortfolio, 'slate')}>
+      <Link href={buildHref({})} className={chipCls(isAllPortfolio, 'slate')}>
         {RESET_LABEL[view]}
       </Link>
 
       {views.map(v => (
         <Link
           key={v.id}
-          href={savedViewUrl(v)}
+          href={buildHref(v.queryParams)}
           title={v.description}
           className={chipCls(matches(v.queryParams), v.tone)}
         >
