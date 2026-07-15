@@ -1,7 +1,6 @@
 import type { EnrichedItem } from '@/lib/queries/enrich';
 import { daysFromNow } from '@/lib/rag';
 import type { Stage } from '@/lib/types';
-import type { BadgeTone } from '@/components/ui/Badge';
 
 /**
  * System-generated reminder categories — each a standing rule evaluated
@@ -19,75 +18,22 @@ export type ReminderType =
   | 'BUSINESS_DELAY'
   | 'VENDOR_DELAY';
 
-export interface ReminderDefinition {
-  type: ReminderType;
-  label: string;
-  /** The trigger rule, in plain words — shown as a tooltip/description. */
-  trigger: string;
-  tone: BadgeTone;
-}
+export type ReminderSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
-export const REMINDER_TYPES: ReminderType[] = [
-  'STALE_UPDATE',
-  'STAGE_OVERDUE',
-  'GO_LIVE_RISK',
-  'BUSINESS_VALIDATION_PENDING',
-  'REGULATORY_DEADLINE_RISK',
-  'BUSINESS_DELAY',
-  'VENDOR_DELAY',
-];
-
-export const REMINDER_DEFINITIONS: Record<ReminderType, ReminderDefinition> = {
-  STALE_UPDATE: {
-    type: 'STALE_UPDATE',
-    label: 'Stale Update',
-    trigger: 'Initiative not updated for more than 7 days',
-    tone: 'warning',
-  },
-  STAGE_OVERDUE: {
-    type: 'STAGE_OVERDUE',
-    label: 'Stage Overdue',
-    trigger: 'Current stage expected date is past',
-    tone: 'danger',
-  },
-  GO_LIVE_RISK: {
-    type: 'GO_LIVE_RISK',
-    label: 'Go-Live Risk',
-    trigger: 'Go-live date is close but item is not near closure',
-    tone: 'danger',
-  },
-  BUSINESS_VALIDATION_PENDING: {
-    type: 'BUSINESS_VALIDATION_PENDING',
-    label: 'Business Validation Pending',
-    trigger: 'Item is in Business Validation but not confirmed',
-    tone: 'brand',
-  },
-  REGULATORY_DEADLINE_RISK: {
-    type: 'REGULATORY_DEADLINE_RISK',
-    label: 'Regulatory Deadline Risk',
-    trigger: 'Regulatory due date is close or overdue',
-    tone: 'danger',
-  },
-  BUSINESS_DELAY: {
-    type: 'BUSINESS_DELAY',
-    label: 'Business Delay',
-    trigger: 'Delay source is Business',
-    tone: 'violet',
-  },
-  VENDOR_DELAY: {
-    type: 'VENDOR_DELAY',
-    label: 'Vendor Delay',
-    trigger: 'Delay source is Vendor',
-    tone: 'slate',
-  },
-};
+export type ReminderOwnerRole = 'PMO' | 'VERTICAL_HEAD' | 'PROGRAM_MANAGER' | 'BUSINESS' | 'VENDOR';
 
 export interface Reminder {
+  id: string;
+  initiativeId: string;
+  title: string;
+  message: string;
   type: ReminderType;
-  itemId: string;
-  itemTitle: string;
-  /** Specific, human-readable context for this occurrence, e.g. "9d overdue". */
-  detail: string;
+  severity: ReminderSeverity;
+  owner: string;
+  ownerRole: ReminderOwnerRole;
+  dueDate?: string;
+  daysOverdue?: number;
+  actionHref: string;
 }
 
 // "Close" windows — kept in one place so every reminder that reasons about
@@ -101,65 +47,176 @@ const REGULATORY_RISK_WINDOW_DAYS = 14;
 // on its way out regardless of how close the go-live date is.
 const NEAR_CLOSURE_STAGES: Stage[] = ['Go Live', 'Business Validation', 'Closed'];
 
-/** All reminders currently triggered for a single item. */
-export function computeReminders(item: EnrichedItem): Reminder[] {
+/** Severity for a thing that is ALREADY overdue by N days — escalates with age. */
+function severityForOverdueDays(days: number): ReminderSeverity {
+  if (days > 21) return 'CRITICAL';
+  if (days > 14) return 'HIGH';
+  if (days > 7) return 'MEDIUM';
+  return 'LOW';
+}
+
+/** Severity for a deadline that is APPROACHING (or just passed) N days from now. */
+function severityForApproaching(daysRemaining: number): ReminderSeverity {
+  if (daysRemaining < 0) return 'CRITICAL';
+  if (daysRemaining <= 7) return 'HIGH';
+  if (daysRemaining <= 14) return 'MEDIUM';
+  return 'LOW';
+}
+
+function itemHref(itemId: string, suffix = ''): string {
+  return `/items/${itemId}${suffix}`;
+}
+
+/** Evaluate every standing reminder rule against one already-visible, already-enriched item. */
+function remindersForItem(item: EnrichedItem): Reminder[] {
   if (item.currentStage === 'Closed') return [];
 
   const reminders: Reminder[] = [];
-  const base = { itemId: item.id, itemTitle: item.title };
+  const href = itemHref(item.id);
 
   if (item.staleDays > 7) {
-    reminders.push({ ...base, type: 'STALE_UPDATE', detail: `${item.staleDays}d since last update` });
+    reminders.push({
+      id: `${item.id}-STALE_UPDATE`,
+      initiativeId: item.id,
+      title: item.title,
+      message: `Not updated in ${item.staleDays} days`,
+      type: 'STALE_UPDATE',
+      severity: severityForOverdueDays(item.staleDays),
+      owner: item.programManagerName || item.verticalHead,
+      ownerRole: 'PROGRAM_MANAGER',
+      daysOverdue: item.staleDays,
+      actionHref: href,
+    });
   }
 
   if (item.etaDays < 0) {
-    reminders.push({ ...base, type: 'STAGE_OVERDUE', detail: `${Math.abs(item.etaDays)}d overdue in ${item.currentStage}` });
+    const daysOverdue = Math.abs(item.etaDays);
+    reminders.push({
+      id: `${item.id}-STAGE_OVERDUE`,
+      initiativeId: item.id,
+      title: item.title,
+      message: `${item.currentStage} is ${daysOverdue} day${daysOverdue === 1 ? '' : 's'} past its expected date`,
+      type: 'STAGE_OVERDUE',
+      severity: severityForOverdueDays(daysOverdue),
+      owner: item.programManagerName || item.verticalHead,
+      ownerRole: 'PROGRAM_MANAGER',
+      dueDate: item.stageExpectedDate,
+      daysOverdue,
+      actionHref: href,
+    });
   }
 
   if (!NEAR_CLOSURE_STAGES.includes(item.currentStage)) {
     const daysToGoLive = daysFromNow(item.goLiveDate);
     if (daysToGoLive <= GO_LIVE_RISK_WINDOW_DAYS) {
-      const detail = daysToGoLive < 0
-        ? `go-live ${Math.abs(daysToGoLive)}d overdue, still in ${item.currentStage}`
-        : `go-live in ${daysToGoLive}d, still in ${item.currentStage}`;
-      reminders.push({ ...base, type: 'GO_LIVE_RISK', detail });
+      const overdue = daysToGoLive < 0;
+      reminders.push({
+        id: `${item.id}-GO_LIVE_RISK`,
+        initiativeId: item.id,
+        title: item.title,
+        message: overdue
+          ? `Go-live was ${Math.abs(daysToGoLive)} days ago but the item is still in ${item.currentStage}`
+          : `Go-live is in ${daysToGoLive} days but the item is still in ${item.currentStage}`,
+        type: 'GO_LIVE_RISK',
+        severity: severityForApproaching(daysToGoLive),
+        owner: item.verticalHead,
+        ownerRole: 'VERTICAL_HEAD',
+        dueDate: item.goLiveDate,
+        daysOverdue: overdue ? Math.abs(daysToGoLive) : undefined,
+        actionHref: href,
+      });
     }
   }
 
   if (item.currentStage === 'Business Validation' && !item.validation) {
-    reminders.push({ ...base, type: 'BUSINESS_VALIDATION_PENDING', detail: 'Awaiting business validation' });
+    reminders.push({
+      id: `${item.id}-BUSINESS_VALIDATION_PENDING`,
+      initiativeId: item.id,
+      title: item.title,
+      message: 'Awaiting business validation of outcomes',
+      type: 'BUSINESS_VALIDATION_PENDING',
+      severity: item.daysInStage > 14 ? 'HIGH' : 'MEDIUM',
+      owner: item.businessSpoc,
+      ownerRole: 'BUSINESS',
+      actionHref: itemHref(item.id, '/validate'),
+    });
   }
 
   if (item.isRegulatory && item.regulatoryDueDate) {
     const daysToReg = daysFromNow(item.regulatoryDueDate);
     if (daysToReg <= REGULATORY_RISK_WINDOW_DAYS) {
-      const detail = daysToReg < 0
-        ? `regulatory deadline ${Math.abs(daysToReg)}d overdue`
-        : `regulatory deadline in ${daysToReg}d`;
-      reminders.push({ ...base, type: 'REGULATORY_DEADLINE_RISK', detail });
+      const overdue = daysToReg < 0;
+      reminders.push({
+        id: `${item.id}-REGULATORY_DEADLINE_RISK`,
+        initiativeId: item.id,
+        title: item.title,
+        message: overdue
+          ? `Regulatory deadline missed by ${Math.abs(daysToReg)} days`
+          : `Regulatory deadline in ${daysToReg} days`,
+        type: 'REGULATORY_DEADLINE_RISK',
+        severity: severityForApproaching(daysToReg),
+        owner: item.programHeadName || 'PMO',
+        ownerRole: 'PMO',
+        dueDate: item.regulatoryDueDate,
+        daysOverdue: overdue ? Math.abs(daysToReg) : undefined,
+        actionHref: href,
+      });
     }
   }
 
   if (item.delaySource === 'Business') {
-    reminders.push({ ...base, type: 'BUSINESS_DELAY', detail: item.delayReason || 'Delayed on the business side' });
+    const daysOverdue = item.etaDays < 0 ? Math.abs(item.etaDays) : undefined;
+    reminders.push({
+      id: `${item.id}-BUSINESS_DELAY`,
+      initiativeId: item.id,
+      title: item.title,
+      message: item.delayReason || 'Delayed on the business side',
+      type: 'BUSINESS_DELAY',
+      severity: daysOverdue !== undefined ? severityForOverdueDays(daysOverdue) : 'MEDIUM',
+      owner: item.businessSpoc,
+      ownerRole: 'BUSINESS',
+      dueDate: item.stageExpectedDate,
+      daysOverdue,
+      actionHref: href,
+    });
   }
 
   if (item.delaySource === 'Vendor') {
-    reminders.push({ ...base, type: 'VENDOR_DELAY', detail: item.delayReason || 'Delayed by vendor' });
+    const daysOverdue = item.etaDays < 0 ? Math.abs(item.etaDays) : undefined;
+    reminders.push({
+      id: `${item.id}-VENDOR_DELAY`,
+      initiativeId: item.id,
+      title: item.title,
+      message: item.delayReason || 'Delayed by vendor',
+      type: 'VENDOR_DELAY',
+      // No vendor-contact field exists on Item yet — owner is a placeholder
+      // label, not a real name, until the data model carries one.
+      severity: daysOverdue !== undefined ? severityForOverdueDays(daysOverdue) : 'MEDIUM',
+      owner: 'Vendor',
+      ownerRole: 'VENDOR',
+      dueDate: item.stageExpectedDate,
+      daysOverdue,
+      actionHref: href,
+    });
   }
 
   return reminders;
 }
 
-/** All reminders across a portfolio, flattened — item order is preserved. */
-export function computeAllReminders(items: EnrichedItem[]): Reminder[] {
-  return items.flatMap(computeReminders);
-}
-
-/** Reminders across a portfolio, grouped by type in REMINDER_TYPES order. */
-export function remindersByType(items: EnrichedItem[]): Record<ReminderType, Reminder[]> {
-  const all = computeAllReminders(items);
-  return Object.fromEntries(
-    REMINDER_TYPES.map(type => [type, all.filter(r => r.type === type)]),
-  ) as Record<ReminderType, Reminder[]>;
+/**
+ * Generate every standing reminder across a portfolio.
+ *
+ * SECURITY (5B/5C): this must only ever be called on the result of
+ * `enrichAll(await listVisibleInitiativesForUser(user))` — i.e. after
+ * organization + role-hierarchy scoping has already happened via
+ * buildInitiativeVisibilityWhere(). This function does no data access of
+ * its own; it purely derives reminders from an in-memory array, exactly
+ * like applyPortfolioFilters(). Never wire it up to a query that reads all
+ * initiatives directly — that would bypass tenant and role-visibility rules.
+ *
+ *   const items = enrichAll(await listVisibleInitiativesForUser(user));
+ *   const reminders = generateReminders(items);
+ */
+export function generateReminders(items: EnrichedItem[]): Reminder[] {
+  return items.flatMap(remindersForItem);
 }
