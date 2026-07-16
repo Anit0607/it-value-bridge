@@ -1,5 +1,6 @@
 import type { EnrichedItem } from '@/lib/queries/enrich';
 import { daysFromNow } from '@/lib/rag';
+import { STAGES } from '@/lib/types';
 import type { Stage } from '@/lib/types';
 
 /**
@@ -67,21 +68,23 @@ const REGULATORY_RISK_WINDOW_DAYS = 14;
 // on its way out regardless of how close the go-live date is.
 const NEAR_CLOSURE_STAGES: Stage[] = ['Go Live', 'Business Validation', 'Closed'];
 
-/** Severity for a thing that is ALREADY overdue by N days — escalates with age. */
-function severityForOverdueDays(days: number): ReminderSeverity {
-  if (days > 21) return 'CRITICAL';
-  if (days > 14) return 'HIGH';
-  if (days > 7) return 'MEDIUM';
-  return 'LOW';
-}
+const UAT_INDEX = STAGES.indexOf('UAT');
 
-/** Severity for a deadline that is APPROACHING (or just passed) N days from now. */
-function severityForApproaching(daysRemaining: number): ReminderSeverity {
-  if (daysRemaining < 0) return 'CRITICAL';
-  if (daysRemaining <= 7) return 'HIGH';
-  if (daysRemaining <= 14) return 'MEDIUM';
-  return 'LOW';
-}
+/**
+ * Severity rules — simple, deterministic, fixed thresholds per type (6A).
+ * No graduated/ML scoring: each type maps directly to one of the bands
+ * below, exactly as specified, with no other inputs.
+ *
+ *   CRITICAL: regulatory overdue · stage overdue > 7d · go-live within 7d
+ *             AND stage before UAT · business validation pending > 7d
+ *   HIGH:     stage overdue 1-7d · regulatory within 14d · vendor delay ·
+ *             business delay
+ *   MEDIUM:   stale update > 7d · go-live within 30d (and not yet in
+ *             Go Live/Business Validation/Closed) · business validation
+ *             pending <= 7d (no explicit band given; MEDIUM is the safe
+ *             "still needs attention" default)
+ *   LOW:      stale update 5-7d
+ */
 
 function itemHref(itemId: string, suffix = ''): string {
   return `/items/${itemId}${suffix}`;
@@ -94,14 +97,15 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
   const reminders: Reminder[] = [];
   const href = itemHref(item.id);
 
-  if (item.staleDays > 7) {
+  // Stale Update — triggers from 5 days; LOW 5-7d, MEDIUM > 7d.
+  if (item.staleDays >= 5) {
     reminders.push({
       id: `${item.id}-STALE_UPDATE`,
       initiativeId: item.id,
       title: item.title,
       message: `Not updated in ${item.staleDays} days`,
       type: 'STALE_UPDATE',
-      severity: severityForOverdueDays(item.staleDays),
+      severity: item.staleDays > 7 ? 'MEDIUM' : 'LOW',
       owner: item.programManagerName || item.verticalHead,
       ownerRole: 'PROGRAM_MANAGER',
       daysOverdue: item.staleDays,
@@ -109,6 +113,7 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
     });
   }
 
+  // Stage Overdue — HIGH 1-7d, CRITICAL > 7d.
   if (item.etaDays < 0) {
     const daysOverdue = Math.abs(item.etaDays);
     reminders.push({
@@ -117,7 +122,7 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
       title: item.title,
       message: `${item.currentStage} is ${daysOverdue} day${daysOverdue === 1 ? '' : 's'} past its expected date`,
       type: 'STAGE_OVERDUE',
-      severity: severityForOverdueDays(daysOverdue),
+      severity: daysOverdue > 7 ? 'CRITICAL' : 'HIGH',
       owner: item.programManagerName || item.verticalHead,
       ownerRole: 'PROGRAM_MANAGER',
       dueDate: item.stageExpectedDate,
@@ -126,10 +131,14 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
     });
   }
 
+  // Go-Live Risk — CRITICAL when within 7 days AND stage is still before
+  // UAT (barely any runway left before a QA/business-facing stage even
+  // starts); MEDIUM for the rest of the 30-day window.
   if (!NEAR_CLOSURE_STAGES.includes(item.currentStage)) {
     const daysToGoLive = daysFromNow(item.goLiveDate);
     if (daysToGoLive <= GO_LIVE_RISK_WINDOW_DAYS) {
       const overdue = daysToGoLive < 0;
+      const beforeUAT = STAGES.indexOf(item.currentStage) < UAT_INDEX;
       reminders.push({
         id: `${item.id}-GO_LIVE_RISK`,
         initiativeId: item.id,
@@ -138,7 +147,7 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
           ? `Go-live was ${Math.abs(daysToGoLive)} days ago but the item is still in ${item.currentStage}`
           : `Go-live is in ${daysToGoLive} days but the item is still in ${item.currentStage}`,
         type: 'GO_LIVE_RISK',
-        severity: severityForApproaching(daysToGoLive),
+        severity: daysToGoLive <= 7 && beforeUAT ? 'CRITICAL' : 'MEDIUM',
         owner: item.verticalHead,
         ownerRole: 'VERTICAL_HEAD',
         dueDate: item.goLiveDate,
@@ -148,6 +157,9 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
     }
   }
 
+  // Business Validation Pending — CRITICAL once pending > 7 days; MEDIUM
+  // otherwise (no explicit band given for the early days, so this is the
+  // simple "still needs attention but not yet critical" default).
   if (item.currentStage === 'Business Validation' && !item.validation) {
     reminders.push({
       id: `${item.id}-BUSINESS_VALIDATION_PENDING`,
@@ -155,13 +167,14 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
       title: item.title,
       message: 'Awaiting business validation of outcomes',
       type: 'BUSINESS_VALIDATION_PENDING',
-      severity: item.daysInStage > 14 ? 'HIGH' : 'MEDIUM',
+      severity: item.daysInStage > 7 ? 'CRITICAL' : 'MEDIUM',
       owner: item.businessSpoc,
       ownerRole: 'BUSINESS',
       actionHref: itemHref(item.id, '/validate'),
     });
   }
 
+  // Regulatory Deadline Risk — CRITICAL once overdue; HIGH within 14 days.
   if (item.isRegulatory && item.regulatoryDueDate) {
     const daysToReg = daysFromNow(item.regulatoryDueDate);
     if (daysToReg <= REGULATORY_RISK_WINDOW_DAYS) {
@@ -174,7 +187,7 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
           ? `Regulatory deadline missed by ${Math.abs(daysToReg)} days`
           : `Regulatory deadline in ${daysToReg} days`,
         type: 'REGULATORY_DEADLINE_RISK',
-        severity: severityForApproaching(daysToReg),
+        severity: overdue ? 'CRITICAL' : 'HIGH',
         owner: item.programHeadName || 'PMO',
         ownerRole: 'PMO',
         dueDate: item.regulatoryDueDate,
@@ -184,6 +197,7 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
     }
   }
 
+  // Business Delay — always HIGH while active, regardless of how overdue.
   if (item.delaySource === 'Business') {
     const daysOverdue = item.etaDays < 0 ? Math.abs(item.etaDays) : undefined;
     reminders.push({
@@ -192,7 +206,7 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
       title: item.title,
       message: item.delayReason || 'Delayed on the business side',
       type: 'BUSINESS_DELAY',
-      severity: daysOverdue !== undefined ? severityForOverdueDays(daysOverdue) : 'MEDIUM',
+      severity: 'HIGH',
       owner: item.businessSpoc,
       ownerRole: 'BUSINESS',
       dueDate: item.stageExpectedDate,
@@ -201,6 +215,7 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
     });
   }
 
+  // Vendor Delay — always HIGH while active, regardless of how overdue.
   if (item.delaySource === 'Vendor') {
     const daysOverdue = item.etaDays < 0 ? Math.abs(item.etaDays) : undefined;
     reminders.push({
@@ -211,7 +226,7 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
       type: 'VENDOR_DELAY',
       // No vendor-contact field exists on Item yet — owner is a placeholder
       // label, not a real name, until the data model carries one.
-      severity: daysOverdue !== undefined ? severityForOverdueDays(daysOverdue) : 'MEDIUM',
+      severity: 'HIGH',
       owner: 'Vendor',
       ownerRole: 'VENDOR',
       dueDate: item.stageExpectedDate,
