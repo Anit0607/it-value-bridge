@@ -4,10 +4,12 @@ import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getVisibleInitiativeItem, getInitiativeValue } from '@/lib/actions/initiatives';
 import { getInitiativeDependencies, listLinkableInitiatives } from '@/lib/actions/dependencies';
-import { isPmoEquivalent } from '@/lib/rbac';
+import { listMilestones } from '@/lib/actions/milestones';
+import { isPmoEquivalent, isBusinessEquivalent } from '@/lib/rbac';
 import { ItemDetailClient } from './ItemDetailClient';
 import { ValueRealizationPanel } from '@/components/value/ValueRealizationPanel';
 import { DependencyPanel } from '@/components/dependencies/DependencyPanel';
+import { MilestonesPanel, type MilestoneView } from '@/components/milestones/MilestonesPanel';
 import { RegulatoryControl } from '@/components/RegulatoryControl';
 import { addMonthsIso, realizationStatus } from '@/lib/value';
 
@@ -15,17 +17,31 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
 
-  const [item, value, deps, linkOptions] = await Promise.all([
+  const [item, value, deps, linkOptions, milestonesRaw] = await Promise.all([
     getVisibleInitiativeItem(params.id, session.user),
     getInitiativeValue(params.id, session.user.organizationId),
     getInitiativeDependencies(params.id, session.user.organizationId),
     listLinkableInitiatives(params.id, session.user.organizationId),
+    listMilestones(params.id, session.user),
   ]);
   if (!item) notFound();
 
   const role = session.user.role;
   const canRecord = isPmoEquivalent(role) || role === 'CIO';
   const canEditDeps = isPmoEquivalent(role) || role === 'CIO' || role === 'VERTICAL_HEAD';
+  const canEditMilestones = isPmoEquivalent(role) || role === 'CIO';
+  const canCompleteMilestones = canEditMilestones || role === 'VERTICAL_HEAD' || isBusinessEquivalent(role);
+
+  const milestones: MilestoneView[] = milestonesRaw.map(m => ({
+    id: m.id,
+    title: m.title,
+    description: m.description,
+    owner: m.owner,
+    ownerRole: m.ownerRole,
+    dueDate: m.dueDate.toISOString().slice(0, 10),
+    status: m.status,
+    completedAt: m.completedAt ? m.completedAt.toISOString().slice(0, 10) : null,
+  }));
 
   // Benefit-realization status for the value panel (computed at render).
   const goLive = item.history.find(h => h.stage === 'Go Live') ?? item.history.find(h => h.stage === 'Closed');
@@ -60,6 +76,14 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
           <ValueRealizationPanel initiativeId={params.id} value={value} canRecord={canRecord} realization={realization} />
         </div>
       )}
+      <div className="mx-auto max-w-5xl">
+        <MilestonesPanel
+          initiativeId={params.id}
+          milestones={milestones}
+          canEdit={canEditMilestones}
+          canComplete={canCompleteMilestones}
+        />
+      </div>
       <div className="mx-auto max-w-5xl">
         <DependencyPanel initiativeId={params.id} deps={deps} options={linkOptions} canEdit={canEditDeps} />
       </div>
