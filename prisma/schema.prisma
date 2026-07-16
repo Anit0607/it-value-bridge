@@ -110,6 +110,13 @@ enum StoryStatus {
   DONE
 }
 
+enum MilestoneStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  BLOCKED
+  COMPLETED
+}
+
 // ---------- Value realization ----------
 enum BenefitUnit {
   INR
@@ -191,11 +198,11 @@ model User {
 
 // ---------- Core ----------
 model Initiative {
-  id             String                    @id @default(cuid())
+  id             String                   @id @default(cuid())
   title          String
   type           InitiativeType
   classification InitiativeClassification @default(TACTICAL)
-  methodology    Methodology               @default(WATERFALL)
+  methodology    Methodology              @default(WATERFALL)
 
   verticalHeadName String
   verticalHead     User?   @relation("VerticalHeadInitiatives", fields: [verticalHeadId], references: [id])
@@ -219,7 +226,7 @@ model Initiative {
   benefitCategory    BenefitCategory
   outcomeDescription String
   targetMetric       String
-  expectedGoLiveDate  DateTime
+  expectedGoLiveDate DateTime
 
   // value governance / cost (Value Realization Layer)
   estimatedCostInr Float?
@@ -253,6 +260,7 @@ model Initiative {
   updatedAt DateTime @updatedAt
 
   stages           WaterfallStage[]
+  milestones       Milestone[]
   knowledgeAreas   KnowledgeArea[]
   risks            Risk[]
   stakeholders     Stakeholder[]
@@ -263,9 +271,9 @@ model Initiative {
   stories          Story[]
   benefitClaims    BenefitClaim[]
   okrLinks         InitiativeOkr[]
-  originDemand     Demand?          @relation("DemandInitiative")
-  dependsOn        Dependency[]     @relation("Dependent")
-  blocking         Dependency[]     @relation("Blocker")
+  originDemand     Demand?                   @relation("DemandInitiative")
+  dependsOn        Dependency[]              @relation("Dependent")
+  blocking         Dependency[]              @relation("Blocker")
 
   @@index([verticalHeadName])
   @@index([currentStage])
@@ -294,6 +302,27 @@ model WaterfallStage {
 
   @@unique([initiativeId, stage])
   @@index([initiativeId])
+}
+
+model Milestone {
+  id           String     @id @default(cuid())
+  initiativeId String
+  initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String?
+  owner       String
+  ownerRole   String?
+  dueDate     DateTime
+  status      MilestoneStatus @default(NOT_STARTED)
+
+  completedAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([initiativeId])
+  @@index([status])
+  @@index([dueDate])
 }
 
 // ---------- Governance (delivery health areas) ----------
@@ -431,18 +460,18 @@ model BenefitClaim {
   demand       Demand?     @relation(fields: [demandId], references: [id], onDelete: Cascade)
   demandId     String?
 
-  category                BenefitCategory
-  metricName              String // e.g. "UPI transaction drop rate"
-  baselineValue           Float?
-  targetValue             Float?
-  unit                    BenefitUnit @default(INR)
-  estimatedAnnualValueInr Float       @default(0) // ₹ value for board rollups
-  confidence              Confidence  @default(MEDIUM)
-  realizationHorizonMonths Int        @default(12)
-  narrative               String      @default("")
+  category                 BenefitCategory
+  metricName               String // e.g. "UPI transaction drop rate"
+  baselineValue            Float?
+  targetValue              Float?
+  unit                     BenefitUnit     @default(INR)
+  estimatedAnnualValueInr  Float           @default(0) // ₹ value for board rollups
+  confidence               Confidence      @default(MEDIUM)
+  realizationHorizonMonths Int             @default(12)
+  narrative                String          @default("")
 
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
   measurements ValueMeasurement[]
 
   @@index([initiativeId])
@@ -479,7 +508,7 @@ model Okr {
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
-  links           InitiativeOkr[]
+  links InitiativeOkr[]
 }
 
 model InitiativeOkr {
@@ -498,16 +527,16 @@ model InitiativeOkr {
 // Demand-management funnel: business raises a need with quantified benefit(s),
 // PMO triages, and on approval it converts into an Initiative.
 model Demand {
-  id           String         @id @default(cuid())
-  title        String
-  requirement  String
-  raisedBy     User?          @relation("RaisedDemands", fields: [raisedById], references: [id])
-  raisedById   String?
-  raisedByName String
+  id               String         @id @default(cuid())
+  title            String
+  requirement      String
+  raisedBy         User?          @relation("RaisedDemands", fields: [raisedById], references: [id])
+  raisedById       String?
+  raisedByName     String
   verticalHeadName String?
-  status       DemandStatus   @default(RAISED)
-  priority     DemandPriority @default(MEDIUM)
-  reviewNote   String         @default("")
+  status           DemandStatus   @default(RAISED)
+  priority         DemandPriority @default(MEDIUM)
+  reviewNote       String         @default("")
 
   convertedInitiative   Initiative? @relation("DemandInitiative", fields: [convertedInitiativeId], references: [id])
   convertedInitiativeId String?     @unique
