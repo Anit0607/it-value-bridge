@@ -310,19 +310,23 @@ model WaterfallStage {
 // this), no Gantt/scheduling fields, no resource or effort/hours tracking,
 // no sprint/task board linkage, no timesheets. If any of that is ever
 // needed, it's a deliberate new model/feature, not an extension of this one.
+//
+// Typical checkpoints (not enforced — title is free text): BRD Sign-off,
+// FSD Sign-off, SIT Completion, UAT Sign-off, AppSec Closure, CAB Approval,
+// Go-Live Readiness, Business Validation.
 model Milestone {
   id           String     @id @default(cuid())
   initiativeId String
   initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
 
-  title       String
-  description String?
-  owner       String
-  ownerRole   String?
-  dueDate     DateTime
+  title       String // checkpoint name, e.g. "UAT Sign-off"
+  description String? // optional detail
+  owner       String // accountable person/team
+  ownerRole   String? // reference values: PMO / IT / Business / Vendor — free text, not an enum
+  dueDate     DateTime // planned checkpoint date
   status      MilestoneStatus @default(NOT_STARTED)
 
-  completedAt DateTime?
+  completedAt DateTime? // actual completion date
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
 
