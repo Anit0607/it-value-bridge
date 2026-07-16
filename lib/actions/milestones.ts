@@ -2,7 +2,7 @@
 
 import { prisma } from '@/lib/db';
 import { requireRole, assertVisibleInitiativeAccess } from '@/lib/authz';
-import { PMO_EQUIVALENT_ROLES } from '@/lib/rbac';
+import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES } from '@/lib/rbac';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { Milestone } from '@prisma/client';
@@ -20,10 +20,25 @@ import type { Milestone } from '@prisma/client';
  * caller happens to know/guess it, mirroring the same guard every
  * initiative-mutating action in lib/actions/initiatives.ts and
  * lib/actions/dependencies.ts already uses.
+ *
+ * PERMISSIONS (6B — simple, role-only; no "business-owned milestone" scoping
+ * yet, that's a later pass):
+ *   View            — any role whose visibility already covers the
+ *                      initiative (assertVisibleInitiativeAccess is the gate;
+ *                      listMilestones has no separate role check).
+ *   Create/Edit/Delete — PMO-equivalent (PMO/PROGRAM_HEAD/PROGRAM_MANAGER) + CIO.
+ *   Complete           — the above, plus VERTICAL_HEAD and Business-equivalent
+ *                      (BUSINESS/BUSINESS_HEAD) — anyone who can see the
+ *                      initiative can mark a milestone complete, but only
+ *                      PMO/CIO can create, edit, or delete one.
  */
 
 async function requireEditor() {
-  return requireRole(...PMO_EQUIVALENT_ROLES, 'CIO', 'VERTICAL_HEAD');
+  return requireRole(...PMO_EQUIVALENT_ROLES, 'CIO');
+}
+
+async function requireCompleter() {
+  return requireRole(...PMO_EQUIVALENT_ROLES, 'CIO', 'VERTICAL_HEAD', ...BUSINESS_EQUIVALENT_ROLES);
 }
 
 /** Resolve a milestone id to its parent initiativeId, or throw if it doesn't exist. */
@@ -114,7 +129,7 @@ export async function updateMilestone(milestoneId: string, input: UpdateMileston
 
 /** The only path to status = COMPLETED — also stamps completedAt. */
 export async function completeMilestone(milestoneId: string): Promise<Milestone> {
-  const user = await requireEditor();
+  const user = await requireCompleter();
   const initiativeId = await requireMilestoneInitiativeId(milestoneId);
   await assertVisibleInitiativeAccess(initiativeId, user);
 
