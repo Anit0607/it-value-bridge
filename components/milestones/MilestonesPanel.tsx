@@ -200,7 +200,9 @@ export function MilestonesPanel({
       )}
 
       {milestones.length === 0 && mode === 'none' ? (
-        <p className="text-xs text-slate-400">No milestones yet.</p>
+        <p className="text-xs text-slate-400">
+          No milestones yet. PMO or Program Managers can add milestone checkpoints such as BRD Sign-off, SIT Completion, UAT Sign-off, AppSec Closure, and Go-Live Readiness.
+        </p>
       ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">

@@ -44,7 +44,19 @@ export function ValueRealizationPanel({
   const [form, setForm] = useState({ horizonLabel: '+3m' as (typeof HORIZONS)[number], realizedInr: '', scale: 10_000_000, actualValue: '', note: '' });
 
   const claims = value.benefitClaims;
-  if (claims.length === 0) return null;
+  if (claims.length === 0) {
+    return (
+      <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+        <h2 className="mb-3 flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-slate-500">
+          <LineChart className="h-3.5 w-3.5" />
+          Value Realization
+        </h2>
+        <p className="text-xs text-slate-400">
+          No value claims recorded yet. PMO or CIO can add benefit claims when editing this initiative.
+        </p>
+      </div>
+    );
+  }
 
   const totalProjected = claims.reduce((s, c) => s + c.estimatedAnnualValueInr, 0);
   const totalRealized = claims.reduce((s, c) => s + latestRealized(c.measurements), 0);

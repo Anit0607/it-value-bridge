@@ -95,7 +95,12 @@ export default async function DependenciesPage() {
           </h2>
         </div>
         {o.topBlockers.length === 0 ? (
-          <p className="px-5 py-6 text-sm text-slate-500">No dependencies recorded yet.</p>
+          <div className="px-5 py-6">
+            <p className="text-sm font-medium text-slate-700">No dependencies recorded yet.</p>
+            <p className="mt-1 text-xs text-slate-400">
+              PMO, CIO, or a Vertical Head can link initiatives that depend on each other from the Cross-System Dependencies section on an item&apos;s detail page.
+            </p>
+          </div>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">

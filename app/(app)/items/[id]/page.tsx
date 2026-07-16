@@ -71,7 +71,7 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
           canEdit={canRecord}
         />
       </div>
-      {value && value.benefitClaims.length > 0 && (
+      {value && (
         <div className="mx-auto max-w-5xl">
           <ValueRealizationPanel initiativeId={params.id} value={value} canRecord={canRecord} realization={realization} />
         </div>

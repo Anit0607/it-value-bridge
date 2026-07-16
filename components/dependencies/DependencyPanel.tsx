@@ -105,7 +105,9 @@ export function DependencyPanel({
             <ArrowUp className="h-3.5 w-3.5 text-slate-400" /> Depends on
           </div>
           {deps.upstream.length === 0 ? (
-            <p className="text-xs text-slate-400">No upstream dependencies.</p>
+            <p className="text-xs text-slate-400">
+              No upstream dependencies. {canEdit ? 'Link an item this depends on below.' : 'PMO, CIO, or the Vertical Head can link a blocking item from here.'}
+            </p>
           ) : (
             <ul className="space-y-1.5">
               {deps.upstream.map(l => <LinkRow key={l.dependencyId} link={l} canEdit={canEdit} onRemove={remove} pending={isPending} />)}
@@ -119,7 +121,9 @@ export function DependencyPanel({
             <ArrowDown className="h-3.5 w-3.5 text-slate-400" /> Blocks
           </div>
           {deps.downstream.length === 0 ? (
-            <p className="text-xs text-slate-400">Nothing depends on this yet.</p>
+            <p className="text-xs text-slate-400">
+              Nothing depends on this yet. No other initiative has been linked as blocked by this one.
+            </p>
           ) : (
             <ul className="space-y-1.5">
               {deps.downstream.map(l => <LinkRow key={l.dependencyId} link={l} canEdit={false} onRemove={remove} pending={isPending} />)}

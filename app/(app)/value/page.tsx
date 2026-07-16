@@ -115,6 +115,15 @@ export default async function ValueDashboard({
         </div>
       )}
 
+      {s.totals.initiativesWithValue === 0 ? (
+        <div className="rounded-xl border border-dashed border-slate-300 bg-white p-10 text-center shadow-card">
+          <p className="text-sm font-medium text-slate-700">No value data yet</p>
+          <p className="mx-auto mt-1 max-w-md text-xs text-slate-400">
+            No initiative has a committed benefit claim yet. PMO or CIO can add benefit claims — projected annual value, category, and linked OKR — when creating or editing an initiative.
+          </p>
+        </div>
+      ) : (
+      <>
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Value by category */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card lg:col-span-2">
@@ -271,6 +280,8 @@ export default async function ValueDashboard({
           </div>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

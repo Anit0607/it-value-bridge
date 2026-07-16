@@ -295,6 +295,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
   };
 
   const emptyContext = useMemo(() => {
+    if (items.length === 0)               return { title: 'No initiatives yet.', sub: 'PMO or Program Managers can create the first initiative from the New Initiative button, or try widening the portfolio filters above.' };
     if (filters.rag === 'Red')            return { title: 'No red initiatives found.', sub: 'All currently visible initiatives are outside critical risk.' };
     if (filters.rag === 'Amber')          return { title: 'No amber initiatives found.', sub: 'All active initiatives are either on track or need escalation.' };
     if (filters.staleOnly)                return { title: 'No stale initiatives found.', sub: 'All initiatives have been updated within the last 7 days.' };
@@ -311,7 +312,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
       if (v) return { title: `No items in "${v.label}".`, sub: 'This saved view returned no results for the current portfolio.' };
     }
     return { title: 'No initiatives match the current filters.', sub: 'Try clearing a filter or adjusting your selection.' };
-  }, [filters, activeView]);
+  }, [items, filters, activeView]);
 
   const insight = useMemo(() => {
     const active = items.filter(i => i.currentStage !== 'Closed');

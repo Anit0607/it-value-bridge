@@ -306,6 +306,14 @@ export default async function CioDashboard({
       )}
 
       <SectionCard title="Vertical Head Summary" subtitle="Sorted by risk" noPad>
+        {vhSummary.length === 0 ? (
+          <div className="px-5 py-8 text-center">
+            <p className="text-sm font-medium text-slate-700">No vertical head data yet</p>
+            <p className="mt-1 text-xs text-slate-400">
+              This appears once PMO or Program Managers create initiatives and assign an IT Vertical Head, or once the current filters match at least one initiative.
+            </p>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -347,9 +355,18 @@ export default async function CioDashboard({
             </tbody>
           </table>
         </div>
+        )}
       </SectionCard>
 
       <SectionCard title="Business Ownership Summary" subtitle="By Business Head, sorted by risk" noPad>
+        {businessOwnership.length === 0 ? (
+          <div className="px-5 py-8 text-center">
+            <p className="text-sm font-medium text-slate-700">No business ownership data yet</p>
+            <p className="mt-1 text-xs text-slate-400">
+              This appears once PMO or Program Managers assign a Business Head and Business Unit to an initiative, or once the current filters match at least one initiative.
+            </p>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -393,6 +410,7 @@ export default async function CioDashboard({
             </tbody>
           </table>
         </div>
+        )}
       </SectionCard>
 
       {/* Governance Lifecycle View + delivery trend — context sections, last in executive order */}

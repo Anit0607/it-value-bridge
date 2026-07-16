@@ -117,6 +117,11 @@ export default async function BusinessSpocView({
             <p className="text-sm font-medium text-slate-700">
               {items.length === 0 ? 'No items assigned' : 'No items match this saved view'}
             </p>
+            <p className="mt-1 max-w-xs text-xs text-slate-400">
+              {items.length === 0
+                ? 'PMO assigns you as Business SPOC when an initiative is created or edited.'
+                : 'Try a different saved view, or clear it to see everything assigned to you.'}
+            </p>
           </div>
         ) : (
           <div className="overflow-x-auto">

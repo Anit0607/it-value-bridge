@@ -184,6 +184,12 @@ export function UserManagementClient({ users }: Props) {
 
       {/* User table */}
       <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
+        {users.length === 0 ? (
+          <div className="flex flex-col items-center justify-center px-6 py-16 text-center">
+            <p className="text-sm font-medium text-slate-700">No users found</p>
+            <p className="mt-1 text-xs text-slate-400">An Admin can create the first pilot user with the button above.</p>
+          </div>
+        ) : (
         <div className="overflow-x-auto">
           <table className="min-w-full text-sm">
             <thead>
@@ -231,6 +237,7 @@ export function UserManagementClient({ users }: Props) {
             </tbody>
           </table>
         </div>
+        )}
       </div>
     </div>
   );
