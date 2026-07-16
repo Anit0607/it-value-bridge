@@ -11,6 +11,8 @@ import type {
   Confidence,
   DemandStatus,
   DemandPriority,
+  MilestoneStatus,
+  MilestoneOwnerRole,
 } from '@prisma/client';
 
 const prisma = new PrismaClient();
@@ -1170,6 +1172,109 @@ async function main() {
   }
 
   console.log(`Seeded ${count} initiatives`);
+
+  // --- Milestones ---
+  // Demo coverage across 14 initiatives spanning every status (Completed,
+  // In Progress, Blocked, and overdue-not-completed at both the 1-7d/HIGH
+  // and >7d/CRITICAL severity bands, plus one business-owned overdue case
+  // to demo the HIGH-capped rule) — an empty Milestones section on every
+  // detail page would make the whole feature look unfinished in a demo.
+  type MilestoneSeed = {
+    initiativeTitle: string;
+    title: string;
+    description?: string;
+    owner: string;
+    ownerRole?: MilestoneOwnerRole;
+    dueDate: Date;
+    status: MilestoneStatus;
+    completedAt?: Date;
+  };
+
+  const milestoneSeeds: MilestoneSeed[] = [
+    // Mobile Banking App Upgrade (DEVELOPMENT) — on track
+    { initiativeTitle: 'Mobile Banking App Upgrade', title: 'BRD Sign-off', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-03-10'), status: 'COMPLETED', completedAt: d('2026-03-10') },
+    { initiativeTitle: 'Mobile Banking App Upgrade', title: 'FSD Sign-off', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-04-05'), status: 'COMPLETED', completedAt: d('2026-04-05') },
+    { initiativeTitle: 'Mobile Banking App Upgrade', title: 'SIT Completion', owner: 'Rajesh Kumar', ownerRole: 'IT', dueDate: d('2026-07-28'), status: 'IN_PROGRESS' },
+
+    // UPI Enhancement v2.0 (SIT) — on track
+    { initiativeTitle: 'UPI Enhancement v2.0', title: 'BRD Sign-off', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-04-01'), status: 'COMPLETED', completedAt: d('2026-04-01') },
+    { initiativeTitle: 'UPI Enhancement v2.0', title: 'FSD Sign-off', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-04-20'), status: 'COMPLETED', completedAt: d('2026-04-20') },
+    { initiativeTitle: 'UPI Enhancement v2.0', title: 'SIT Completion', owner: 'Priya Sharma', ownerRole: 'IT', dueDate: d('2026-07-25'), status: 'IN_PROGRESS' },
+    { initiativeTitle: 'UPI Enhancement v2.0', title: 'UAT Sign-off', owner: 'Priya Sharma', ownerRole: 'IT', dueDate: d('2026-08-05'), status: 'NOT_STARTED' },
+
+    // CBS Core Integration (DEVELOPMENT, vendor-delayed) — blocked on the
+    // vendor's own overdue deliverable, matching its notes/history.
+    { initiativeTitle: 'CBS Core Integration', title: 'BRD Sign-off', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-04-01'), status: 'COMPLETED', completedAt: d('2026-04-01') },
+    { initiativeTitle: 'CBS Core Integration', title: 'FSD Sign-off', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-04-20'), status: 'COMPLETED', completedAt: d('2026-04-20') },
+    { initiativeTitle: 'CBS Core Integration', title: 'Vendor API Documentation', description: 'CBS vendor to deliver full API documentation for Loans module integration.', owner: 'CBS Vendor', ownerRole: 'VENDOR', dueDate: d('2026-06-10'), status: 'BLOCKED' },
+
+    // Payment Gateway Upgrade (CAB Approval) — mildly overdue (HIGH)
+    { initiativeTitle: 'Payment Gateway Upgrade', title: 'SIT Completion', owner: 'Priya Sharma', ownerRole: 'IT', dueDate: d('2026-05-20'), status: 'COMPLETED', completedAt: d('2026-05-22') },
+    { initiativeTitle: 'Payment Gateway Upgrade', title: 'CAB Approval', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-07-10'), status: 'NOT_STARTED' },
+
+    // NACH Mandate Processing (FSD, stale) — badly overdue (CRITICAL)
+    { initiativeTitle: 'NACH Mandate Processing', title: 'BRD Sign-off', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-05-01'), status: 'COMPLETED', completedAt: d('2026-05-01') },
+    { initiativeTitle: 'NACH Mandate Processing', title: 'FSD Sign-off', owner: 'Rohan Verma', ownerRole: 'IT', dueDate: d('2026-06-01'), status: 'NOT_STARTED' },
+
+    // Trade Finance Digitisation (COMMERCIAL, business-delayed) — blocked
+    // AND business-owned, to demo the business-owned severity cap.
+    { initiativeTitle: 'Trade Finance Digitisation', title: 'BRD Sign-off', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-04-15'), status: 'COMPLETED', completedAt: d('2026-04-18') },
+    { initiativeTitle: 'Trade Finance Digitisation', title: 'Commercial Sign-off', description: 'Awaiting business sign-off on vendor commercial terms.', owner: 'Suman Bose', ownerRole: 'BUSINESS', dueDate: d('2026-06-05'), status: 'BLOCKED' },
+
+    // Customer 360 Dashboard (AppSec) — overdue (CRITICAL), in progress
+    { initiativeTitle: 'Customer 360 Dashboard', title: 'UAT Sign-off', owner: 'Rajesh Kumar', ownerRole: 'IT', dueDate: d('2026-05-20'), status: 'COMPLETED', completedAt: d('2026-05-25') },
+    { initiativeTitle: 'Customer 360 Dashboard', title: 'AppSec Closure', owner: 'Rajesh Kumar', ownerRole: 'IT', dueDate: d('2026-06-15'), status: 'IN_PROGRESS' },
+
+    // SWIFT Message Automation (SIT) — mildly overdue (HIGH)
+    { initiativeTitle: 'SWIFT Message Automation', title: 'FSD Sign-off', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-05-10'), status: 'COMPLETED', completedAt: d('2026-05-10') },
+    { initiativeTitle: 'SWIFT Message Automation', title: 'SIT Completion', owner: 'Priya Sharma', ownerRole: 'IT', dueDate: d('2026-07-11'), status: 'IN_PROGRESS' },
+
+    // BBPS Bill Payment Integration (UAT, IT-delayed) — badly overdue (CRITICAL)
+    { initiativeTitle: 'BBPS Bill Payment Integration', title: 'SIT Completion', owner: 'Neha Kapoor', ownerRole: 'IT', dueDate: d('2026-05-01'), status: 'COMPLETED', completedAt: d('2026-05-03') },
+    { initiativeTitle: 'BBPS Bill Payment Integration', title: 'UAT Sign-off', owner: 'Rajesh Kumar', ownerRole: 'IT', dueDate: d('2026-06-01'), status: 'IN_PROGRESS' },
+
+    // Digital Onboarding Revamp (Go Live) — badly overdue (CRITICAL)
+    { initiativeTitle: 'Digital Onboarding Revamp', title: 'CAB Approval', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-05-15'), status: 'COMPLETED', completedAt: d('2026-05-15') },
+    { initiativeTitle: 'Digital Onboarding Revamp', title: 'Go-Live Readiness', owner: 'Rajesh Kumar', ownerRole: 'IT', dueDate: d('2026-06-01'), status: 'NOT_STARTED' },
+
+    // Debit Card Management System (Business Validation) — business-owned
+    // overdue, demoing the HIGH-capped rule at a large day count.
+    { initiativeTitle: 'Debit Card Management System', title: 'Go-Live Readiness', owner: 'Priya Sharma', ownerRole: 'IT', dueDate: d('2026-05-10'), status: 'COMPLETED', completedAt: d('2026-05-12') },
+    { initiativeTitle: 'Debit Card Management System', title: 'Business Validation', owner: 'Anil Kumar', ownerRole: 'BUSINESS', dueDate: d('2026-05-25'), status: 'NOT_STARTED' },
+
+    // Cheque Truncation System (UAT, IT-delayed 70+ days) — severely
+    // overdue (CRITICAL), the sharpest demo case for escalation.
+    { initiativeTitle: 'Cheque Truncation System (CTS) Upgrade', title: 'SIT Completion', owner: 'Amit Patel', ownerRole: 'IT', dueDate: d('2026-02-20'), status: 'COMPLETED', completedAt: d('2026-02-20') },
+    { initiativeTitle: 'Cheque Truncation System (CTS) Upgrade', title: 'UAT Sign-off', owner: 'Amit Patel', ownerRole: 'IT', dueDate: d('2026-04-30'), status: 'IN_PROGRESS' },
+
+    // Loan Account Statement API (Commercial, externally-delayed) — blocked
+    { initiativeTitle: 'Loan Account Statement API', title: 'FSD Sign-off', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-05-01'), status: 'COMPLETED', completedAt: d('2026-05-01') },
+    { initiativeTitle: 'Loan Account Statement API', title: 'Commercial Sign-off', description: 'Blocked pending external vendor contract finalisation.', owner: 'Priya Sharma', ownerRole: 'PMO', dueDate: d('2026-06-15'), status: 'BLOCKED' },
+
+    // IMPS Real-time Settlement Upgrade (CAB Approval) — mildly overdue (HIGH)
+    { initiativeTitle: 'IMPS Real-time Settlement Upgrade', title: 'SIT Completion', owner: 'Priya Sharma', ownerRole: 'IT', dueDate: d('2026-06-01'), status: 'COMPLETED', completedAt: d('2026-06-01') },
+    { initiativeTitle: 'IMPS Real-time Settlement Upgrade', title: 'CAB Approval', owner: 'Anita Desai', ownerRole: 'PMO', dueDate: d('2026-07-12'), status: 'IN_PROGRESS' },
+  ];
+
+  let milestoneCount = 0;
+  for (const m of milestoneSeeds) {
+    const initiativeId = idByTitle[m.initiativeTitle];
+    if (!initiativeId) continue;
+    await prisma.milestone.create({
+      data: {
+        initiativeId,
+        title: m.title,
+        description: m.description ?? null,
+        owner: m.owner,
+        ownerRole: m.ownerRole ?? null,
+        dueDate: m.dueDate,
+        status: m.status,
+        completedAt: m.completedAt ?? null,
+      },
+    });
+    milestoneCount++;
+  }
+  console.log(`Seeded ${milestoneCount} milestones across ${new Set(milestoneSeeds.map(m => m.initiativeTitle)).size} initiatives`);
 
   // --- Demand funnel ---
   type DemandSeed = {
