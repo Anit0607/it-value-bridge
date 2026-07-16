@@ -24,6 +24,7 @@ import {
   Users,
   AlertTriangle,
   Building2,
+  ListChecks,
 } from 'lucide-react';
 
 interface NavItem {
@@ -44,6 +45,7 @@ const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: '/cio', label: 'Executive View', icon: LayoutDashboard, roles: ['CIO'] },
       { href: '/pmo', label: 'Program / Governance View', icon: ClipboardList, roles: PMO_EQUIVALENT_ROLES },
+      { href: '/reminders', label: 'Action Center', icon: ListChecks, roles: ['CIO', ...PMO_EQUIVALENT_ROLES, 'VERTICAL_HEAD', ...BUSINESS_EQUIVALENT_ROLES] },
     ],
   },
   {

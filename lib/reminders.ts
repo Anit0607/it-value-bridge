@@ -22,6 +22,26 @@ export type ReminderSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
 export type ReminderOwnerRole = 'PMO' | 'VERTICAL_HEAD' | 'PROGRAM_MANAGER' | 'BUSINESS' | 'VENDOR';
 
+/** Display label per type — single source of truth for any UI listing reminders. */
+export const REMINDER_TYPE_LABEL: Record<ReminderType, string> = {
+  STALE_UPDATE: 'Stale Update',
+  STAGE_OVERDUE: 'Stage Overdue',
+  GO_LIVE_RISK: 'Go-Live Risk',
+  BUSINESS_VALIDATION_PENDING: 'Business Validation Pending',
+  REGULATORY_DEADLINE_RISK: 'Regulatory Deadline Risk',
+  BUSINESS_DELAY: 'Business Delay',
+  VENDOR_DELAY: 'Vendor Delay',
+};
+
+/** Display label per owner role. */
+export const REMINDER_OWNER_ROLE_LABEL: Record<ReminderOwnerRole, string> = {
+  PMO: 'PMO',
+  VERTICAL_HEAD: 'Vertical Head',
+  PROGRAM_MANAGER: 'Program Manager',
+  BUSINESS: 'Business',
+  VENDOR: 'Vendor',
+};
+
 export interface Reminder {
   id: string;
   initiativeId: string;
