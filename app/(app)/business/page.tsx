@@ -8,7 +8,10 @@ import { RagDot } from '@/components/RagBadge';
 import { PageHeader } from '@/components/PageHeader';
 import { SavedViewsBar } from '@/components/SavedViewsBar';
 import { parsePortfolioFilters, applyPortfolioFilters } from '@/lib/portfolioFilters';
-import { ClipboardCheck, ArrowRight, Inbox } from 'lucide-react';
+import { generateReminders } from '@/lib/reminders';
+import { RemindersList, sortBySeverity } from '@/components/RemindersPanel';
+import { SectionCard } from '@/components/ui/SectionCard';
+import { ClipboardCheck, ArrowRight, Inbox, ListChecks } from 'lucide-react';
 import { TodaysFocus } from '@/components/TodaysFocus';
 
 const ACHIEVED_TONE: Record<string, string> = {
@@ -29,6 +32,15 @@ export default async function BusinessSpocView({
   const filters = parsePortfolioFilters(searchParams);
   const filteredItems = applyPortfolioFilters(items, filters);
 
+  // Business Actions Needed: only reminders this business user actually
+  // owns or is affected by — validation pending, business-side delay, and
+  // stage-overdue items among what's already visible to them.
+  const businessActions = sortBySeverity(
+    generateReminders(filteredItems).filter(r =>
+      r.type === 'BUSINESS_VALIDATION_PENDING' || r.type === 'BUSINESS_DELAY' || r.type === 'STAGE_OVERDUE',
+    ),
+  );
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -37,6 +49,10 @@ export default async function BusinessSpocView({
       />
 
       <SavedViewsBar view="business" />
+
+      <SectionCard title="Business Actions Needed" icon={ListChecks} tone="risk" count={businessActions.length} noPad>
+        <RemindersList reminders={businessActions} emptyText="Nothing needs your attention right now." />
+      </SectionCard>
 
       <TodaysFocus
         title="Pending validations"

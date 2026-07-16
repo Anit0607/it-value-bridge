@@ -12,6 +12,8 @@ import { PeriodPicker } from '@/components/PeriodPicker';
 import { PortfolioFilterBar } from '@/components/PortfolioFilterBar';
 import { SavedViewsBar } from '@/components/SavedViewsBar';
 import { parsePortfolioFilters } from '@/lib/portfolioFilters';
+import { generateReminders } from '@/lib/reminders';
+import { RemindersList, sortBySeverity } from '@/components/RemindersPanel';
 import { StageFunnel } from '@/components/StageFunnel';
 import { CompletedByMonthChart } from '@/components/CompletedByMonthChart';
 import { RagDot } from '@/components/RagBadge';
@@ -33,6 +35,7 @@ import {
   ShieldAlert,
   PackageCheck,
   Star,
+  ListChecks,
 } from 'lucide-react';
 
 export default async function CioDashboard({
@@ -53,6 +56,7 @@ export default async function CioDashboard({
   const period = resolvePeriod(searchParams);
   const filters = parsePortfolioFilters(searchParams);
   const {
+    items,
     totalCount,
     activeCount: total,
     counts,
@@ -71,6 +75,22 @@ export default async function CioDashboard({
   } = await getCioSummary(period, session.user, filters);
 
   const todayIso = new Date().toISOString().slice(0, 10);
+
+  // Leadership Actions Needed: regulatory deadline risk, go-live risk,
+  // strategic-red items, and stage-overdue Major Projects — critical/high
+  // only, top 5 worst-first. items is already portfolio-filter-scoped, same
+  // as delays/regulatory above.
+  const itemById = new Map(items.map(i => [i.id, i]));
+  const leadershipActions = sortBySeverity(
+    generateReminders(items).filter(r => {
+      const item = itemById.get(r.initiativeId);
+      if (!item || (r.severity !== 'CRITICAL' && r.severity !== 'HIGH')) return false;
+      if (r.type === 'REGULATORY_DEADLINE_RISK' || r.type === 'GO_LIVE_RISK') return true;
+      if (item.classification === 'Strategic' && item.rag === 'Red') return true;
+      if (r.type === 'STAGE_OVERDUE' && item.classification === 'Major Project') return true;
+      return false;
+    }),
+  ).slice(0, 5);
 
   return (
     <div className="space-y-6">
@@ -150,6 +170,10 @@ export default async function CioDashboard({
         </SectionCard>
       </div>
       {/* ── End Executive Summary Zone ── */}
+
+      <SectionCard title="Leadership Actions Needed" icon={ListChecks} tone="risk" count={leadershipActions.length} subtitle="Top critical/high items across regulatory, go-live, strategic-red, and major-project risk" noPad>
+        <RemindersList reminders={leadershipActions} emptyText="No critical or high leadership actions right now." />
+      </SectionCard>
 
       {delays.length > 0 && (
         <SectionCard title="Delays Needing Attention" icon={AlertOctagon} tone="risk" count={delays.length} subtitle="Worst slip first" noPad>

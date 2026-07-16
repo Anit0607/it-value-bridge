@@ -5,47 +5,20 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { listVisibleInitiativesForUser } from '@/lib/actions/initiatives';
 import { enrichAll } from '@/lib/queries/enrich';
-import {
-  generateReminders,
-  REMINDER_TYPE_LABEL,
-  REMINDER_OWNER_ROLE_LABEL,
-  type Reminder,
-  type ReminderSeverity,
-} from '@/lib/reminders';
+import { generateReminders, REMINDER_TYPE_LABEL, REMINDER_OWNER_ROLE_LABEL } from '@/lib/reminders';
+import { SEVERITY_TONE, sortBySeverity, dueOrAge } from '@/components/RemindersPanel';
 import { PageHeader } from '@/components/PageHeader';
 import { KpiCard } from '@/components/KpiCard';
 import { SectionCard } from '@/components/ui/SectionCard';
-import { Badge, type BadgeTone } from '@/components/ui/Badge';
+import { Badge } from '@/components/ui/Badge';
 import { ListChecks, AlertOctagon, ShieldAlert, Building2, Truck, Inbox } from 'lucide-react';
-
-const SEVERITY_TONE: Record<ReminderSeverity, BadgeTone> = {
-  CRITICAL: 'danger',
-  HIGH: 'warning',
-  MEDIUM: 'brand',
-  LOW: 'slate',
-};
-
-// CRITICAL first — the table reads worst-first, same convention as every
-// other risk-ordered list in the app (Delays Needing Attention, etc.).
-const SEVERITY_ORDER: Record<ReminderSeverity, number> = {
-  CRITICAL: 0,
-  HIGH: 1,
-  MEDIUM: 2,
-  LOW: 3,
-};
-
-function dueOrAge(r: Reminder): string {
-  if (r.daysOverdue !== undefined) return `${r.daysOverdue}d overdue`;
-  if (r.dueDate) return r.dueDate;
-  return '—';
-}
 
 export default async function ActionCenterPage() {
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
 
   const items = enrichAll(await listVisibleInitiativesForUser(session.user));
-  const reminders = generateReminders(items).sort((a, b) => SEVERITY_ORDER[a.severity] - SEVERITY_ORDER[b.severity]);
+  const reminders = sortBySeverity(generateReminders(items));
 
   const totalOpen = reminders.length;
   const critical = reminders.filter(r => r.severity === 'CRITICAL').length;
