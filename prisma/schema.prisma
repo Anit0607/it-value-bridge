@@ -304,6 +304,12 @@ model WaterfallStage {
   @@index([initiativeId])
 }
 
+// A flat list of named checkpoints per initiative — deliberately lightweight.
+// Not a WBS: no parent/child hierarchy, no subtasks, no dependency links
+// between milestones (that's Dependency, which is between Initiatives, not
+// this), no Gantt/scheduling fields, no resource or effort/hours tracking,
+// no sprint/task board linkage, no timesheets. If any of that is ever
+// needed, it's a deliberate new model/feature, not an extension of this one.
 model Milestone {
   id           String     @id @default(cuid())
   initiativeId String
