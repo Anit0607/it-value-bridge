@@ -117,6 +117,13 @@ enum MilestoneStatus {
   COMPLETED
 }
 
+enum MilestoneOwnerRole {
+  PMO
+  IT
+  BUSINESS
+  VENDOR
+}
+
 // ---------- Value realization ----------
 enum BenefitUnit {
   INR
@@ -322,9 +329,9 @@ model Milestone {
   title       String // checkpoint name, e.g. "UAT Sign-off"
   description String? // optional detail
   owner       String // accountable person/team
-  ownerRole   String? // reference values: PMO / IT / Business / Vendor — free text, not an enum
+  ownerRole   MilestoneOwnerRole? // accountable side: PMO / IT / Business / Vendor
   dueDate     DateTime // planned checkpoint date
-  status      MilestoneStatus @default(NOT_STARTED)
+  status      MilestoneStatus     @default(NOT_STARTED)
 
   completedAt DateTime? // actual completion date
   createdAt   DateTime  @default(now())
