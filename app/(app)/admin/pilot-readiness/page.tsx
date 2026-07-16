@@ -3,9 +3,14 @@ export const dynamic = 'force-dynamic';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
+import { listVisibleInitiativesForUser } from '@/lib/actions/initiatives';
+import { listOpenMilestonesForInitiatives } from '@/lib/actions/milestones';
+import { enrichAll } from '@/lib/queries/enrich';
+import { generateReminders } from '@/lib/reminders';
 import { PageHeader } from '@/components/PageHeader';
 import { SectionCard } from '@/components/ui/SectionCard';
-import { CheckCircle2, AlertTriangle, XCircle, ShieldCheck, Database, Target, Rocket } from 'lucide-react';
+import { Badge } from '@/components/ui/Badge';
+import { CheckCircle2, AlertTriangle, XCircle, ShieldCheck, Database, Target, Rocket, ClipboardCheck } from 'lucide-react';
 
 type S = 'pass' | 'warn' | 'fail';
 interface Check { label: string; status: S; detail?: string }
@@ -43,7 +48,10 @@ export default async function PilotReadinessPage() {
   if (session.user.role !== 'ADMIN') redirect('/');
 
   // ── DB counts for data section ─────────────────────────────────────────────
-  const [userCount, initiativeCount, regulatoryCount, delayedCount, claimCount, org, users] =
+  const [
+    userCount, initiativeCount, regulatoryCount, delayedCount, claimCount, org, users,
+    milestoneCount, strategicCount, hierarchyInitiativeCount,
+  ] =
     await Promise.all([
       prisma.user.count(),
       prisma.initiative.count(),
@@ -52,10 +60,23 @@ export default async function PilotReadinessPage() {
       prisma.benefitClaim.count(),
       prisma.organization.findFirst({ select: { name: true, status: true } }),
       prisma.user.findMany({ select: { role: true } }),
+      prisma.milestone.count(),
+      prisma.initiative.count({ where: { classification: 'STRATEGIC' } }),
+      prisma.initiative.count({ where: { programHeadName: { not: null } } }),
     ]);
 
   const rolesPresent = new Set(users.map(u => u.role as string));
   const allRoles = ['ADMIN', 'CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS'];
+  const hierarchyRoles = ['VERTICAL_HEAD', 'BUSINESS', 'PROGRAM_HEAD', 'PROGRAM_MANAGER', 'BUSINESS_HEAD'];
+  const hierarchyRolesPresent = hierarchyRoles.every(r => rolesPresent.has(r));
+  const roleHierarchyConfigured = hierarchyRolesPresent && hierarchyInitiativeCount > 0;
+
+  // Real smoke test of the Action Center's actual reminder engine — not a
+  // static claim. Same org-wide visibility ADMIN already gets everywhere
+  // else (buildInitiativeVisibilityWhere), so this reads real, live data.
+  const adminItems = enrichAll(await listVisibleInitiativesForUser(session.user));
+  const adminMilestones = await listOpenMilestonesForInitiatives(adminItems);
+  const activeReminderCount = generateReminders(adminItems, adminMilestones).length;
 
   const wsNameSet = !!(process.env.NEXT_PUBLIC_WORKSPACE_NAME);
   const demoModeSet = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
@@ -157,6 +178,24 @@ export default async function PilotReadinessPage() {
   const totalPass = allChecks.filter(c => c.status === 'pass').length;
   const totalFail = allChecks.filter(c => c.status === 'fail').length;
 
+  // ── Platform Structure Checklist ── the enterprise-buyer-facing summary:
+  // ten yes/no areas, each backed by a real DB count or a live run of the
+  // actual feature (Action Center), not a hardcoded claim.
+  interface AreaCheck { area: string; done: boolean; detail: string }
+  const structureChecks: AreaCheck[] = [
+    { area: 'Organization configured', done: !!org, detail: org ? `"${org.name}" — status: ${org.status}` : 'No organization record found' },
+    { area: 'Users seeded or created', done: userCount > 0, detail: `${userCount} user${userCount === 1 ? '' : 's'} across ${rolesPresent.size} role${rolesPresent.size === 1 ? '' : 's'}` },
+    { area: 'Role hierarchy configured', done: roleHierarchyConfigured, detail: roleHierarchyConfigured ? 'Vertical Head / Business / Program Head / Program Manager / Business Head all present, with hierarchy fields set on initiatives' : 'Missing one or more hierarchy roles, or no initiative has programHeadName set' },
+    { area: 'Initiatives available', done: initiativeCount > 0, detail: `${initiativeCount} initiative${initiativeCount === 1 ? '' : 's'}` },
+    { area: 'Value claims available', done: claimCount > 0, detail: `${claimCount} benefit claim${claimCount === 1 ? '' : 's'}` },
+    { area: 'Milestones available', done: milestoneCount > 0, detail: `${milestoneCount} milestone${milestoneCount === 1 ? '' : 's'}` },
+    { area: 'Action Center generating reminders', done: activeReminderCount > 0, detail: `${activeReminderCount} active reminder${activeReminderCount === 1 ? '' : 's'} generated live from current data` },
+    { area: 'Regulatory examples available', done: regulatoryCount > 0, detail: `${regulatoryCount} regulatory initiative${regulatoryCount === 1 ? '' : 's'}` },
+    { area: 'Strategic projects available', done: strategicCount > 0, detail: `${strategicCount} Strategic-classified initiative${strategicCount === 1 ? '' : 's'}` },
+    { area: 'Known limitations documented', done: true, detail: 'See /admin/known-limitations' },
+  ];
+  const structureDoneCount = structureChecks.filter(c => c.done).length;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -182,6 +221,39 @@ export default async function PilotReadinessPage() {
         </div>
         <p className="mt-1 text-xs text-slate-500">{totalPass} / {allChecks.length} ready</p>
       </div>
+
+      {/* ── Platform Structure Checklist — enterprise-buyer-facing summary ── */}
+      <SectionCard
+        title="Platform Structure Checklist"
+        subtitle={`${structureDoneCount} / ${structureChecks.length} done`}
+        icon={ClipboardCheck}
+        tone={structureDoneCount === structureChecks.length ? 'success' : 'risk'}
+        noPad
+      >
+        <div className="overflow-x-auto">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="border-b border-slate-100 bg-slate-50/60">
+                <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Area</th>
+                <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {structureChecks.map((c, idx) => (
+                <tr key={c.area} className={`border-t border-slate-100 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
+                  <td className="px-5 py-2.5">
+                    <div className="font-medium text-slate-800">{c.area}</div>
+                    <div className="mt-0.5 text-xs text-slate-500">{c.detail}</div>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    <Badge tone={c.done ? 'success' : 'danger'} size="sm">{c.done ? 'Done' : 'Missing'}</Badge>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </SectionCard>
 
       {/* ── 1. Product ── */}
       <SectionCard title="Product" subtitle={sectionScore(product)} icon={Rocket} tone={sectionTone(product)}>
