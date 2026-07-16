@@ -43,6 +43,21 @@ export const REMINDER_OWNER_ROLE_LABEL: Record<ReminderOwnerRole, string> = {
   VENDOR: 'Vendor',
 };
 
+/**
+ * Reminders are ephemeral for 6A — generated fresh from live data on every
+ * request, never written to the database. There is deliberately no
+ * status/snoozedUntil/assignee/readAt field, and no mark-as-read, snooze,
+ * assign, history, or email/WhatsApp delivery in this phase; all of that is
+ * out of scope until a later pass.
+ *
+ * `id` is nonetheless fully deterministic (`${initiativeId}-${type}` — see
+ * remindersForItem() below) precisely so a future persistence layer can key
+ * a separate status table off this same id — e.g. `ReminderStatus { id,
+ * readAt, snoozedUntil, assignedTo }` joined against whatever
+ * generateReminders() returns — without generateReminders() itself ever
+ * needing to change. It stays a pure, stateless function; persistence would
+ * be a merge step layered on top, not a rewrite of this file.
+ */
 export interface Reminder {
   id: string;
   initiativeId: string;
