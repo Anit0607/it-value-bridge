@@ -11,7 +11,7 @@ import { SavedViewsBar } from '@/components/SavedViewsBar';
 import { parsePortfolioFilters } from '@/lib/portfolioFilters';
 import { generateReminders } from '@/lib/reminders';
 import { GroupedRemindersList, sortBySeverity } from '@/components/RemindersPanel';
-import { listAtRiskMilestones } from '@/lib/actions/milestones';
+import { listAtRiskMilestones, listOpenMilestonesForInitiatives } from '@/lib/actions/milestones';
 import { KpiCard } from '@/components/KpiCard';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Badge } from '@/components/ui/Badge';
@@ -38,7 +38,11 @@ export default async function PmoDashboard({
 
   // Governance Action Queue: same portfolio-filter-scoped items as the rest
   // of the page, grouped by type so PMO can triage by kind of problem.
-  const pmoReminders = generateReminders(items);
+  // Milestone-derived reminders (MILESTONE_OVERDUE/MILESTONE_BLOCKED) feed
+  // into pmoReminders too, but aren't grouped here — Milestone Watch below
+  // already covers that same data in a purpose-built table.
+  const openMilestones = await listOpenMilestonesForInitiatives(items);
+  const pmoReminders = generateReminders(items, openMilestones);
   const governanceGroups = [
     { label: 'Overdue Stage', reminders: sortBySeverity(pmoReminders.filter(r => r.type === 'STAGE_OVERDUE')) },
     { label: 'Stale Update', reminders: sortBySeverity(pmoReminders.filter(r => r.type === 'STALE_UPDATE')) },

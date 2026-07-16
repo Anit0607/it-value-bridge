@@ -2,6 +2,7 @@ import type { EnrichedItem } from '@/lib/queries/enrich';
 import { daysFromNow } from '@/lib/rag';
 import { STAGES } from '@/lib/types';
 import type { Stage } from '@/lib/types';
+import type { Milestone } from '@prisma/client';
 
 /**
  * System-generated reminder categories — each a standing rule evaluated
@@ -17,7 +18,9 @@ export type ReminderType =
   | 'BUSINESS_VALIDATION_PENDING'
   | 'REGULATORY_DEADLINE_RISK'
   | 'BUSINESS_DELAY'
-  | 'VENDOR_DELAY';
+  | 'VENDOR_DELAY'
+  | 'MILESTONE_OVERDUE'
+  | 'MILESTONE_BLOCKED';
 
 export type ReminderSeverity = 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 
@@ -32,6 +35,8 @@ export const REMINDER_TYPE_LABEL: Record<ReminderType, string> = {
   REGULATORY_DEADLINE_RISK: 'Regulatory Deadline Risk',
   BUSINESS_DELAY: 'Business Delay',
   VENDOR_DELAY: 'Vendor Delay',
+  MILESTONE_OVERDUE: 'Milestone Overdue',
+  MILESTONE_BLOCKED: 'Milestone Blocked',
 };
 
 /** Display label per owner role. */
@@ -50,9 +55,10 @@ export const REMINDER_OWNER_ROLE_LABEL: Record<ReminderOwnerRole, string> = {
  * assign, history, or email/WhatsApp delivery in this phase; all of that is
  * out of scope until a later pass.
  *
- * `id` is nonetheless fully deterministic (`${initiativeId}-${type}` — see
- * remindersForItem() below) precisely so a future persistence layer can key
- * a separate status table off this same id — e.g. `ReminderStatus { id,
+ * `id` is nonetheless fully deterministic (`${initiativeId}-${type}` for
+ * item-level reminders, `${milestoneId}-${type}` for the milestone-derived
+ * ones — see remindersForItem() below) precisely so a future persistence
+ * layer can key a separate status table off this same id — e.g. `ReminderStatus { id,
  * readAt, snoozedUntil, assignedTo }` joined against whatever
  * generateReminders() returns — without generateReminders() itself ever
  * needing to change. It stays a pure, stateless function; persistence would
@@ -91,9 +97,13 @@ const UAT_INDEX = STAGES.indexOf('UAT');
  * below, exactly as specified, with no other inputs.
  *
  *   CRITICAL: regulatory overdue · stage overdue > 7d · go-live within 7d
- *             AND stage before UAT · business validation pending > 7d
+ *             AND stage before UAT · business validation pending > 7d ·
+ *             milestone overdue > 7d (unless business-owned, see below)
  *   HIGH:     stage overdue 1-7d · regulatory within 14d · vendor delay ·
- *             business delay
+ *             business delay · milestone overdue 1-7d · milestone blocked ·
+ *             business-owned milestone overdue (capped here regardless of
+ *             days overdue — mirrors business/vendor delay never
+ *             escalating to CRITICAL either)
  *   MEDIUM:   stale update > 7d · go-live within 30d (and not yet in
  *             Go Live/Business Validation/Closed) · business validation
  *             pending <= 7d (no explicit band given; MEDIUM is the safe
@@ -101,12 +111,27 @@ const UAT_INDEX = STAGES.indexOf('UAT');
  *   LOW:      stale update 5-7d
  */
 
+// Milestone.ownerRole ('PMO'/'IT'/'BUSINESS'/'VENDOR') doesn't map 1:1 onto
+// ReminderOwnerRole — IT lands on PROGRAM_MANAGER, the same role
+// STAGE_OVERDUE/STALE_UPDATE already route "IT delivery" reminders to.
+const MILESTONE_OWNER_ROLE_MAP: Record<string, ReminderOwnerRole> = {
+  PMO: 'PMO',
+  IT: 'PROGRAM_MANAGER',
+  BUSINESS: 'BUSINESS',
+  VENDOR: 'VENDOR',
+};
+
 function itemHref(itemId: string, suffix = ''): string {
   return `/items/${itemId}${suffix}`;
 }
 
-/** Evaluate every standing reminder rule against one already-visible, already-enriched item. */
-function remindersForItem(item: EnrichedItem): Reminder[] {
+/**
+ * Evaluate every standing reminder rule against one already-visible,
+ * already-enriched item, plus that item's own open (non-Completed)
+ * milestones (already filtered/scoped by the caller — see
+ * generateReminders() below).
+ */
+function remindersForItem(item: EnrichedItem, milestones: Milestone[]): Reminder[] {
   if (item.currentStage === 'Closed') return [];
 
   const reminders: Reminder[] = [];
@@ -250,6 +275,52 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
     });
   }
 
+  // Milestone Overdue — CRITICAL > 7d, HIGH 1-7d; business-owned milestones
+  // are capped at HIGH regardless of how overdue, mirroring how
+  // Business/Vendor Delay above never escalate to CRITICAL either.
+  // Milestone Blocked — always HIGH, independent of due date; a milestone
+  // that's both blocked and overdue fires both reminders (same "more than
+  // one can fire" model as everything else in this file).
+  for (const m of milestones) {
+    if (m.status === 'COMPLETED') continue;
+    const ownerRole = MILESTONE_OWNER_ROLE_MAP[m.ownerRole ?? ''] ?? 'PMO';
+    const dueDateIso = m.dueDate.toISOString().slice(0, 10);
+    const daysToDue = daysFromNow(dueDateIso);
+    const overdue = daysToDue < 0;
+
+    if (overdue) {
+      const daysOverdue = Math.abs(daysToDue);
+      reminders.push({
+        id: `${m.id}-MILESTONE_OVERDUE`,
+        initiativeId: item.id,
+        title: item.title,
+        message: `Milestone "${m.title}" is ${daysOverdue} day${daysOverdue === 1 ? '' : 's'} overdue`,
+        type: 'MILESTONE_OVERDUE',
+        severity: m.ownerRole === 'BUSINESS' ? 'HIGH' : (daysOverdue > 7 ? 'CRITICAL' : 'HIGH'),
+        owner: m.owner,
+        ownerRole,
+        dueDate: dueDateIso,
+        daysOverdue,
+        actionHref: href,
+      });
+    }
+
+    if (m.status === 'BLOCKED') {
+      reminders.push({
+        id: `${m.id}-MILESTONE_BLOCKED`,
+        initiativeId: item.id,
+        title: item.title,
+        message: `Milestone "${m.title}" is blocked`,
+        type: 'MILESTONE_BLOCKED',
+        severity: 'HIGH',
+        owner: m.owner,
+        ownerRole,
+        dueDate: dueDateIso,
+        actionHref: href,
+      });
+    }
+  }
+
   return reminders;
 }
 
@@ -264,9 +335,23 @@ function remindersForItem(item: EnrichedItem): Reminder[] {
  * like applyPortfolioFilters(). Never wire it up to a query that reads all
  * initiatives directly — that would bypass tenant and role-visibility rules.
  *
+ * `milestones` should come from an already-scoped bulk fetch keyed to the
+ * SAME initiative set (e.g. lib/actions/milestones.ts's
+ * listOpenMilestonesForInitiatives(items)) — never a direct unscoped query.
+ * Milestones are grouped by initiativeId internally and matched to their
+ * parent item; a milestone whose initiativeId isn't in `items` (out of
+ * scope, or the item is Closed) is silently ignored.
+ *
  *   const items = enrichAll(await listVisibleInitiativesForUser(user));
- *   const reminders = generateReminders(items);
+ *   const milestones = await listOpenMilestonesForInitiatives(items);
+ *   const reminders = generateReminders(items, milestones);
  */
-export function generateReminders(items: EnrichedItem[]): Reminder[] {
-  return items.flatMap(remindersForItem);
+export function generateReminders(items: EnrichedItem[], milestones: Milestone[] = []): Reminder[] {
+  const milestonesByInitiative = new Map<string, Milestone[]>();
+  for (const m of milestones) {
+    const list = milestonesByInitiative.get(m.initiativeId);
+    if (list) list.push(m);
+    else milestonesByInitiative.set(m.initiativeId, [m]);
+  }
+  return items.flatMap(item => remindersForItem(item, milestonesByInitiative.get(item.id) ?? []));
 }

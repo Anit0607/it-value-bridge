@@ -14,7 +14,7 @@ import { SavedViewsBar } from '@/components/SavedViewsBar';
 import { parsePortfolioFilters } from '@/lib/portfolioFilters';
 import { generateReminders } from '@/lib/reminders';
 import { RemindersList, sortBySeverity } from '@/components/RemindersPanel';
-import { listAtRiskMilestones } from '@/lib/actions/milestones';
+import { listAtRiskMilestones, listOpenMilestonesForInitiatives } from '@/lib/actions/milestones';
 import { StageFunnel } from '@/components/StageFunnel';
 import { CompletedByMonthChart } from '@/components/CompletedByMonthChart';
 import { RagDot } from '@/components/RagBadge';
@@ -83,8 +83,9 @@ export default async function CioDashboard({
   // only, top 5 worst-first. items is already portfolio-filter-scoped, same
   // as delays/regulatory above.
   const itemById = new Map(items.map(i => [i.id, i]));
+  const openMilestones = await listOpenMilestonesForInitiatives(items);
   const leadershipActions = sortBySeverity(
-    generateReminders(items).filter(r => {
+    generateReminders(items, openMilestones).filter(r => {
       const item = itemById.get(r.initiativeId);
       if (!item || (r.severity !== 'CRITICAL' && r.severity !== 'HIGH')) return false;
       if (r.type === 'REGULATORY_DEADLINE_RISK' || r.type === 'GO_LIVE_RISK') return true;

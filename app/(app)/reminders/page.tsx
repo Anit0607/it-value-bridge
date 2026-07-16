@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { listVisibleInitiativesForUser } from '@/lib/actions/initiatives';
 import { enrichAll } from '@/lib/queries/enrich';
 import { generateReminders } from '@/lib/reminders';
+import { listOpenMilestonesForInitiatives } from '@/lib/actions/milestones';
 import { sortBySeverity } from '@/components/RemindersPanel';
 import { PageHeader } from '@/components/PageHeader';
 import { KpiCard } from '@/components/KpiCard';
@@ -16,7 +17,8 @@ export default async function ActionCenterPage() {
   if (!session?.user) redirect('/sign-in');
 
   const items = enrichAll(await listVisibleInitiativesForUser(session.user));
-  const reminders = sortBySeverity(generateReminders(items));
+  const milestones = await listOpenMilestonesForInitiatives(items);
+  const reminders = sortBySeverity(generateReminders(items, milestones));
 
   const totalOpen = reminders.length;
   const critical = reminders.filter(r => r.severity === 'CRITICAL').length;

@@ -152,6 +152,33 @@ export async function deleteMilestone(milestoneId: string): Promise<void> {
   revalidatePath(`/items/${initiativeId}`);
 }
 
+/**
+ * Every open (non-Completed) milestone across a set of initiatives the
+ * caller has ALREADY scoped to what the user can see — feeds
+ * generateReminders() (lib/reminders.ts) so it can derive
+ * MILESTONE_OVERDUE/MILESTONE_BLOCKED reminders itself, and backs
+ * listAtRiskMilestones() below.
+ *
+ * SECURITY: unlike the single-milestone actions above (which each verify one
+ * caller-supplied id via assertVisibleInitiativeAccess), this is a portfolio
+ * rollup — the same shape as generateReminders()/applyPortfolioFilters(): it
+ * does no visibility check of its own and must only ever be called with
+ * initiatives from enrichAll(await listVisibleInitiativesForUser(user)).
+ * Never pass it ids sourced from request input.
+ */
+export async function listOpenMilestonesForInitiatives(
+  initiatives: { id: string }[],
+): Promise<Milestone[]> {
+  if (initiatives.length === 0) return [];
+  return prisma.milestone.findMany({
+    where: {
+      initiativeId: { in: initiatives.map(i => i.id) },
+      status: { not: 'COMPLETED' },
+    },
+    orderBy: { dueDate: 'asc' },
+  });
+}
+
 export interface AtRiskMilestone {
   milestoneId: string;
   initiativeId: string;
@@ -165,14 +192,8 @@ export interface AtRiskMilestone {
 /**
  * Milestones that are BLOCKED, or overdue (due date passed and not
  * completed), across a set of initiatives the caller has ALREADY scoped to
- * what the user can see.
- *
- * SECURITY: unlike the single-milestone actions above (which each verify one
- * caller-supplied id via assertVisibleInitiativeAccess), this is a portfolio
- * rollup — the same shape as generateReminders()/applyPortfolioFilters(): it
- * does no visibility check of its own and must only ever be called with
- * initiatives from enrichAll(await listVisibleInitiativesForUser(user)).
- * Never pass it ids sourced from request input.
+ * what the user can see. Same security shape as
+ * listOpenMilestonesForInitiatives() above, which this builds on.
  */
 export async function listAtRiskMilestones(
   initiatives: { id: string; title: string }[],
@@ -183,13 +204,7 @@ export async function listAtRiskMilestones(
   const today = new Date();
   today.setHours(0, 0, 0, 0);
 
-  const rows = await prisma.milestone.findMany({
-    where: {
-      initiativeId: { in: initiatives.map(i => i.id) },
-      status: { not: 'COMPLETED' },
-    },
-    orderBy: { dueDate: 'asc' },
-  });
+  const rows = await listOpenMilestonesForInitiatives(initiatives);
 
   return rows
     .filter(m => m.status === 'BLOCKED' || m.dueDate < today)

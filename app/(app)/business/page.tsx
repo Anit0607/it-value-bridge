@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { SavedViewsBar } from '@/components/SavedViewsBar';
 import { parsePortfolioFilters, applyPortfolioFilters } from '@/lib/portfolioFilters';
 import { generateReminders } from '@/lib/reminders';
+import { listOpenMilestonesForInitiatives } from '@/lib/actions/milestones';
 import { RemindersList, sortBySeverity } from '@/components/RemindersPanel';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { ClipboardCheck, ArrowRight, Inbox, ListChecks } from 'lucide-react';
@@ -34,9 +35,14 @@ export default async function BusinessSpocView({
 
   // Business Actions Needed: only reminders this business user actually
   // owns or is affected by — validation pending, business-side delay, and
-  // stage-overdue items among what's already visible to them.
+  // stage-overdue items among what's already visible to them. Milestone
+  // reminders aren't filtered into this list yet — dedicated Business-view
+  // milestone widgets are still deferred (see MilestonesPanel on item
+  // detail, which already covers this for 6B) — but milestones are still
+  // passed to generateReminders() so nothing is silently dropped.
+  const openMilestones = await listOpenMilestonesForInitiatives(filteredItems);
   const businessActions = sortBySeverity(
-    generateReminders(filteredItems).filter(r =>
+    generateReminders(filteredItems, openMilestones).filter(r =>
       r.type === 'BUSINESS_VALIDATION_PENDING' || r.type === 'BUSINESS_DELAY' || r.type === 'STAGE_OVERDUE',
     ),
   );
