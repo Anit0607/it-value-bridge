@@ -157,6 +157,13 @@ export function MilestonesPanel({
     });
   };
 
+  const todayMid = new Date();
+  todayMid.setHours(0, 0, 0, 0);
+  const total = milestones.length;
+  const completedCount = milestones.filter(m => m.status === 'COMPLETED').length;
+  const blockedCount = milestones.filter(m => m.status === 'BLOCKED').length;
+  const overdueCount = milestones.filter(m => m.status !== 'COMPLETED' && new Date(m.dueDate).getTime() < todayMid.getTime()).length;
+
   return (
     <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card">
       <div className="mb-4 flex items-center justify-between">
@@ -170,6 +177,27 @@ export function MilestonesPanel({
           </button>
         )}
       </div>
+
+      {total > 0 && (
+        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="rounded-lg border border-slate-200 bg-slate-50/70 p-3">
+            <div className="tabular text-2xl font-semibold text-slate-900">{total}</div>
+            <div className="mt-1 text-[11px] font-medium text-slate-500">Total Milestones</div>
+          </div>
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3">
+            <div className="tabular text-2xl font-semibold text-emerald-700">{completedCount}</div>
+            <div className="mt-1 text-[11px] font-medium text-emerald-600/80">Completed</div>
+          </div>
+          <div className="rounded-lg border border-amber-200 bg-amber-50/70 p-3">
+            <div className="tabular text-2xl font-semibold text-amber-700">{blockedCount}</div>
+            <div className="mt-1 text-[11px] font-medium text-amber-600/80">Blocked</div>
+          </div>
+          <div className="rounded-lg border border-rose-200 bg-rose-50/70 p-3">
+            <div className="tabular text-2xl font-semibold text-rose-700">{overdueCount}</div>
+            <div className="mt-1 text-[11px] font-medium text-rose-600/80">Overdue</div>
+          </div>
+        </div>
+      )}
 
       {milestones.length === 0 && mode === 'none' ? (
         <p className="text-xs text-slate-400">No milestones yet.</p>
