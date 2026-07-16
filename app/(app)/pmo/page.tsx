@@ -11,9 +11,11 @@ import { SavedViewsBar } from '@/components/SavedViewsBar';
 import { parsePortfolioFilters } from '@/lib/portfolioFilters';
 import { generateReminders } from '@/lib/reminders';
 import { GroupedRemindersList, sortBySeverity } from '@/components/RemindersPanel';
+import { listAtRiskMilestones } from '@/lib/actions/milestones';
 import { KpiCard } from '@/components/KpiCard';
 import { SectionCard } from '@/components/ui/SectionCard';
-import { Layers, CheckCircle2, AlertTriangle, AlertOctagon, PlusCircle, ListChecks } from 'lucide-react';
+import { Badge } from '@/components/ui/Badge';
+import { Layers, CheckCircle2, AlertTriangle, AlertOctagon, PlusCircle, ListChecks, Flag } from 'lucide-react';
 import { TodaysFocus } from '@/components/TodaysFocus';
 import { buttonCls } from '@/components/ui/Button';
 import { KPI_DEFINITIONS } from '@/lib/kpiDefinitions';
@@ -46,6 +48,11 @@ export default async function PmoDashboard({
   ];
   const governanceCount = governanceGroups.reduce((n, g) => n + g.reminders.length, 0);
 
+  // Milestone Watch: top overdue/blocked milestones across the same
+  // portfolio-filter-scoped items, worst (oldest due date) first.
+  const atRiskMilestones = await listAtRiskMilestones(items);
+  const topAtRiskMilestones = atRiskMilestones.slice(0, 10);
+
   return (
     <div className="space-y-6">
       <PageHeader title="Program / Governance View" subtitle={`${totalCount} initiatives translating delivery into business value`}>
@@ -77,6 +84,54 @@ export default async function PmoDashboard({
 
       <SectionCard title="Governance Action Queue" icon={ListChecks} tone="risk" count={governanceCount} subtitle="Grouped by issue type" noPad>
         <GroupedRemindersList groups={governanceGroups} />
+      </SectionCard>
+
+      <SectionCard
+        title="Milestone Watch"
+        icon={Flag}
+        tone="risk"
+        count={atRiskMilestones.length}
+        subtitle={atRiskMilestones.length > 10 ? `Top 10 of ${atRiskMilestones.length} — oldest due date first` : 'Oldest due date first'}
+        noPad
+      >
+        {topAtRiskMilestones.length === 0 ? (
+          <p className="px-5 py-6 text-center text-sm text-slate-400">No overdue or blocked milestones right now.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/60">
+                  <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Initiative</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Milestone</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Owner</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Due Date</th>
+                  <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                {topAtRiskMilestones.map((m, idx) => (
+                  <tr key={m.milestoneId} className={`border-t border-slate-100 transition-colors hover:bg-brand-50/40 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
+                    <td className="px-5 py-2.5">
+                      <Link href={`/items/${m.initiativeId}`} className="font-medium text-slate-800 hover:text-brand-700">
+                        {m.initiativeTitle}
+                      </Link>
+                    </td>
+                    <td className="px-4 py-2.5 text-slate-700">{m.title}</td>
+                    <td className="px-4 py-2.5 text-slate-600">{m.owner}</td>
+                    <td className="px-4 py-2.5 tabular text-slate-600">{m.dueDate}</td>
+                    <td className="px-4 py-2.5">
+                      {m.status === 'BLOCKED' ? (
+                        <Badge tone="danger" size="sm">Blocked</Badge>
+                      ) : (
+                        <Badge tone="warning" size="sm">Overdue</Badge>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </SectionCard>
 
       <PmoDashboardClient items={items} />

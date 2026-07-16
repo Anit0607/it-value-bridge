@@ -14,6 +14,7 @@ import { SavedViewsBar } from '@/components/SavedViewsBar';
 import { parsePortfolioFilters } from '@/lib/portfolioFilters';
 import { generateReminders } from '@/lib/reminders';
 import { RemindersList, sortBySeverity } from '@/components/RemindersPanel';
+import { listAtRiskMilestones } from '@/lib/actions/milestones';
 import { StageFunnel } from '@/components/StageFunnel';
 import { CompletedByMonthChart } from '@/components/CompletedByMonthChart';
 import { RagDot } from '@/components/RagBadge';
@@ -36,6 +37,7 @@ import {
   PackageCheck,
   Star,
   ListChecks,
+  Flag,
 } from 'lucide-react';
 
 export default async function CioDashboard({
@@ -92,6 +94,12 @@ export default async function CioDashboard({
     }),
   ).slice(0, 5);
 
+  // Milestone Risk: count of DISTINCT initiatives with at least one
+  // blocked or overdue milestone — a single high-level signal, deliberately
+  // not a detailed milestone table (that's PMO's Milestone Watch instead).
+  const atRiskMilestones = await listAtRiskMilestones(items);
+  const milestoneRiskCount = new Set(atRiskMilestones.map(m => m.initiativeId)).size;
+
   return (
     <div className="space-y-6">
       <PageHeader title="Executive View" subtitle="Where is delivery risk threatening business outcomes? — real-time across all verticals">
@@ -119,12 +127,13 @@ export default async function CioDashboard({
           ]}
         />
 
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-6">
           <KpiCard label="Active Items" value={total} sub={`of ${totalCount} total`} icon={Activity} accent="brand" tooltip={KPI_DEFINITIONS.activeItems} />
           <KpiCard label="Delivered Projects" value={deliveredProjects.length} sub={`closed in ${periodLabel}`} icon={PackageCheck} accent="emerald" tooltip={KPI_DEFINITIONS.deliveredProjects} />
           <KpiCard label="On Track" value={counts.green} sub={`${pct(counts.green)}%`} icon={CheckCircle2} accent="emerald" tooltip={KPI_DEFINITIONS.onTrack} />
           <KpiCard label="Value at Risk" value={counts.red} sub={`${pct(counts.red)}%`} icon={AlertOctagon} accent="rose" tooltip={KPI_DEFINITIONS.valueAtRisk} />
           <KpiCard label="At Risk" value={counts.amber} sub={`${pct(counts.amber)}%`} icon={AlertTriangle} accent="amber" tooltip={KPI_DEFINITIONS.atRisk} />
+          <KpiCard label="Milestone Risk" value={milestoneRiskCount} sub="initiatives with overdue/blocked milestones" icon={Flag} accent="amber" />
         </div>
 
         {/* Delivery commitments */}

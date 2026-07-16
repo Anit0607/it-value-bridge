@@ -151,3 +151,55 @@ export async function deleteMilestone(milestoneId: string): Promise<void> {
 
   revalidatePath(`/items/${initiativeId}`);
 }
+
+export interface AtRiskMilestone {
+  milestoneId: string;
+  initiativeId: string;
+  initiativeTitle: string;
+  title: string;
+  owner: string;
+  dueDate: string; // ISO date
+  status: 'NOT_STARTED' | 'IN_PROGRESS' | 'BLOCKED';
+}
+
+/**
+ * Milestones that are BLOCKED, or overdue (due date passed and not
+ * completed), across a set of initiatives the caller has ALREADY scoped to
+ * what the user can see.
+ *
+ * SECURITY: unlike the single-milestone actions above (which each verify one
+ * caller-supplied id via assertVisibleInitiativeAccess), this is a portfolio
+ * rollup — the same shape as generateReminders()/applyPortfolioFilters(): it
+ * does no visibility check of its own and must only ever be called with
+ * initiatives from enrichAll(await listVisibleInitiativesForUser(user)).
+ * Never pass it ids sourced from request input.
+ */
+export async function listAtRiskMilestones(
+  initiatives: { id: string; title: string }[],
+): Promise<AtRiskMilestone[]> {
+  if (initiatives.length === 0) return [];
+  const titleById = new Map(initiatives.map(i => [i.id, i.title]));
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const rows = await prisma.milestone.findMany({
+    where: {
+      initiativeId: { in: initiatives.map(i => i.id) },
+      status: { not: 'COMPLETED' },
+    },
+    orderBy: { dueDate: 'asc' },
+  });
+
+  return rows
+    .filter(m => m.status === 'BLOCKED' || m.dueDate < today)
+    .map(m => ({
+      milestoneId: m.id,
+      initiativeId: m.initiativeId,
+      initiativeTitle: titleById.get(m.initiativeId) ?? '',
+      title: m.title,
+      owner: m.owner,
+      dueDate: m.dueDate.toISOString().slice(0, 10),
+      status: m.status as 'NOT_STARTED' | 'IN_PROGRESS' | 'BLOCKED',
+    }));
+}
