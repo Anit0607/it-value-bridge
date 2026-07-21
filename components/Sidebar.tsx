@@ -25,6 +25,7 @@ import {
   AlertTriangle,
   Building2,
   ListChecks,
+  ClipboardCheck,
 } from 'lucide-react';
 
 interface NavItem {
@@ -84,6 +85,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/admin/workspace', label: 'Workspace', icon: Building2, roles: ['ADMIN'] },
       { href: '/admin/users', label: 'User Management', icon: Users, roles: ['ADMIN'] },
       { href: '/admin/pilot-readiness', label: 'Pilot Readiness', icon: CheckSquare, roles: ['ADMIN'] },
+      { href: '/admin/uat-readiness', label: 'Client UAT Readiness', icon: ClipboardCheck, roles: ['ADMIN'] },
       { href: '/admin/known-limitations', label: 'Known Limitations', icon: AlertTriangle, roles: ['ADMIN'] },
       { href: '/cio', label: 'CIO Dashboard', icon: LayoutDashboard, roles: ['ADMIN'] },
       { href: '/pmo', label: 'PMO Dashboard', icon: ClipboardList, roles: ['ADMIN'] },
