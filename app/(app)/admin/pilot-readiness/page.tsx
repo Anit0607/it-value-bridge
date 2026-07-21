@@ -100,7 +100,7 @@ export default async function PilotReadinessPage() {
     { label: 'Password hashing enabled', status: 'pass', detail: 'bcryptjs with 12 salt rounds' },
     { label: 'No public data routes', status: 'pass', detail: 'All /api/* are either auth-protected or Next-Auth internals' },
     { label: 'AUTH_SECRET configured', status: authSecretSet ? 'pass' : 'fail', detail: authSecretSet ? 'Session secret is set' : 'AUTH_SECRET env var is missing — sessions are insecure' },
-    { label: 'NEXT_PUBLIC_DEMO_MODE set', status: demoModeSet ? 'pass' : 'warn', detail: demoModeSet ? 'Demo banner visible — users know this is sample data' : 'Set NEXT_PUBLIC_DEMO_MODE=true for the hosted demo instance' },
+    { label: 'NEXT_PUBLIC_DEMO_MODE set', status: demoModeSet ? 'pass' : 'warn', detail: demoModeSet ? 'Sample-data banner visible — users know this environment holds sample data' : 'Set NEXT_PUBLIC_DEMO_MODE=true for the hosted sample-data instance' },
     { label: 'AI narrative disabled', status: 'pass', detail: 'ENABLE_AI_NARRATIVE=false — no external API calls at runtime' },
   ];
 
@@ -114,7 +114,7 @@ export default async function PilotReadinessPage() {
     {
       label: `Sample initiatives available (${initiativeCount})`,
       status: initiativeCount >= 15 ? 'pass' : initiativeCount >= 8 ? 'warn' : 'fail',
-      detail: initiativeCount >= 15 ? 'Good portfolio volume for demo' : 'Run db:seed to populate sample data',
+      detail: initiativeCount >= 15 ? 'Good portfolio volume for a working walkthrough' : 'Run db:seed to populate sample data',
     },
     {
       label: `Sample regulatory items (${regulatoryCount})`,
@@ -138,17 +138,17 @@ export default async function PilotReadinessPage() {
     },
   ];
 
-  // ── 4. Pilot ───────────────────────────────────────────────────────────────
+  // ── 4. Client Rollout ────────────────────────────────────────────────────────
   const pilot: Check[] = [
     {
-      label: 'Pilot workspace name configured',
+      label: 'Client workspace name configured',
       status: wsNameSet ? 'pass' : 'warn',
       detail: wsNameSet
         ? `NEXT_PUBLIC_WORKSPACE_NAME = "${process.env.NEXT_PUBLIC_WORKSPACE_NAME}"`
         : 'Set NEXT_PUBLIC_WORKSPACE_NAME in Vercel env vars',
     },
     {
-      label: `All 5 pilot user roles created`,
+      label: `All 5 core user roles created`,
       status: allRoles.every(r => rolesPresent.has(r)) ? 'pass' : 'warn',
       detail: `Roles present: ${allRoles.filter(r => rolesPresent.has(r)).join(', ')} | Missing: ${allRoles.filter(r => !rolesPresent.has(r)).join(', ') || 'none'}`,
     },
@@ -158,19 +158,19 @@ export default async function PilotReadinessPage() {
       detail: org ? `"${org.name}" (status: ${org.status})` : 'Run scripts/seed-admin.ts to create the default org',
     },
     {
-      label: 'Demo walkthrough script ready',
+      label: 'Client walkthrough script ready',
       status: 'warn',
-      detail: 'Recommended: prepare a 3-step flow (CIO → PMO → Business SPOC) before CIO demo',
+      detail: 'Recommended: prepare a 3-step flow (CIO → PMO → Business SPOC) before the client walkthrough',
     },
     {
-      label: 'Known limitations documented',
+      label: 'Current release scope documented',
       status: 'pass',
-      detail: 'Single-tenant pilot, no real bank data, ADMIN role migration pending DB apply, Docker bundle not complete',
+      detail: 'Single-tenant deployment, seed data pending real enterprise mapping, Docker bundle not complete — see Current Release Scope',
     },
     {
-      label: 'Feedback capture process defined',
+      label: 'UAT feedback capture process defined',
       status: 'warn',
-      detail: 'Recommend a shared form or Jira board for testers to log observations before CIO demo',
+      detail: 'Recommend a shared form or Jira board for UAT testers to log observations before go-live',
     },
   ];
 
@@ -192,14 +192,14 @@ export default async function PilotReadinessPage() {
     { area: 'Action Center generating reminders', done: activeReminderCount > 0, detail: `${activeReminderCount} active reminder${activeReminderCount === 1 ? '' : 's'} generated live from current data` },
     { area: 'Regulatory examples available', done: regulatoryCount > 0, detail: `${regulatoryCount} regulatory initiative${regulatoryCount === 1 ? '' : 's'}` },
     { area: 'Strategic projects available', done: strategicCount > 0, detail: `${strategicCount} Strategic-classified initiative${strategicCount === 1 ? '' : 's'}` },
-    { area: 'Known limitations documented', done: true, detail: 'See /admin/known-limitations' },
+    { area: 'Current release scope documented', done: true, detail: 'See Current Release Scope (/admin/known-limitations)' },
   ];
   const structureDoneCount = structureChecks.filter(c => c.done).length;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Pilot Readiness Checklist"
+        title="Production Readiness Checklist"
         subtitle={`${totalPass} of ${allChecks.length} checks passing${totalFail > 0 ? ` · ${totalFail} critical` : ''}`}
       />
 
@@ -211,10 +211,10 @@ export default async function PilotReadinessPage() {
       }`}>
         <p className={`text-sm font-semibold ${totalFail > 0 ? 'text-rose-800' : allChecks.some(c => c.status === 'warn') ? 'text-amber-800' : 'text-emerald-800'}`}>
           {totalFail > 0
-            ? `${totalFail} critical issue${totalFail !== 1 ? 's' : ''} must be resolved before pilot.`
+            ? `${totalFail} critical issue${totalFail !== 1 ? 's' : ''} must be resolved before go-live.`
             : allChecks.some(c => c.status === 'warn')
-            ? `${allChecks.filter(c => c.status === 'warn').length} items need attention before CIO demo.`
-            : '✓ All checks passing — platform is ready for pilot deployment.'}
+            ? `${allChecks.filter(c => c.status === 'warn').length} items need attention before the client walkthrough.`
+            : '✓ All checks passing — platform is ready for client UAT and production rollout.'}
         </p>
         <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-slate-100">
           <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(totalPass / allChecks.length) * 100}%` }} />
@@ -270,8 +270,8 @@ export default async function PilotReadinessPage() {
         <ul>{data.map(c => <CheckRow key={c.label} {...c} />)}</ul>
       </SectionCard>
 
-      {/* ── 4. Pilot ── */}
-      <SectionCard title="Pilot" subtitle={sectionScore(pilot)} icon={Target} tone={sectionTone(pilot)}>
+      {/* ── 4. Client Rollout ── */}
+      <SectionCard title="Client Rollout" subtitle={sectionScore(pilot)} icon={Target} tone={sectionTone(pilot)}>
         <ul>{pilot.map(c => <CheckRow key={c.label} {...c} />)}</ul>
       </SectionCard>
     </div>

@@ -69,12 +69,12 @@ export default async function AdminPage() {
     m[u.role] = (m[u.role] ?? 0) + 1; return m;
   }, {});
 
-  // ── Pilot data health ────────────────────────────────────────────────────────
+  // ── Sample data health ───────────────────────────────────────────────────────
   const dataHealth: Array<{ label: string; status: CheckStatus; detail: string }> = [
     {
       label: `${initiativeCount} initiatives registered`,
       status: initiativeCount >= 10 ? 'pass' : initiativeCount >= 5 ? 'warn' : 'fail',
-      detail: initiativeCount >= 10 ? 'Good volume for demo' : 'Add more to make the demo compelling',
+      detail: initiativeCount >= 10 ? 'Good volume for a working walkthrough' : 'Add more initiatives for a stronger walkthrough',
     },
     {
       label: `${initiativesWithClaims} initiatives have benefit claims`,
@@ -87,7 +87,7 @@ export default async function AdminPage() {
       detail: 'OKRs link initiatives to business strategy',
     },
     {
-      label: `${delayedCount} delayed initiatives (governance demo)`,
+      label: `${delayedCount} delayed initiatives (governance walkthrough)`,
       status: delayedCount >= 2 ? 'pass' : 'warn',
       detail: 'Delays make the PMO governance view realistic',
     },
@@ -110,14 +110,14 @@ export default async function AdminPage() {
     { label: 'AI narrative disabled', status: 'pass', detail: 'ENABLE_AI_NARRATIVE=false — no external API calls at runtime' },
     { label: 'Self-hosted database (Neon)', status: 'pass', detail: 'PostgreSQL on AWS Singapore (ap-southeast-1)' },
     { label: 'Credentials auth (no OAuth)', status: 'pass', detail: 'Auth.js with bcrypt password hashing — no Google/external IdP' },
-    { label: 'Demo mode banner active', status: 'pass', detail: 'NEXT_PUBLIC_DEMO_MODE=true — visitors know this is sample data' },
+    { label: 'Sample-data banner active', status: 'pass', detail: 'NEXT_PUBLIC_DEMO_MODE=true — visitors know this is sample data' },
     { label: 'ADMIN role created', status: rolesPresent.has('ADMIN') ? 'pass' : 'fail', detail: rolesPresent.has('ADMIN') ? 'admin@bank.com active' : 'Run seed-admin.ts to create admin user' },
-    { label: 'Business data isolation', status: 'warn', detail: 'Multi-tenant isolation deferred — single workspace for pilot' },
+    { label: 'Business data isolation', status: 'warn', detail: 'Multi-tenant isolation deferred — single workspace for this phase' },
   ];
 
-  // ── Pilot readiness checklist ────────────────────────────────────────────────
+  // ── Production readiness checklist ───────────────────────────────────────────
   const readinessChecks: Array<{ label: string; status: CheckStatus; detail?: string }> = [
-    { label: 'All 5 demo roles have active users', status: ['CIO','PMO','VERTICAL_HEAD','BUSINESS','ADMIN'].every(r => rolesPresent.has(r as any)) ? 'pass' : 'warn', detail: `Roles present: ${[...rolesPresent].join(', ')}` },
+    { label: 'All 5 core roles have active users', status: ['CIO','PMO','VERTICAL_HEAD','BUSINESS','ADMIN'].every(r => rolesPresent.has(r as any)) ? 'pass' : 'warn', detail: `Roles present: ${[...rolesPresent].join(', ')}` },
     { label: 'CIO dashboard shows meaningful data', status: initiativeCount >= 10 ? 'pass' : 'warn', detail: 'KPI cards, delays, regulatory watch' },
     { label: 'PMO Work Queue has items to act on', status: delayedCount >= 2 ? 'pass' : 'warn', detail: `${delayedCount} delayed initiatives` },
     { label: 'Value Board shows projected ₹ ROI', status: benefitClaimCount >= 5 ? 'pass' : 'warn', detail: `${benefitClaimCount} benefit claims` },
@@ -125,7 +125,7 @@ export default async function AdminPage() {
     { label: 'Initiative Control Room is functional', status: 'pass', detail: 'Stage progression, audit trail, Action Required panel' },
     { label: 'Edit Initiative workflow live', status: 'pass', detail: '/items/[id]/edit — PMO/CIO can update metadata' },
     { label: 'Multi-step creation form live', status: 'pass', detail: '6-step guided workflow with review & submit' },
-    { label: 'Demo environment banner visible', status: 'pass', detail: 'Warns users this is sample data' },
+    { label: 'Sample-data banner visible', status: 'pass', detail: 'Warns users this is sample data' },
     { label: 'Landing page enterprise-ready', status: 'pass', detail: 'Product promise, pain statement, audience hierarchy, CTA flow' },
   ];
 
@@ -135,7 +135,7 @@ export default async function AdminPage() {
     <div className="space-y-6">
       <PageHeader
         title="Admin Console"
-        subtitle={`${org?.name ?? 'IT Value Bridge Pilot Workspace'} · Admin`}
+        subtitle={`${org?.name ?? 'IT Value Bridge Workspace'} · Admin`}
       />
 
       {/* ── 1. Workspace Overview ─────────────────────────────────────────────── */}
@@ -172,9 +172,9 @@ export default async function AdminPage() {
         </table>
       </SectionCard>
 
-      {/* ── 3. Pilot Data Health ──────────────────────────────────────────────── */}
+      {/* ── 3. Sample Data Health ─────────────────────────────────────────────── */}
       <SectionCard
-        title="Pilot Data Health"
+        title="Sample Data Health"
         subtitle={`${passCount(dataHealth)} / ${dataHealth.length} checks passing`}
         icon={ClipboardList}
         tone={passCount(dataHealth) === dataHealth.length ? 'success' : passCount(dataHealth) >= 4 ? 'default' : 'warning'}
@@ -226,9 +226,9 @@ export default async function AdminPage() {
         </ul>
       </SectionCard>
 
-      {/* ── 6. Pilot Readiness Checklist ──────────────────────────────────────── */}
+      {/* ── 6. Production Readiness Checklist ─────────────────────────────────── */}
       <SectionCard
-        title="Pilot Readiness Checklist"
+        title="Production Readiness Checklist"
         subtitle={`${passCount(readinessChecks)} / ${readinessChecks.length} ready`}
         icon={Settings}
         tone={passCount(readinessChecks) === readinessChecks.length ? 'success' : 'default'}
@@ -238,7 +238,7 @@ export default async function AdminPage() {
         </ul>
         {passCount(readinessChecks) === readinessChecks.length && (
           <div className="mt-4 rounded-lg border border-emerald-200 bg-emerald-50/60 px-4 py-3 text-sm font-medium text-emerald-800">
-            ✓ All pilot readiness checks passing — platform is ready for CIO demo.
+            ✓ All production readiness checks passing — platform is ready for client UAT.
           </div>
         )}
       </SectionCard>
