@@ -100,36 +100,46 @@ export default async function PilotReadinessPage() {
     { label: 'Password hashing enabled', status: 'pass', detail: 'bcryptjs with 12 salt rounds' },
     { label: 'No public data routes', status: 'pass', detail: 'All /api/* are either auth-protected or Next-Auth internals' },
     { label: 'AUTH_SECRET configured', status: authSecretSet ? 'pass' : 'fail', detail: authSecretSet ? 'Session secret is set' : 'AUTH_SECRET env var is missing — sessions are insecure' },
-    { label: 'NEXT_PUBLIC_DEMO_MODE set', status: demoModeSet ? 'pass' : 'warn', detail: demoModeSet ? 'Sample-data banner visible — users know this environment holds sample data' : 'Set NEXT_PUBLIC_DEMO_MODE=true for the hosted sample-data instance' },
+    { label: 'Production environment mode confirmed', status: demoModeSet ? 'pass' : 'warn', detail: demoModeSet ? 'Sample-data banner visible — correct while UAT runs on seed data; turn NEXT_PUBLIC_DEMO_MODE off before go-live with real client data' : 'NEXT_PUBLIC_DEMO_MODE is off — confirm this is intentional for a live production environment with real client data' },
     { label: 'AI narrative disabled', status: 'pass', detail: 'ENABLE_AI_NARRATIVE=false — no external API calls at runtime' },
   ];
 
   // ── 3. Data ────────────────────────────────────────────────────────────────
   const data: Check[] = [
     {
-      label: `Sample users available (${userCount} registered)`,
+      label: `Client users configured (${userCount} registered)`,
       status: userCount >= 5 ? 'pass' : userCount >= 2 ? 'warn' : 'fail',
       detail: `Roles present: ${[...rolesPresent].join(', ')}`,
     },
     {
-      label: `Sample initiatives available (${initiativeCount})`,
+      label: `Client initiatives imported/created (${initiativeCount})`,
       status: initiativeCount >= 15 ? 'pass' : initiativeCount >= 8 ? 'warn' : 'fail',
-      detail: initiativeCount >= 15 ? 'Good portfolio volume for a working walkthrough' : 'Run db:seed to populate sample data',
+      detail: initiativeCount >= 15 ? 'Good portfolio volume for a working walkthrough' : 'Import client initiatives via CSV or the New Initiative form, or run db:seed for placeholder data',
     },
     {
-      label: `Sample regulatory items (${regulatoryCount})`,
+      label: `Client regulatory items available (${regulatoryCount})`,
       status: regulatoryCount >= 2 ? 'pass' : regulatoryCount >= 1 ? 'warn' : 'fail',
       detail: 'Required for Regulatory Watch in CIO dashboard and report',
     },
     {
-      label: `Sample delayed items (${delayedCount})`,
+      label: `Client delayed items tracked (${delayedCount})`,
       status: delayedCount >= 3 ? 'pass' : delayedCount >= 1 ? 'warn' : 'fail',
       detail: 'Makes PMO Work Queue and Delay Accountability realistic',
     },
     {
-      label: `Sample benefit claims (${claimCount})`,
+      label: `Client benefit claims mapped (${claimCount})`,
       status: claimCount >= 10 ? 'pass' : claimCount >= 3 ? 'warn' : 'fail',
       detail: 'Drives Value Board, Value-at-Risk summary, and ROI metrics',
+    },
+    {
+      label: `Client milestones available (${milestoneCount})`,
+      status: milestoneCount >= 10 ? 'pass' : milestoneCount >= 3 ? 'warn' : 'fail',
+      detail: 'Drives the Milestone Watch table, Milestone Risk KPI, and Action Center reminders',
+    },
+    {
+      label: 'UAT scenarios prepared',
+      status: 'warn',
+      detail: 'Recommend a written test-case list per role (CIO, PMO, Program Head, Program Manager, Vertical Head, Business Head, Business SPOC) — see Client UAT Readiness for the live data-scoping verification',
     },
     {
       label: 'Reset / reseed process documented',
