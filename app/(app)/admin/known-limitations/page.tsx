@@ -16,10 +16,10 @@ interface Limitation {
 const LIMITATIONS: Limitation[] = [
   {
     id: 1,
-    area: 'Multi-tenancy',
-    current: 'Single-organisation workspace. All users share one portfolio view. There is no data isolation between different bank teams.',
-    roadmap: 'Tenant-level data partitioning via the `organizationId` field already added to the schema — activation is the next infrastructure sprint.',
-    priority: 'high',
+    area: 'Organization & Role-Scoped Access',
+    current: 'Current release supports organization-scoped and role-scoped access. Some ownership mappings are still name-based and should move to ID-based mapping before broader production rollout.',
+    roadmap: 'ID-based ownership mapping is the next hardening step (see Role-Based Access Scoping below for specifics). Full multi-organization tenant isolation — for future deployments serving more than one client organization — is already schema-ready via the `organizationId` field and can be activated in a later infrastructure sprint.',
+    priority: 'medium',
   },
   {
     id: 2,
