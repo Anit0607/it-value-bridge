@@ -101,8 +101,8 @@ const LIMITATIONS: Limitation[] = [
   {
     id: 13,
     area: 'Client UAT Validation',
-    current: 'Platform has not yet completed a structured UAT cycle with real client users in a live governance environment.',
-    roadmap: 'UAT with 4–5 client testers at Bandhan Bank, followed by structured feedback collection, is the immediate next step.',
+    current: 'A structured UAT cycle with real client users in a live governance environment is the next milestone before broader rollout.',
+    roadmap: 'UAT with 4–5 client testers at Bandhan Bank, followed by structured feedback collection, is scheduled as the immediate next step.',
     priority: 'high',
   },
 ];

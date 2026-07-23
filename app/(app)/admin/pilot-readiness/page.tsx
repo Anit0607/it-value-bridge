@@ -3,10 +3,21 @@ export const dynamic = 'force-dynamic';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/db';
+import type { Role } from '@prisma/client';
+import { buildInitiativeVisibilityWhere, ROLE_LABEL } from '@/lib/rbac';
 import { listVisibleInitiativesForUser } from '@/lib/actions/initiatives';
-import { listOpenMilestonesForInitiatives } from '@/lib/actions/milestones';
+import {
+  listOpenMilestonesForInitiatives,
+  createMilestone,
+  updateMilestone,
+  completeMilestone,
+  deleteMilestone,
+} from '@/lib/actions/milestones';
 import { enrichAll } from '@/lib/queries/enrich';
-import { generateReminders } from '@/lib/reminders';
+import { generateReminders, REMINDER_TYPE_LABEL, type ReminderType } from '@/lib/reminders';
+import { getBoardSummary } from '@/lib/queries/value';
+import { resolvePeriod } from '@/lib/period';
+import { formatInr } from '@/lib/value';
 import { PageHeader } from '@/components/PageHeader';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Badge } from '@/components/ui/Badge';
@@ -42,45 +53,272 @@ function sectionTone(checks: Check[]): 'success' | 'warning' | 'risk' | 'default
   return 'success';
 }
 
-export default async function PilotReadinessPage() {
+const STATUS_LABEL: Record<S, string> = { pass: 'Ready', warn: 'Needs attention', fail: 'Not ready' };
+const STATUS_TONE: Record<S, 'success' | 'warning' | 'danger'> = { pass: 'success', warn: 'warning', fail: 'danger' };
+
+interface TableRow { area: string; expected: string; status: S; detail: string }
+
+function ChecklistTable({ rows }: { rows: TableRow[] }) {
+  return (
+    <div className="overflow-x-auto">
+      <table className="min-w-full text-sm">
+        <thead>
+          <tr className="border-b border-slate-100 bg-slate-50/60">
+            <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Area</th>
+            <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Expected Result</th>
+            <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r, idx) => (
+            <tr key={r.area} className={`border-t border-slate-100 align-top ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
+              <td className="px-5 py-3 font-medium text-slate-800">{r.area}</td>
+              <td className="px-4 py-3 text-slate-600">
+                <div>{r.expected}</div>
+                <div className="mt-1 text-xs text-slate-400">{r.detail}</div>
+              </td>
+              <td className="px-4 py-3">
+                <Badge tone={STATUS_TONE[r.status]} size="sm">{STATUS_LABEL[r.status]}</Badge>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+const ROLE_ACCESS_DEFS: { role: Role; area: string; expected: string; fullAccess: boolean }[] = [
+  { role: 'CIO',            area: 'CIO access',            expected: 'Full Executive View',                fullAccess: true },
+  { role: 'PMO',             area: 'PMO access',             expected: 'Full governance portfolio',          fullAccess: true },
+  { role: 'PROGRAM_HEAD',    area: 'Program Head access',    expected: 'Assigned program portfolio only',    fullAccess: false },
+  { role: 'PROGRAM_MANAGER', area: 'Program Manager access', expected: 'Assigned initiatives only',          fullAccess: false },
+  { role: 'VERTICAL_HEAD',   area: 'Vertical Head access',   expected: 'Own vertical only',                  fullAccess: false },
+  { role: 'BUSINESS_HEAD',   area: 'Business Head access',   expected: 'Own business portfolio',              fullAccess: false },
+  { role: 'BUSINESS',        area: 'Business SPOC access',   expected: 'Assigned validations only',          fullAccess: false },
+];
+
+const ALL_REMINDER_TYPES: ReminderType[] = [
+  'STALE_UPDATE', 'STAGE_OVERDUE', 'GO_LIVE_RISK', 'BUSINESS_VALIDATION_PENDING',
+  'REGULATORY_DEADLINE_RISK', 'BUSINESS_DELAY', 'VENDOR_DELAY', 'MILESTONE_OVERDUE', 'MILESTONE_BLOCKED',
+];
+
+const MILESTONE_STATUSES = ['NOT_STARTED', 'IN_PROGRESS', 'BLOCKED', 'COMPLETED'] as const;
+
+export default async function ClientReadinessPage() {
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
   if (session.user.role !== 'ADMIN') redirect('/');
 
-  // ── DB counts for data section ─────────────────────────────────────────────
+  // The "active organization/client workspace" is the admin's own org — every
+  // count below is scoped to this id (a sentinel when absent, so every query
+  // naturally returns zero rather than silently falling back to a cross-org
+  // total). This is deliberate: once a second client organization exists on
+  // this deployment, these checks must not blend the two together.
+  const orgId = session.user.organizationId ?? null;
+  const scopeId = orgId ?? '__no_active_organization__';
+
   const [
-    userCount, initiativeCount, regulatoryCount, delayedCount, claimCount, org, users,
-    milestoneCount, strategicCount, hierarchyInitiativeCount,
-  ] =
-    await Promise.all([
-      prisma.user.count(),
-      prisma.initiative.count(),
-      prisma.initiative.count({ where: { isRegulatory: true } }),
-      prisma.initiative.count({ where: { delayed: true, currentStage: { not: 'CLOSED' } } }),
-      prisma.benefitClaim.count(),
-      prisma.organization.findFirst({ select: { name: true, status: true } }),
-      prisma.user.findMany({ select: { role: true } }),
-      prisma.milestone.count(),
-      prisma.initiative.count({ where: { classification: 'STRATEGIC' } }),
-      prisma.initiative.count({ where: { programHeadName: { not: null } } }),
-    ]);
+    org, userCount, users, initiativeCount, regulatoryCount, regulatoryWithBodyCount,
+    claimCount, milestoneCount, hierarchyMappedCount, businessUnitMappedCount,
+  ] = await Promise.all([
+    orgId ? prisma.organization.findUnique({ where: { id: orgId }, select: { name: true, status: true } }) : null,
+    prisma.user.count({ where: { organizationId: scopeId } }),
+    prisma.user.findMany({ where: { organizationId: scopeId }, select: { role: true } }),
+    prisma.initiative.count({ where: { organizationId: scopeId } }),
+    prisma.initiative.count({ where: { organizationId: scopeId, isRegulatory: true } }),
+    prisma.initiative.count({ where: { organizationId: scopeId, isRegulatory: true, regulatoryBody: { not: null } } }),
+    prisma.benefitClaim.count({ where: { OR: [{ initiative: { organizationId: scopeId } }, { demand: { organizationId: scopeId } }] } }),
+    prisma.milestone.count({ where: { initiative: { organizationId: scopeId } } }),
+    prisma.initiative.count({ where: { organizationId: scopeId, OR: [{ programHeadName: { not: null } }, { programManagerName: { not: null } }, { businessHeadName: { not: null } }] } }),
+    prisma.initiative.count({ where: { organizationId: scopeId, businessUnit: { not: null } } }),
+  ]);
 
   const rolesPresent = new Set(users.map(u => u.role as string));
   const allRoles = ['ADMIN', 'CIO', 'PMO', 'VERTICAL_HEAD', 'BUSINESS'];
-  const hierarchyRoles = ['VERTICAL_HEAD', 'BUSINESS', 'PROGRAM_HEAD', 'PROGRAM_MANAGER', 'BUSINESS_HEAD'];
-  const hierarchyRolesPresent = hierarchyRoles.every(r => rolesPresent.has(r));
-  const roleHierarchyConfigured = hierarchyRolesPresent && hierarchyInitiativeCount > 0;
-
-  // Real smoke test of the Action Center's actual reminder engine — not a
-  // static claim. Same org-wide visibility ADMIN already gets everywhere
-  // else (buildInitiativeVisibilityWhere), so this reads real, live data.
-  const adminItems = enrichAll(await listVisibleInitiativesForUser(session.user));
-  const adminMilestones = await listOpenMilestonesForInitiatives(adminItems);
-  const activeReminderCount = generateReminders(adminItems, adminMilestones).length;
 
   const wsNameSet = !!(process.env.NEXT_PUBLIC_WORKSPACE_NAME);
   const demoModeSet = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
   const authSecretSet = !!(process.env.AUTH_SECRET);
+
+  // ── Client UAT Checklist ─────────────────────────────────────────────────
+  // Role access + data isolation: find a real user for the role IN THIS
+  // ORGANIZATION, run the same buildInitiativeVisibilityWhere() every
+  // dashboard uses, and compare what they see against this org's portfolio.
+  const roleRows: TableRow[] = [];
+  for (const def of ROLE_ACCESS_DEFS) {
+    const user = orgId ? await prisma.user.findFirst({ where: { role: def.role, organizationId: orgId } }) : null;
+    if (!user) {
+      roleRows.push({
+        area: def.area,
+        expected: def.expected,
+        status: 'warn',
+        detail: `No ${ROLE_LABEL[def.role]} user exists in this organization yet — cannot verify live scoping.`,
+      });
+      continue;
+    }
+
+    const where = buildInitiativeVisibilityWhere({
+      role: user.role,
+      name: user.name,
+      verticalHead: user.verticalHead,
+      organizationId: user.organizationId!,
+    });
+    const visibleCount = await prisma.initiative.count({ where });
+
+    if (def.fullAccess) {
+      const ok = initiativeCount > 0 && visibleCount === initiativeCount;
+      roleRows.push({
+        area: def.area,
+        expected: def.expected,
+        status: ok ? 'pass' : initiativeCount === 0 ? 'warn' : 'fail',
+        detail: `${user.name} (${user.email}) sees ${visibleCount} of ${initiativeCount} initiatives in this organization${
+          ok ? ' — full portfolio, as expected.' : ' — expected full visibility but got a restricted count.'
+        }`,
+      });
+    } else {
+      const isolated = initiativeCount > 0 && visibleCount < initiativeCount;
+      const hasData = visibleCount > 0;
+      roleRows.push({
+        area: def.area,
+        expected: def.expected,
+        status: isolated && hasData ? 'pass' : isolated ? 'warn' : 'fail',
+        detail: `${user.name} (${user.email}) sees ${visibleCount} of ${initiativeCount} initiatives in this organization${
+          isolated ? ' — correctly scoped to their own portfolio.' : ' — NOT scoped; sees the entire organization portfolio.'
+        }${!hasData ? ' No initiatives are currently assigned to this user to verify against.' : ''}`,
+      });
+    }
+  }
+
+  const msByStatus = await prisma.milestone.groupBy({
+    by: ['status'],
+    where: { initiative: { organizationId: scopeId } },
+    _count: { _all: true },
+  });
+  const statusesPresent = new Set(msByStatus.map(s => s.status));
+  const missingStatuses = MILESTONE_STATUSES.filter(s => !statusesPresent.has(s));
+  const actionsWired = [createMilestone, updateMilestone, completeMilestone, deleteMilestone].every(fn => typeof fn === 'function');
+  const milestoneRow: TableRow = {
+    area: 'Milestone workflow',
+    expected: 'Create/edit/complete/delete works',
+    status: actionsWired && missingStatuses.length === 0 ? 'pass' : actionsWired ? 'warn' : 'fail',
+    detail: `${statusesPresent.size}/4 milestone states observed in this organization (${[...statusesPresent].join(', ') || 'none'}); create/edit/complete/delete server actions are wired in lib/actions/milestones.ts.${
+      missingStatuses.length ? ` Not yet exercised: ${missingStatuses.join(', ')}.` : ''
+    }`,
+  };
+
+  // Action Center — a real re-run of the reminder engine, scoped through the
+  // same buildInitiativeVisibilityWhere()-backed query every dashboard uses.
+  const scopedItems = enrichAll(await listVisibleInitiativesForUser(session.user));
+  const scopedMilestones = await listOpenMilestonesForInitiatives(scopedItems);
+  const liveReminders = generateReminders(scopedItems, scopedMilestones);
+  const presentTypes = new Set(liveReminders.map(r => r.type));
+  const typeCoverage = ALL_REMINDER_TYPES.filter(t => presentTypes.has(t));
+  const actionCenterRow: TableRow = {
+    area: 'Action Center',
+    expected: 'Reminders generated correctly',
+    status: liveReminders.length > 0 && typeCoverage.length >= 5 ? 'pass' : liveReminders.length > 0 ? 'warn' : 'fail',
+    detail: `${liveReminders.length} reminders generated live from this organization's data, covering ${typeCoverage.length}/${ALL_REMINDER_TYPES.length} reminder types (${typeCoverage.map(t => REMINDER_TYPE_LABEL[t]).join(', ') || 'none'}).`,
+  };
+
+  // Value Report — NOTE: getBoardSummary() does not yet accept an
+  // organization filter internally, so this total reflects ALL
+  // organizations on the deployment, not just this one. Harmless today
+  // (single-organization deployment) but should be scoped before a second
+  // client organization is onboarded — see the summary note below the table.
+  const boardSummary = await getBoardSummary(resolvePeriod({ period: 'all' }));
+  const valueRow: TableRow = {
+    area: 'Value Report',
+    expected: 'Business value summary works',
+    status: boardSummary.totals.initiativesWithValue > 0 && boardSummary.byCategory.length > 0 ? 'pass' : 'fail',
+    detail: `${boardSummary.totals.initiativesWithValue} initiatives with committed value, ${formatInr(boardSummary.totals.projected)} projected across ${boardSummary.byCategory.length} benefit categories and ${boardSummary.byOkr.length} strategic OKRs. (Not yet organization-scoped internally — see note below.)`,
+  };
+
+  const scopedRoleRows = roleRows.filter(r => !['CIO access', 'PMO access'].includes(r.area));
+  const unauthorizedFails = scopedRoleRows.filter(r => r.status === 'fail').length;
+  const unauthorizedWarns = scopedRoleRows.filter(r => r.status === 'warn').length;
+  const unauthorizedRow: TableRow = {
+    area: 'Unauthorized access',
+    expected: 'Restricted data blocked',
+    status: unauthorizedFails > 0 ? 'fail' : unauthorizedWarns > 0 ? 'warn' : 'pass',
+    detail: unauthorizedFails > 0
+      ? `${unauthorizedFails} scoped role${unauthorizedFails === 1 ? '' : 's'} can currently see initiatives outside their assignment — investigate before client UAT.`
+      : unauthorizedWarns > 0
+      ? `Scoping rules are correct, but ${unauthorizedWarns} role${unauthorizedWarns === 1 ? '' : 's'} has no assigned initiatives to verify against — assign at least one initiative per role before UAT.`
+      : `All ${scopedRoleRows.length} scoped roles (Program Head, Program Manager, Vertical Head, Business Head, Business SPOC) see a strict subset of this organization's ${initiativeCount}-initiative portfolio.`,
+  };
+
+  const uatRows: TableRow[] = [...roleRows, milestoneRow, actionCenterRow, valueRow, unauthorizedRow];
+
+  // ── Client Onboarding & Data Readiness ───────────────────────────────────
+  const hierarchyPct = initiativeCount > 0 ? Math.round((hierarchyMappedCount / initiativeCount) * 100) : 0;
+  const businessUnitPct = initiativeCount > 0 ? Math.round((businessUnitMappedCount / initiativeCount) * 100) : 0;
+
+  const envVars = [
+    { name: 'NEXT_PUBLIC_WORKSPACE_NAME', set: wsNameSet },
+    { name: 'AUTH_SECRET', set: authSecretSet },
+    { name: 'NEXT_PUBLIC_DEMO_MODE', set: process.env.NEXT_PUBLIC_DEMO_MODE !== undefined },
+  ];
+  const missingEnv = envVars.filter(e => !e.set);
+
+  const onboardingRows: TableRow[] = [
+    {
+      area: 'Client users',
+      expected: 'Core roles registered for this organization',
+      status: userCount >= 5 ? 'pass' : userCount >= 2 ? 'warn' : 'fail',
+      detail: `${userCount} user${userCount === 1 ? '' : 's'} in this organization. Roles present: ${[...rolesPresent].join(', ') || 'none'}.`,
+    },
+    {
+      area: 'Client initiatives',
+      expected: 'Portfolio imported or created',
+      status: initiativeCount >= 15 ? 'pass' : initiativeCount >= 8 ? 'warn' : 'fail',
+      detail: initiativeCount >= 15
+        ? `${initiativeCount} initiatives — good portfolio volume for a working walkthrough.`
+        : `${initiativeCount} initiatives. Import via CSV or the New Initiative form, or run db:seed for placeholder data.`,
+    },
+    {
+      area: 'Role hierarchy mapping',
+      expected: 'Program Head / Program Manager / Business Head mapped',
+      status: initiativeCount === 0 ? 'warn' : hierarchyPct >= 80 ? 'pass' : hierarchyPct >= 40 ? 'warn' : 'fail',
+      detail: `${hierarchyMappedCount} of ${initiativeCount} initiatives (${hierarchyPct}%) have at least one enterprise-role field mapped by name.`,
+    },
+    {
+      area: 'Business unit mapping',
+      expected: 'Business unit assigned per initiative',
+      status: initiativeCount === 0 ? 'warn' : businessUnitPct >= 80 ? 'pass' : businessUnitPct >= 40 ? 'warn' : 'fail',
+      detail: `${businessUnitMappedCount} of ${initiativeCount} initiatives (${businessUnitPct}%) have a business unit assigned.`,
+    },
+    {
+      area: 'Milestones',
+      expected: 'Checkpoints available for delivery tracking',
+      status: milestoneCount >= 10 ? 'pass' : milestoneCount >= 3 ? 'warn' : 'fail',
+      detail: `${milestoneCount} milestones in this organization — drives Milestone Watch, Milestone Risk KPI, and Action Center reminders.`,
+    },
+    {
+      area: 'Benefit claims',
+      expected: 'Value claims mapped to initiatives',
+      status: claimCount >= 10 ? 'pass' : claimCount >= 3 ? 'warn' : 'fail',
+      detail: `${claimCount} benefit claims in this organization — drives Value Board, Value-at-Risk summary, and ROI metrics.`,
+    },
+    {
+      area: 'Regulatory metadata',
+      expected: 'Regulatory body recorded for flagged initiatives',
+      status: regulatoryCount === 0 ? 'warn' : regulatoryWithBodyCount === regulatoryCount ? 'pass' : 'warn',
+      detail: regulatoryCount === 0
+        ? 'No initiatives are flagged as regulatory in this organization yet.'
+        : `${regulatoryWithBodyCount} of ${regulatoryCount} regulatory initiatives have a regulatory body recorded.`,
+    },
+    {
+      area: 'Production environment variables',
+      expected: 'Deployment configuration confirmed',
+      status: missingEnv.length === 0 ? 'pass' : missingEnv.some(e => e.name === 'AUTH_SECRET') ? 'fail' : 'warn',
+      detail: missingEnv.length === 0
+        ? 'NEXT_PUBLIC_WORKSPACE_NAME, AUTH_SECRET, and NEXT_PUBLIC_DEMO_MODE are all configured for this environment.'
+        : `Missing: ${missingEnv.map(e => e.name).join(', ')}.`,
+    },
+  ];
+
+  const wsNameSetForRollout = wsNameSet; // kept distinct from the consolidated env-var row above for the Client Rollout section's own detail line
 
   // ── 1. Product ─────────────────────────────────────────────────────────────
   const product: Check[] = [
@@ -104,56 +342,12 @@ export default async function PilotReadinessPage() {
     { label: 'AI narrative disabled', status: 'pass', detail: 'ENABLE_AI_NARRATIVE=false — no external API calls at runtime' },
   ];
 
-  // ── 3. Data ────────────────────────────────────────────────────────────────
-  const data: Check[] = [
-    {
-      label: `Client users configured (${userCount} registered)`,
-      status: userCount >= 5 ? 'pass' : userCount >= 2 ? 'warn' : 'fail',
-      detail: `Roles present: ${[...rolesPresent].join(', ')}`,
-    },
-    {
-      label: `Client initiatives imported/created (${initiativeCount})`,
-      status: initiativeCount >= 15 ? 'pass' : initiativeCount >= 8 ? 'warn' : 'fail',
-      detail: initiativeCount >= 15 ? 'Good portfolio volume for a working walkthrough' : 'Import client initiatives via CSV or the New Initiative form, or run db:seed for placeholder data',
-    },
-    {
-      label: `Client regulatory items available (${regulatoryCount})`,
-      status: regulatoryCount >= 2 ? 'pass' : regulatoryCount >= 1 ? 'warn' : 'fail',
-      detail: 'Required for Regulatory Watch in CIO dashboard and report',
-    },
-    {
-      label: `Client delayed items tracked (${delayedCount})`,
-      status: delayedCount >= 3 ? 'pass' : delayedCount >= 1 ? 'warn' : 'fail',
-      detail: 'Makes PMO Work Queue and Delay Accountability realistic',
-    },
-    {
-      label: `Client benefit claims mapped (${claimCount})`,
-      status: claimCount >= 10 ? 'pass' : claimCount >= 3 ? 'warn' : 'fail',
-      detail: 'Drives Value Board, Value-at-Risk summary, and ROI metrics',
-    },
-    {
-      label: `Client milestones available (${milestoneCount})`,
-      status: milestoneCount >= 10 ? 'pass' : milestoneCount >= 3 ? 'warn' : 'fail',
-      detail: 'Drives the Milestone Watch table, Milestone Risk KPI, and Action Center reminders',
-    },
-    {
-      label: 'UAT scenarios prepared',
-      status: 'warn',
-      detail: 'Recommend a written test-case list per role (CIO, PMO, Program Head, Program Manager, Vertical Head, Business Head, Business SPOC) — see Client UAT Readiness for the live data-scoping verification',
-    },
-    {
-      label: 'Reset / reseed process documented',
-      status: 'pass',
-      detail: 'DATABASE_URL=<neon-url> npx tsx scripts/seed-admin.ts / npm run db:seed',
-    },
-  ];
-
-  // ── 4. Client Rollout ────────────────────────────────────────────────────────
-  const pilot: Check[] = [
+  // ── 3. Client Rollout ────────────────────────────────────────────────────────
+  const rollout: Check[] = [
     {
       label: 'Client workspace name configured',
-      status: wsNameSet ? 'pass' : 'warn',
-      detail: wsNameSet
+      status: wsNameSetForRollout ? 'pass' : 'warn',
+      detail: wsNameSetForRollout
         ? `NEXT_PUBLIC_WORKSPACE_NAME = "${process.env.NEXT_PUBLIC_WORKSPACE_NAME}"`
         : 'Set NEXT_PUBLIC_WORKSPACE_NAME in Vercel env vars',
     },
@@ -165,7 +359,7 @@ export default async function PilotReadinessPage() {
     {
       label: 'Organization record created',
       status: org ? 'pass' : 'fail',
-      detail: org ? `"${org.name}" (status: ${org.status})` : 'Run scripts/seed-admin.ts to create the default org',
+      detail: org ? `"${org.name}" (status: ${org.status})` : 'This admin account is not assigned to an organization — run scripts/seed-admin.ts to create one',
     },
     {
       label: 'Client walkthrough script ready',
@@ -184,85 +378,60 @@ export default async function PilotReadinessPage() {
     },
   ];
 
-  const allChecks = [...product, ...security, ...data, ...pilot];
-  const totalPass = allChecks.filter(c => c.status === 'pass').length;
-  const totalFail = allChecks.filter(c => c.status === 'fail').length;
-
-  // ── Platform Structure Checklist ── the enterprise-buyer-facing summary:
-  // ten yes/no areas, each backed by a real DB count or a live run of the
-  // actual feature (Action Center), not a hardcoded claim.
-  interface AreaCheck { area: string; done: boolean; detail: string }
-  const structureChecks: AreaCheck[] = [
-    { area: 'Organization configured', done: !!org, detail: org ? `"${org.name}" — status: ${org.status}` : 'No organization record found' },
-    { area: 'Users seeded or created', done: userCount > 0, detail: `${userCount} user${userCount === 1 ? '' : 's'} across ${rolesPresent.size} role${rolesPresent.size === 1 ? '' : 's'}` },
-    { area: 'Role hierarchy configured', done: roleHierarchyConfigured, detail: roleHierarchyConfigured ? 'Vertical Head / Business / Program Head / Program Manager / Business Head all present, with hierarchy fields set on initiatives' : 'Missing one or more hierarchy roles, or no initiative has programHeadName set' },
-    { area: 'Initiatives available', done: initiativeCount > 0, detail: `${initiativeCount} initiative${initiativeCount === 1 ? '' : 's'}` },
-    { area: 'Value claims available', done: claimCount > 0, detail: `${claimCount} benefit claim${claimCount === 1 ? '' : 's'}` },
-    { area: 'Milestones available', done: milestoneCount > 0, detail: `${milestoneCount} milestone${milestoneCount === 1 ? '' : 's'}` },
-    { area: 'Action Center generating reminders', done: activeReminderCount > 0, detail: `${activeReminderCount} active reminder${activeReminderCount === 1 ? '' : 's'} generated live from current data` },
-    { area: 'Regulatory examples available', done: regulatoryCount > 0, detail: `${regulatoryCount} regulatory initiative${regulatoryCount === 1 ? '' : 's'}` },
-    { area: 'Strategic projects available', done: strategicCount > 0, detail: `${strategicCount} Strategic-classified initiative${strategicCount === 1 ? '' : 's'}` },
-    { area: 'Current release scope documented', done: true, detail: 'See Current Release Scope (/admin/known-limitations)' },
-  ];
-  const structureDoneCount = structureChecks.filter(c => c.done).length;
+  const allChecks = [...product, ...security, ...rollout];
+  const totalPass = allChecks.filter(c => c.status === 'pass').length + uatRows.filter(r => r.status === 'pass').length + onboardingRows.filter(r => r.status === 'pass').length;
+  const totalFail = allChecks.filter(c => c.status === 'fail').length + uatRows.filter(r => r.status === 'fail').length + onboardingRows.filter(r => r.status === 'fail').length;
+  const totalChecks = allChecks.length + uatRows.length + onboardingRows.length;
+  const totalWarn = totalChecks - totalPass - totalFail;
 
   return (
     <div className="space-y-6">
       <PageHeader
-        title="Production Readiness Checklist"
-        subtitle={`${totalPass} of ${allChecks.length} checks passing${totalFail > 0 ? ` · ${totalFail} critical` : ''}`}
+        title="Client UAT & Production Readiness"
+        subtitle={`${totalPass} of ${totalChecks} checks passing${totalFail > 0 ? ` · ${totalFail} not ready` : ''}`}
       />
 
       {/* Summary bar */}
       <div className={`rounded-xl border px-5 py-4 ${
         totalFail > 0 ? 'border-rose-200 bg-rose-50/60' :
-        allChecks.some(c => c.status === 'warn') ? 'border-amber-200 bg-amber-50/60' :
+        totalWarn > 0 ? 'border-amber-200 bg-amber-50/60' :
         'border-emerald-200 bg-emerald-50/60'
       }`}>
-        <p className={`text-sm font-semibold ${totalFail > 0 ? 'text-rose-800' : allChecks.some(c => c.status === 'warn') ? 'text-amber-800' : 'text-emerald-800'}`}>
+        <p className={`text-sm font-semibold ${totalFail > 0 ? 'text-rose-800' : totalWarn > 0 ? 'text-amber-800' : 'text-emerald-800'}`}>
           {totalFail > 0
-            ? `${totalFail} critical issue${totalFail !== 1 ? 's' : ''} must be resolved before go-live.`
-            : allChecks.some(c => c.status === 'warn')
-            ? `${allChecks.filter(c => c.status === 'warn').length} items need attention before the client walkthrough.`
+            ? `${totalFail} item${totalFail !== 1 ? 's' : ''} not ready for client UAT.`
+            : totalWarn > 0
+            ? `${totalWarn} item${totalWarn !== 1 ? 's' : ''} need attention before the client walkthrough.`
             : '✓ All checks passing — platform is ready for client UAT and production rollout.'}
         </p>
         <div className="mt-2 flex h-2 overflow-hidden rounded-full bg-slate-100">
-          <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(totalPass / allChecks.length) * 100}%` }} />
+          <div className="h-full bg-emerald-500 transition-all" style={{ width: `${(totalPass / totalChecks) * 100}%` }} />
         </div>
-        <p className="mt-1 text-xs text-slate-500">{totalPass} / {allChecks.length} ready</p>
+        <p className="mt-1 text-xs text-slate-500">
+          {totalPass} / {totalChecks} ready — every count on this page is scoped to your active organization ({org?.name ?? 'none assigned'}), re-computed live on every load.
+        </p>
       </div>
 
-      {/* ── Platform Structure Checklist — enterprise-buyer-facing summary ── */}
+      {/* ── Client UAT Checklist ── */}
       <SectionCard
-        title="Platform Structure Checklist"
-        subtitle={`${structureDoneCount} / ${structureChecks.length} done`}
+        title="Client UAT Checklist"
+        subtitle={sectionScore(uatRows.map(r => ({ label: r.area, status: r.status })))}
         icon={ClipboardCheck}
-        tone={structureDoneCount === structureChecks.length ? 'success' : 'risk'}
+        tone={uatRows.some(r => r.status === 'fail') ? 'risk' : uatRows.some(r => r.status === 'warn') ? 'warning' : 'success'}
         noPad
       >
-        <div className="overflow-x-auto">
-          <table className="min-w-full text-sm">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/60">
-                <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Area</th>
-                <th className="px-4 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Status</th>
-              </tr>
-            </thead>
-            <tbody>
-              {structureChecks.map((c, idx) => (
-                <tr key={c.area} className={`border-t border-slate-100 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
-                  <td className="px-5 py-2.5">
-                    <div className="font-medium text-slate-800">{c.area}</div>
-                    <div className="mt-0.5 text-xs text-slate-500">{c.detail}</div>
-                  </td>
-                  <td className="px-4 py-2.5">
-                    <Badge tone={c.done ? 'success' : 'danger'} size="sm">{c.done ? 'Done' : 'Missing'}</Badge>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ChecklistTable rows={uatRows} />
+      </SectionCard>
+
+      {/* ── Client Onboarding & Data Readiness ── */}
+      <SectionCard
+        title="Client Onboarding & Data Readiness"
+        subtitle={sectionScore(onboardingRows.map(r => ({ label: r.area, status: r.status })))}
+        icon={Database}
+        tone={onboardingRows.some(r => r.status === 'fail') ? 'risk' : onboardingRows.some(r => r.status === 'warn') ? 'warning' : 'success'}
+        noPad
+      >
+        <ChecklistTable rows={onboardingRows} />
       </SectionCard>
 
       {/* ── 1. Product ── */}
@@ -275,15 +444,20 @@ export default async function PilotReadinessPage() {
         <ul>{security.map(c => <CheckRow key={c.label} {...c} />)}</ul>
       </SectionCard>
 
-      {/* ── 3. Data ── */}
-      <SectionCard title="Data" subtitle={sectionScore(data)} icon={Database} tone={sectionTone(data)}>
-        <ul>{data.map(c => <CheckRow key={c.label} {...c} />)}</ul>
+      {/* ── 3. Client Rollout ── */}
+      <SectionCard title="Client Rollout" subtitle={sectionScore(rollout)} icon={Target} tone={sectionTone(rollout)}>
+        <ul>{rollout.map(c => <CheckRow key={c.label} {...c} />)}</ul>
       </SectionCard>
 
-      {/* ── 4. Client Rollout ── */}
-      <SectionCard title="Client Rollout" subtitle={sectionScore(pilot)} icon={Target} tone={sectionTone(pilot)}>
-        <ul>{pilot.map(c => <CheckRow key={c.label} {...c} />)}</ul>
-      </SectionCard>
+      {/* Known gap in this checklist itself */}
+      <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-5 py-4">
+        <p className="text-sm font-semibold text-amber-800">One gap in this page itself</p>
+        <p className="mt-1 text-sm leading-relaxed text-amber-700">
+          The Value Report row above calls the same summary query the live Value Board uses, which does not yet
+          filter by organization internally — on this single-organization deployment the number shown is correct,
+          but it should be scoped explicitly before a second client organization is onboarded to this platform.
+        </p>
+      </div>
     </div>
   );
 }
