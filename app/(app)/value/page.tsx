@@ -21,7 +21,7 @@ export default async function ValueDashboard({
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
 
-  const s = await getBoardSummary(resolvePeriod(searchParams), session.user.organizationId ?? null);
+  const s = await getBoardSummary(resolvePeriod(searchParams), session.user);
   const maxCat = s.byCategory[0]?.projected ?? 1;
   const maxVh = s.byVertical[0]?.projected ?? 1;
   const maxOkr = s.byOkr[0]?.projected ?? 1;

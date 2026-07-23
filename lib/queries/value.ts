@@ -1,6 +1,7 @@
 import { prisma } from '@/lib/db';
 import { addMonthsIso, realizationStatus, type RealizationStatus } from '@/lib/value';
 import { inPeriod, type Period } from '@/lib/period';
+import { buildInitiativeVisibilityWhere } from '@/lib/rbac';
 import type { BenefitCategory, Stage } from '@prisma/client';
 
 export interface BoardCategoryRow {
@@ -75,16 +76,25 @@ function latestRealized(measurements: { measuredAt: Date; realizedInr: number | 
 }
 
 /**
- * organizationId scopes every initiative this reads to one client
- * workspace — the same boundary buildInitiativeVisibilityWhere() enforces
- * everywhere else. Pass null only when there is genuinely no active
- * organization (e.g. a misconfigured admin account); that returns an empty
- * summary rather than silently blending every organization's data together.
+ * `user` scopes every initiative this reads through the SAME
+ * buildInitiativeVisibilityWhere() every dashboard uses — not just the
+ * organization boundary, but role-based visibility too. This matters here:
+ * /value and /report are reachable by PROGRAM_HEAD and PROGRAM_MANAGER
+ * (PMO_EQUIVALENT_ROLES), and those roles must only see the value of
+ * initiatives assigned to them, not the whole organization's portfolio.
+ * Passing a bare organizationId would silently over-share for those two
+ * roles even though it correctly excludes other organizations.
  */
-export async function getBoardSummary(period: Period, organizationId: string | null): Promise<BoardSummary> {
+export async function getBoardSummary(
+  period: Period,
+  user: { role: string; name: string; verticalHead?: string | null; organizationId?: string | null },
+): Promise<BoardSummary> {
   const todayIso = new Date().toISOString().slice(0, 10);
+  const where = user.organizationId
+    ? buildInitiativeVisibilityWhere({ ...user, organizationId: user.organizationId })
+    : { organizationId: '__no_active_organization__' }; // no org context — see nothing, same safe default as listVisibleInitiativesForUser
   const initiatives = await prisma.initiative.findMany({
-    where: { organizationId: organizationId ?? '__no_active_organization__' },
+    where,
     include: {
       benefitClaims: { include: { measurements: true } },
       okrLinks: { include: { okr: true } },

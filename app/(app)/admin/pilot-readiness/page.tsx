@@ -222,8 +222,8 @@ export default async function ClientReadinessPage() {
   };
 
   // Value Report — a real re-run of the Value Board's own summary query,
-  // scoped to this organization the same way every other check on this page is.
-  const boardSummary = await getBoardSummary(resolvePeriod({ period: 'all' }), orgId);
+  // scoped through the same user-based visibility as every other check on this page.
+  const boardSummary = await getBoardSummary(resolvePeriod({ period: 'all' }), session.user);
   const valueRow: TableRow = {
     area: 'Value Report',
     expected: 'Business value summary works',

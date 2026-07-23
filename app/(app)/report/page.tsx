@@ -37,8 +37,11 @@ export default async function ReportPage({
   const period = resolvePeriod(searchParams);
   const today = new Date().toISOString().slice(0, 10);
 
-  // Value lens — benefit claim totals per initiative
+  // Value lens — benefit claim totals per initiative. Scoped to the same
+  // already-visible ids as `items` above; never read organization- or
+  // role-scoped data through an unscoped query, even for a lookup table.
   const claimData = await prisma.initiative.findMany({
+    where: { id: { in: items.map(i => i.id) } },
     select: {
       id: true,
       currentStage: true,
