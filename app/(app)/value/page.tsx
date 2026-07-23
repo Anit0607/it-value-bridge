@@ -1,5 +1,7 @@
 export const dynamic = 'force-dynamic';
 
+import { auth } from '@/auth';
+import { redirect } from 'next/navigation';
 import { getBoardSummary } from '@/lib/queries/value';
 import { PrintButton } from '@/components/PrintButton';
 import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE } from '@/lib/value';
@@ -16,7 +18,10 @@ export default async function ValueDashboard({
 }: {
   searchParams: { period?: string; from?: string; to?: string };
 }) {
-  const s = await getBoardSummary(resolvePeriod(searchParams));
+  const session = await auth();
+  if (!session?.user) redirect('/sign-in');
+
+  const s = await getBoardSummary(resolvePeriod(searchParams), session.user.organizationId ?? null);
   const maxCat = s.byCategory[0]?.projected ?? 1;
   const maxVh = s.byVertical[0]?.projected ?? 1;
   const maxOkr = s.byOkr[0]?.projected ?? 1;

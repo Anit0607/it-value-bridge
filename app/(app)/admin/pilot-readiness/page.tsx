@@ -221,17 +221,14 @@ export default async function ClientReadinessPage() {
     detail: `${liveReminders.length} reminders generated live from this organization's data, covering ${typeCoverage.length}/${ALL_REMINDER_TYPES.length} reminder types (${typeCoverage.map(t => REMINDER_TYPE_LABEL[t]).join(', ') || 'none'}).`,
   };
 
-  // Value Report — NOTE: getBoardSummary() does not yet accept an
-  // organization filter internally, so this total reflects ALL
-  // organizations on the deployment, not just this one. Harmless today
-  // (single-organization deployment) but should be scoped before a second
-  // client organization is onboarded — see the summary note below the table.
-  const boardSummary = await getBoardSummary(resolvePeriod({ period: 'all' }));
+  // Value Report — a real re-run of the Value Board's own summary query,
+  // scoped to this organization the same way every other check on this page is.
+  const boardSummary = await getBoardSummary(resolvePeriod({ period: 'all' }), orgId);
   const valueRow: TableRow = {
     area: 'Value Report',
     expected: 'Business value summary works',
     status: boardSummary.totals.initiativesWithValue > 0 && boardSummary.byCategory.length > 0 ? 'pass' : 'fail',
-    detail: `${boardSummary.totals.initiativesWithValue} initiatives with committed value, ${formatInr(boardSummary.totals.projected)} projected across ${boardSummary.byCategory.length} benefit categories and ${boardSummary.byOkr.length} strategic OKRs. (Not yet organization-scoped internally — see note below.)`,
+    detail: `${boardSummary.totals.initiativesWithValue} initiatives with committed value, ${formatInr(boardSummary.totals.projected)} projected across ${boardSummary.byCategory.length} benefit categories and ${boardSummary.byOkr.length} strategic OKRs.`,
   };
 
   const scopedRoleRows = roleRows.filter(r => !['CIO access', 'PMO access'].includes(r.area));
@@ -448,16 +445,6 @@ export default async function ClientReadinessPage() {
       <SectionCard title="Client Rollout" subtitle={sectionScore(rollout)} icon={Target} tone={sectionTone(rollout)}>
         <ul>{rollout.map(c => <CheckRow key={c.label} {...c} />)}</ul>
       </SectionCard>
-
-      {/* Known gap in this checklist itself */}
-      <div className="rounded-xl border border-amber-200 bg-amber-50/60 px-5 py-4">
-        <p className="text-sm font-semibold text-amber-800">One gap in this page itself</p>
-        <p className="mt-1 text-sm leading-relaxed text-amber-700">
-          The Value Report row above calls the same summary query the live Value Board uses, which does not yet
-          filter by organization internally — on this single-organization deployment the number shown is correct,
-          but it should be scoped explicitly before a second client organization is onboarded to this platform.
-        </p>
-      </div>
     </div>
   );
 }

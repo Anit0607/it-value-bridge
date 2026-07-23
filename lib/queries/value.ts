@@ -74,9 +74,17 @@ function latestRealized(measurements: { measuredAt: Date; realizedInr: number | 
   return latest.realizedInr ?? 0;
 }
 
-export async function getBoardSummary(period: Period): Promise<BoardSummary> {
+/**
+ * organizationId scopes every initiative this reads to one client
+ * workspace — the same boundary buildInitiativeVisibilityWhere() enforces
+ * everywhere else. Pass null only when there is genuinely no active
+ * organization (e.g. a misconfigured admin account); that returns an empty
+ * summary rather than silently blending every organization's data together.
+ */
+export async function getBoardSummary(period: Period, organizationId: string | null): Promise<BoardSummary> {
   const todayIso = new Date().toISOString().slice(0, 10);
   const initiatives = await prisma.initiative.findMany({
+    where: { organizationId: organizationId ?? '__no_active_organization__' },
     include: {
       benefitClaims: { include: { measurements: true } },
       okrLinks: { include: { okr: true } },
