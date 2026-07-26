@@ -53,7 +53,7 @@ npm run db:seed
 DATABASE_URL="<neon-url>" npx tsx scripts/seed-admin.ts
 ```
 
-**Demo credentials (all use password `Demo@1234!`):**
+**Demo credentials (all use password `Welcome@1234!`):**
 
 | Email | Role | Name | Notes |
 |---|---|---|---|
@@ -115,7 +115,7 @@ See `/admin/known-limitations` for full details with roadmap paths.
 
 **Live demo (Vercel):** https://it-value-bridge.vercel.app/sign-in
 - Credentials are visible on the sign-in page when `NEXT_PUBLIC_DEMO_MODE=true`
-- All accounts use password: `Demo@1234!`
+- All accounts use password: `Welcome@1234!`
 
 **Vercel environment variables:** Vercel Dashboard → Project → Settings → Environment Variables
 - `DATABASE_URL` — Neon connection string (sensitive; cannot be copied from UI)

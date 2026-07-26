@@ -10,7 +10,7 @@ import bcrypt from 'bcryptjs';
 const prisma = new PrismaClient();
 
 async function main() {
-  const password = await bcrypt.hash('Demo@1234!', 12);
+  const password = await bcrypt.hash('Welcome@1234!', 12);
 
   const org = await prisma.organization.upsert({
     where: { slug: 'it-value-bridge-pilot' },
@@ -26,7 +26,7 @@ async function main() {
 
   const admin = await prisma.user.upsert({
     where: { email: 'admin@bank.com' },
-    update: { role: 'ADMIN' as any, organizationId: org.id },
+    update: { role: 'ADMIN' as any, organizationId: org.id, passwordHash: password },
     create: {
       name: 'Platform Admin',
       email: 'admin@bank.com',

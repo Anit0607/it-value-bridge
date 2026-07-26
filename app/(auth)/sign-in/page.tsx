@@ -31,7 +31,7 @@ const DEMO_ACCOUNTS = [
   { email: 'business2@bank.com',       name: 'Priti Sharma',   desc: 'Business View — Retail Lending SPOC',                       icon: CheckSquare },
 ];
 
-const DEMO_PASSWORD = 'Demo@1234!';
+const DEMO_PASSWORD = 'Welcome@1234!';
 
 export default function SignInPage() {
   const router = useRouter();
@@ -236,7 +236,7 @@ export default function SignInPage() {
 
           {isDemo && (
             <p className="mt-4 text-center text-xs text-slate-400">
-              Password for all demo accounts: <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono">Demo@1234!</code>
+              Password for all demo accounts: <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono">Welcome@1234!</code>
             </p>
           )}
         </div>

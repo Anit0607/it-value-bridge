@@ -105,7 +105,7 @@ const confidenceForStage = (s: Stage): Confidence => {
 };
 
 async function main() {
-  const password = await bcrypt.hash('Demo@1234!', 12);
+  const password = await bcrypt.hash('Welcome@1234!', 12);
 
   // --- Default organisation (Pilot workspace) ---
   const org = await prisma.organization.upsert({
@@ -122,7 +122,7 @@ async function main() {
   // --- Demo users ---
   await prisma.user.upsert({
     where: { email: 'admin@bank.com' },
-    update: {},
+    update: { passwordHash: password },
     create: {
       name: 'Platform Admin',
       email: 'admin@bank.com',
@@ -134,19 +134,19 @@ async function main() {
 
   const cio = await prisma.user.upsert({
     where: { email: 'cio@bank.com' },
-    update: { organizationId: org.id },
+    update: { organizationId: org.id, passwordHash: password },
     create: { name: 'Mahesh Iyer', email: 'cio@bank.com', passwordHash: password, role: 'CIO', organizationId: org.id },
   });
 
   const pmo = await prisma.user.upsert({
     where: { email: 'pmo@bank.com' },
-    update: { organizationId: org.id },
+    update: { organizationId: org.id, passwordHash: password },
     create: { name: 'Anita Desai', email: 'pmo@bank.com', passwordHash: password, role: 'PMO', organizationId: org.id },
   });
 
   const vh = await prisma.user.upsert({
     where: { email: 'vh@bank.com' },
-    update: { organizationId: org.id, businessHeadName: 'Rohit Malhotra', businessUnit: 'Retail Banking', subBusinessUnit: 'Digital Channels' },
+    update: { organizationId: org.id, businessHeadName: 'Rohit Malhotra', businessUnit: 'Retail Banking', subBusinessUnit: 'Digital Channels', passwordHash: password },
     create: {
       name: 'Rajesh Kumar',
       email: 'vh@bank.com',
@@ -162,7 +162,7 @@ async function main() {
 
   const business = await prisma.user.upsert({
     where: { email: 'business@bank.com' },
-    update: { organizationId: org.id, businessHeadName: 'Rohit Malhotra', businessUnit: 'Retail Banking', subBusinessUnit: 'Digital Channels' },
+    update: { organizationId: org.id, businessHeadName: 'Rohit Malhotra', businessUnit: 'Retail Banking', subBusinessUnit: 'Digital Channels', passwordHash: password },
     create: {
       name: 'Anil Kumar',
       email: 'business@bank.com',
@@ -178,7 +178,7 @@ async function main() {
   // Second Vertical Head — covers Retail Assets vertical
   const vh2 = await prisma.user.upsert({
     where: { email: 'vh2@bank.com' },
-    update: { organizationId: org.id, businessUnit: 'Retail Banking' },
+    update: { organizationId: org.id, businessUnit: 'Retail Banking', passwordHash: password },
     create: {
       name: 'Priya Sharma',
       email: 'vh2@bank.com',
@@ -195,7 +195,7 @@ async function main() {
   // this account actually has assigned work).
   const business2 = await prisma.user.upsert({
     where: { email: 'business2@bank.com' },
-    update: { organizationId: org.id, name: 'Priti Sharma', businessUnit: 'Payments & Treasury', subBusinessUnit: 'Cards & Payments' },
+    update: { organizationId: org.id, name: 'Priti Sharma', businessUnit: 'Payments & Treasury', subBusinessUnit: 'Cards & Payments', passwordHash: password },
     create: {
       name: 'Priti Sharma',
       email: 'business2@bank.com',
@@ -210,7 +210,7 @@ async function main() {
   // Third Business SPOC — covers Retail Lending / digital products
   const business3 = await prisma.user.upsert({
     where: { email: 'business3@bank.com' },
-    update: { organizationId: org.id, businessUnit: 'Retail Banking', subBusinessUnit: 'Retail Lending' },
+    update: { organizationId: org.id, businessUnit: 'Retail Banking', subBusinessUnit: 'Retail Lending', passwordHash: password },
     create: {
       name: 'Meena Gupta',
       email: 'business3@bank.com',
@@ -225,7 +225,7 @@ async function main() {
   // Fourth Business SPOC — covers Corporate & Treasury products
   const business4 = await prisma.user.upsert({
     where: { email: 'business4@bank.com' },
-    update: { organizationId: org.id, businessUnit: 'Corporate & Treasury' },
+    update: { organizationId: org.id, businessUnit: 'Corporate & Treasury', passwordHash: password },
     create: {
       name: 'Rakesh Joshi',
       email: 'business4@bank.com',
@@ -239,7 +239,7 @@ async function main() {
   // Enterprise role model additions — reuse the PMO / Business dashboards as stand-ins this sprint.
   const programHead = await prisma.user.upsert({
     where: { email: 'program-head@bank.com' },
-    update: { organizationId: org.id, businessHeadName: 'Rohit Malhotra', businessUnit: 'Retail Banking' },
+    update: { organizationId: org.id, businessHeadName: 'Rohit Malhotra', businessUnit: 'Retail Banking', passwordHash: password },
     create: {
       name: 'Karan Mehta',
       email: 'program-head@bank.com',
@@ -253,7 +253,7 @@ async function main() {
 
   const programManager = await prisma.user.upsert({
     where: { email: 'program-manager@bank.com' },
-    update: { organizationId: org.id, programHeadName: 'Karan Mehta', businessUnit: 'Retail Banking', subBusinessUnit: 'Digital Channels' },
+    update: { organizationId: org.id, programHeadName: 'Karan Mehta', businessUnit: 'Retail Banking', subBusinessUnit: 'Digital Channels', passwordHash: password },
     create: {
       name: 'Neha Kapoor',
       email: 'program-manager@bank.com',
@@ -270,7 +270,7 @@ async function main() {
   // Retail Lending delivery stream.
   const programManager2 = await prisma.user.upsert({
     where: { email: 'program-manager2@bank.com' },
-    update: { organizationId: org.id, programHeadName: 'Karan Mehta', businessUnit: 'Retail Banking', subBusinessUnit: 'Retail Lending' },
+    update: { organizationId: org.id, programHeadName: 'Karan Mehta', businessUnit: 'Retail Banking', subBusinessUnit: 'Retail Lending', passwordHash: password },
     create: {
       name: 'Rohan Verma',
       email: 'program-manager2@bank.com',
@@ -285,7 +285,7 @@ async function main() {
 
   const businessHead = await prisma.user.upsert({
     where: { email: 'business-head@bank.com' },
-    update: { organizationId: org.id, businessUnit: 'Retail Banking' },
+    update: { organizationId: org.id, businessUnit: 'Retail Banking', passwordHash: password },
     create: {
       name: 'Rohit Malhotra',
       email: 'business-head@bank.com',
@@ -299,7 +299,7 @@ async function main() {
   // Second Business Head — covers the Retail Lending / digital products line.
   const businessHead2 = await prisma.user.upsert({
     where: { email: 'business-head2@bank.com' },
-    update: { organizationId: org.id, businessUnit: 'Retail Banking' },
+    update: { organizationId: org.id, businessUnit: 'Retail Banking', passwordHash: password },
     create: {
       name: 'Kavita Rao',
       email: 'business-head2@bank.com',

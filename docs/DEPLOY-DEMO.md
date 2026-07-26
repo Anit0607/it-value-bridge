@@ -64,7 +64,7 @@ Expected: tables created, then "Seeded 4 users, 20 initiatives, 5 demands, 5 dep
 
 ## Step 5 — Share it
 
-Send testers the link + logins (password for all: `Demo@1234!`):
+Send testers the link + logins (password for all: `Welcome@1234!`):
 
 - CIO view — `cio@bank.com`
 - PMO — `pmo@bank.com`

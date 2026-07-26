@@ -63,7 +63,7 @@ const HIERARCHY_FIELDS_BY_ROLE: Record<string, string[]> = {
 };
 
 const EMPTY: CreatePilotUserInput = {
-  name: '', email: '', role: 'PMO', verticalHead: '', password: 'Demo@1234!',
+  name: '', email: '', role: 'PMO', verticalHead: '', password: 'Welcome@1234!',
 };
 
 export function UserManagementClient({ users }: Props) {
