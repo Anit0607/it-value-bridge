@@ -146,7 +146,20 @@ export default async function ClientReadinessPage() {
   // Role access + data isolation: find a real user for the role IN THIS
   // ORGANIZATION, run the same buildInitiativeVisibilityWhere() every
   // dashboard uses, and compare what they see against this org's portfolio.
+  //
+  // Five distinct states, not a single pass/fail:
+  //   1. no_user            — no user with this role exists to test with       → warn
+  //   2. no_org_data        — user exists, but the org has zero initiatives    → warn
+  //      (nothing to assign, so neither pass nor fail can be proven either way)
+  //   3. sees_zero          — org has data, but this user sees none of it      → warn
+  //      (scoped roles only — could be correct isolation OR nobody assigned
+  //      them anything yet; UAT cannot tell those apart, so it can't pass)
+  //   4. sees_everything    — scoped role sees the WHOLE org                   → fail
+  //   5. correct_subset     — sees a non-empty, non-total slice (scoped) or
+  //                           the full portfolio (full-access)                 → pass
+  type RoleCheckReason = 'no_user' | 'no_org_data' | 'sees_zero' | 'sees_everything' | 'ok';
   const roleRows: TableRow[] = [];
+  const roleCheckReasons: RoleCheckReason[] = [];
   for (const def of ROLE_ACCESS_DEFS) {
     const user = orgId ? await prisma.user.findFirst({ where: { role: def.role, organizationId: orgId } }) : null;
     if (!user) {
@@ -156,6 +169,7 @@ export default async function ClientReadinessPage() {
         status: 'warn',
         detail: `No ${ROLE_LABEL[def.role]} user exists in this organization yet — cannot verify live scoping.`,
       });
+      if (!def.fullAccess) roleCheckReasons.push('no_user');
       continue;
     }
 
@@ -166,28 +180,40 @@ export default async function ClientReadinessPage() {
       organizationId: user.organizationId!,
     });
     const visibleCount = await prisma.initiative.count({ where });
+    const who = `${user.name} (${user.email})`;
 
     if (def.fullAccess) {
-      const ok = initiativeCount > 0 && visibleCount === initiativeCount;
-      roleRows.push({
-        area: def.area,
-        expected: def.expected,
-        status: ok ? 'pass' : initiativeCount === 0 ? 'warn' : 'fail',
-        detail: `${user.name} (${user.email}) sees ${visibleCount} of ${initiativeCount} initiatives in this organization${
-          ok ? ' — full portfolio, as expected.' : ' — expected full visibility but got a restricted count.'
-        }`,
-      });
+      if (initiativeCount === 0) {
+        roleRows.push({ area: def.area, expected: def.expected, status: 'warn',
+          detail: `${who} — this organization has no initiatives yet, so full-portfolio visibility cannot be verified either way.` });
+      } else if (visibleCount === initiativeCount) {
+        roleRows.push({ area: def.area, expected: def.expected, status: 'pass',
+          detail: `${who} sees ${visibleCount} of ${initiativeCount} initiatives — full portfolio, as expected.` });
+      } else {
+        roleRows.push({ area: def.area, expected: def.expected, status: 'fail',
+          detail: `${who} sees only ${visibleCount} of ${initiativeCount} initiatives — expected full visibility for this role but got a restricted count.` });
+      }
+      continue;
+    }
+
+    // Scoped roles: Program Head, Program Manager, Vertical Head, Business
+    // Head, Business SPOC.
+    if (initiativeCount === 0) {
+      roleRows.push({ area: def.area, expected: def.expected, status: 'warn',
+        detail: `${who} — this organization has no initiatives yet, so scoping cannot be verified either way.` });
+      roleCheckReasons.push('no_org_data');
+    } else if (visibleCount === initiativeCount) {
+      roleRows.push({ area: def.area, expected: def.expected, status: 'fail',
+        detail: `${who} sees the entire organization (${visibleCount} of ${initiativeCount} initiatives) — NOT scoped; this role should only see its own assigned portfolio.` });
+      roleCheckReasons.push('sees_everything');
+    } else if (visibleCount === 0) {
+      roleRows.push({ area: def.area, expected: def.expected, status: 'warn',
+        detail: `${who} sees 0 of ${initiativeCount} initiatives — no initiatives are currently assigned to this user, so UAT cannot prove visibility scoping works for this role. Assign at least one initiative to this user before sign-off.` });
+      roleCheckReasons.push('sees_zero');
     } else {
-      const isolated = initiativeCount > 0 && visibleCount < initiativeCount;
-      const hasData = visibleCount > 0;
-      roleRows.push({
-        area: def.area,
-        expected: def.expected,
-        status: isolated && hasData ? 'pass' : isolated ? 'warn' : 'fail',
-        detail: `${user.name} (${user.email}) sees ${visibleCount} of ${initiativeCount} initiatives in this organization${
-          isolated ? ' — correctly scoped to their own portfolio.' : ' — NOT scoped; sees the entire organization portfolio.'
-        }${!hasData ? ' No initiatives are currently assigned to this user to verify against.' : ''}`,
-      });
+      roleRows.push({ area: def.area, expected: def.expected, status: 'pass',
+        detail: `${who} sees ${visibleCount} of ${initiativeCount} initiatives — correctly scoped to their own portfolio.` });
+      roleCheckReasons.push('ok');
     }
   }
 
@@ -233,17 +259,23 @@ export default async function ClientReadinessPage() {
   };
 
   const scopedRoleRows = roleRows.filter(r => !['CIO access', 'PMO access'].includes(r.area));
-  const unauthorizedFails = scopedRoleRows.filter(r => r.status === 'fail').length;
-  const unauthorizedWarns = scopedRoleRows.filter(r => r.status === 'warn').length;
+  const overPermissionedCount = roleCheckReasons.filter(r => r === 'sees_everything').length;
+  const unassignedCount = roleCheckReasons.filter(r => r === 'sees_zero').length;
+  const noUserCount = roleCheckReasons.filter(r => r === 'no_user').length;
+  const noOrgDataCount = roleCheckReasons.filter(r => r === 'no_org_data').length;
   const unauthorizedRow: TableRow = {
     area: 'Unauthorized access',
     expected: 'Restricted data blocked',
-    status: unauthorizedFails > 0 ? 'fail' : unauthorizedWarns > 0 ? 'warn' : 'pass',
-    detail: unauthorizedFails > 0
-      ? `${unauthorizedFails} scoped role${unauthorizedFails === 1 ? '' : 's'} can currently see initiatives outside their assignment — investigate before client UAT.`
-      : unauthorizedWarns > 0
-      ? `Scoping rules are correct, but ${unauthorizedWarns} role${unauthorizedWarns === 1 ? '' : 's'} has no assigned initiatives to verify against — assign at least one initiative per role before UAT.`
-      : `All ${scopedRoleRows.length} scoped roles (Program Head, Program Manager, Vertical Head, Business Head, Business SPOC) see a strict subset of this organization's ${initiativeCount}-initiative portfolio.`,
+    status: overPermissionedCount > 0 ? 'fail' : (unassignedCount > 0 || noUserCount > 0 || noOrgDataCount > 0) ? 'warn' : 'pass',
+    detail: overPermissionedCount > 0
+      ? `${overPermissionedCount} scoped role${overPermissionedCount === 1 ? '' : 's'} can currently see the entire organization instead of its own portfolio — investigate before client UAT.`
+      : noOrgDataCount > 0
+      ? `This organization has no initiatives yet, so scoping cannot be proven for any role — add data before UAT sign-off.`
+      : (unassignedCount > 0 || noUserCount > 0)
+      ? `Scoping rules are correct wherever they could be tested, but ${unassignedCount + noUserCount} role${unassignedCount + noUserCount === 1 ? '' : 's'} — ${
+          [unassignedCount > 0 ? `${unassignedCount} with no initiatives assigned` : null, noUserCount > 0 ? `${noUserCount} with no user created` : null].filter(Boolean).join(', ')
+        } — cannot be proven yet. Assign at least one initiative per role and create any missing role users before sign-off.`
+      : `All ${scopedRoleRows.length} scoped roles (Program Head, Program Manager, Vertical Head, Business Head, Business SPOC) see a strict, non-empty subset of this organization's ${initiativeCount}-initiative portfolio.`,
   };
 
   const uatRows: TableRow[] = [...roleRows, milestoneRow, actionCenterRow, valueRow, unauthorizedRow];
