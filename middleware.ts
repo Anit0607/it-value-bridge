@@ -23,6 +23,11 @@ const ROUTE_RULES: RouteRule[] = [
   // CIO — leadership dashboards
   { path: '/cio',           allow: ['CIO'] },
 
+  // Action Center — reachable by every role with a reminders view (mirrors
+  // Sidebar's Command group). Page itself is already auth'd and data-scoped;
+  // this rule is for route-level clarity, not a new restriction.
+  { path: '/reminders',     allow: ['CIO', ...PMO_EQUIVALENT_ROLES, 'VERTICAL_HEAD', ...BUSINESS_EQUIVALENT_ROLES] },
+
   // PMO — governance control tower (also reused by PROGRAM_HEAD / PROGRAM_MANAGER)
   { path: '/pmo',           allow: PMO_EQUIVALENT_ROLES },
 
