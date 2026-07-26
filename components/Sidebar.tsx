@@ -26,6 +26,7 @@ import {
   Building2,
   ListChecks,
   ClipboardCheck,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 interface NavItem {
@@ -85,6 +86,7 @@ const NAV_GROUPS: NavGroup[] = [
       { href: '/admin/workspace', label: 'Workspace', icon: Building2, roles: ['ADMIN'] },
       { href: '/admin/users', label: 'User Management', icon: Users, roles: ['ADMIN'] },
       { href: '/admin/pilot-readiness', label: 'Client UAT & Production Readiness', icon: ClipboardCheck, roles: ['ADMIN'] },
+      { href: '/admin/client-data-readiness', label: 'Client Data Mapping', icon: FileSpreadsheet, roles: ['ADMIN'] },
       { href: '/admin/known-limitations', label: 'Current Release Scope', icon: AlertTriangle, roles: ['ADMIN'] },
       { href: '/cio', label: 'CIO Dashboard', icon: LayoutDashboard, roles: ['ADMIN'] },
       { href: '/pmo', label: 'PMO Dashboard', icon: ClipboardList, roles: ['ADMIN'] },

@@ -2,6 +2,7 @@ export const dynamic = 'force-dynamic';
 
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { prisma } from '@/lib/db';
 import type { Role } from '@prisma/client';
 import { buildInitiativeVisibilityWhere, ROLE_LABEL } from '@/lib/rbac';
@@ -429,6 +430,10 @@ export default async function ClientReadinessPage() {
         noPad
       >
         <ChecklistTable rows={onboardingRows} />
+        <p className="border-t border-slate-100 px-5 py-3 text-xs text-slate-500">
+          These are portfolio-level counts. For the exact field-by-field mapping the client&apos;s data needs to
+          follow, see <Link href="/admin/client-data-readiness" className="font-medium text-brand-600 hover:underline">Client Data Mapping</Link>.
+        </p>
       </SectionCard>
 
       {/* ── 1. Product ── */}
