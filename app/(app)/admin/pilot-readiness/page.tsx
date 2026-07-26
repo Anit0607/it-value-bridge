@@ -368,7 +368,7 @@ export default async function ClientReadinessPage() {
     { label: 'Password hashing enabled', status: 'pass', detail: 'bcryptjs with 12 salt rounds' },
     { label: 'No public data routes', status: 'pass', detail: 'All /api/* are either auth-protected or Next-Auth internals' },
     { label: 'AUTH_SECRET configured', status: authSecretSet ? 'pass' : 'fail', detail: authSecretSet ? 'Session secret is set' : 'AUTH_SECRET env var is missing — sessions are insecure' },
-    { label: 'Production environment mode confirmed', status: demoModeSet ? 'pass' : 'warn', detail: demoModeSet ? 'Sample-data banner visible — correct while UAT runs on seed data; turn NEXT_PUBLIC_DEMO_MODE off before go-live with real client data' : 'NEXT_PUBLIC_DEMO_MODE is off — confirm this is intentional for a live production environment with real client data' },
+    { label: 'Production environment mode confirmed', status: demoModeSet ? 'pass' : 'warn', detail: demoModeSet ? 'Seed-data banner visible — correct while UAT runs on seed data; turn NEXT_PUBLIC_DEMO_MODE off before go-live with real client data' : 'NEXT_PUBLIC_DEMO_MODE is off — confirm this is intentional for a live production environment with real client data' },
     { label: 'AI narrative disabled', status: 'pass', detail: 'ENABLE_AI_NARRATIVE=false — no external API calls at runtime' },
   ];
 

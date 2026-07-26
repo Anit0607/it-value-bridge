@@ -72,8 +72,8 @@ const LIMITATIONS: Limitation[] = [
   },
   {
     id: 9,
-    area: 'Demo & Seed Data',
-    current: 'All portfolio data visible in this environment is seeded demo data representing a plausible banking IT portfolio, not a live enterprise data feed.',
+    area: 'Seed Data',
+    current: 'All portfolio data visible in this environment is seed data representing a plausible banking IT portfolio, not a live enterprise data feed.',
     roadmap: 'The next milestone is validating that real enterprise data (initiative lists, ownership hierarchies, benefit claims) maps cleanly onto this schema — seed data was built to mirror that exact shape so the transition is low-risk.',
     priority: 'medium',
   },

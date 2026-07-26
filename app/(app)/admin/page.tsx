@@ -69,7 +69,7 @@ export default async function AdminPage() {
     m[u.role] = (m[u.role] ?? 0) + 1; return m;
   }, {});
 
-  // ── Sample data health ───────────────────────────────────────────────────────
+  // ── Seed data health ─────────────────────────────────────────────────────────
   const dataHealth: Array<{ label: string; status: CheckStatus; detail: string }> = [
     {
       label: `${initiativeCount} initiatives registered`,
@@ -110,7 +110,7 @@ export default async function AdminPage() {
     { label: 'AI narrative disabled', status: 'pass', detail: 'ENABLE_AI_NARRATIVE=false — no external API calls at runtime' },
     { label: 'Self-hosted database (Neon)', status: 'pass', detail: 'PostgreSQL on AWS Singapore (ap-southeast-1)' },
     { label: 'Credentials auth (no OAuth)', status: 'pass', detail: 'Auth.js with bcrypt password hashing — no Google/external IdP' },
-    { label: 'Sample-data banner active', status: 'pass', detail: 'NEXT_PUBLIC_DEMO_MODE=true — visitors know this is sample data' },
+    { label: 'Seed-data banner active', status: 'pass', detail: 'NEXT_PUBLIC_DEMO_MODE=true — visitors know this environment holds seed data' },
     { label: 'ADMIN role created', status: rolesPresent.has('ADMIN') ? 'pass' : 'fail', detail: rolesPresent.has('ADMIN') ? 'admin@bank.com active' : 'Run seed-admin.ts to create admin user' },
     { label: 'Business data isolation', status: 'warn', detail: 'Multi-tenant isolation deferred — single workspace for this phase' },
   ];
@@ -125,7 +125,7 @@ export default async function AdminPage() {
     { label: 'Initiative Control Room is functional', status: 'pass', detail: 'Stage progression, audit trail, Action Required panel' },
     { label: 'Edit Initiative workflow live', status: 'pass', detail: '/items/[id]/edit — PMO/CIO can update metadata' },
     { label: 'Multi-step creation form live', status: 'pass', detail: '6-step guided workflow with review & submit' },
-    { label: 'Sample-data banner visible', status: 'pass', detail: 'Warns users this is sample data' },
+    { label: 'Seed-data banner visible', status: 'pass', detail: 'Warns users this environment holds seed data' },
     { label: 'Landing page enterprise-ready', status: 'pass', detail: 'Product promise, pain statement, audience hierarchy, CTA flow' },
   ];
 
@@ -143,7 +143,7 @@ export default async function AdminPage() {
         <KpiCard label="Total Users" value={users.length} icon={Users} accent="brand" />
         <KpiCard label="Total Initiatives" value={initiativeCount} icon={Activity} accent="emerald" />
         <KpiCard label="Roles Configured" value={Object.keys(roleCounts).length} icon={ShieldCheck} accent="brand" sub="of 5 possible" />
-        <KpiCard label="Sample Data Status" value={benefitClaimCount > 0 ? 'Seeded' : 'Empty'} icon={Database} accent={benefitClaimCount > 0 ? 'emerald' : 'rose'} />
+        <KpiCard label="Seed Data Status" value={benefitClaimCount > 0 ? 'Seeded' : 'Empty'} icon={Database} accent={benefitClaimCount > 0 ? 'emerald' : 'rose'} />
       </div>
 
       {/* ── 2. Users & Roles ──────────────────────────────────────────────────── */}
@@ -172,9 +172,9 @@ export default async function AdminPage() {
         </table>
       </SectionCard>
 
-      {/* ── 3. Sample Data Health ─────────────────────────────────────────────── */}
+      {/* ── 3. Seed Data Health ───────────────────────────────────────────────── */}
       <SectionCard
-        title="Sample Data Health"
+        title="Seed Data Health"
         subtitle={`${passCount(dataHealth)} / ${dataHealth.length} checks passing`}
         icon={ClipboardList}
         tone={passCount(dataHealth) === dataHealth.length ? 'success' : passCount(dataHealth) >= 4 ? 'default' : 'warning'}
@@ -184,8 +184,8 @@ export default async function AdminPage() {
         </ul>
       </SectionCard>
 
-      {/* ── 4. Sample Data Controls ───────────────────────────────────────────── */}
-      <SectionCard title="Sample Data Controls" icon={Database}>
+      {/* ── 4. Seed Data Controls ─────────────────────────────────────────────── */}
+      <SectionCard title="Seed Data Controls" icon={Database}>
         <div className="grid grid-cols-2 gap-4 sm:grid-cols-4 text-sm">
           {[
             { label: 'Initiatives', value: initiativeCount, icon: Activity },
@@ -210,7 +210,7 @@ export default async function AdminPage() {
           })}
         </div>
         <p className="mt-3 text-xs text-slate-400">
-          To reset and reseed sample data, run: <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono">npm run db:seed</code> with the Neon DATABASE_URL.
+          To reset and reseed this dataset, run: <code className="rounded bg-slate-100 px-1.5 py-0.5 font-mono">npm run db:seed</code> with the Neon DATABASE_URL.
         </p>
       </SectionCard>
 
