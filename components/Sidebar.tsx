@@ -76,7 +76,7 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Admin',
     items: [
-      { href: '/import', label: 'Import', icon: Upload, roles: PMO_EQUIVALENT_ROLES },
+      { href: '/import', label: 'Client Data Import', icon: Upload, roles: PMO_EQUIVALENT_ROLES },
     ],
   },
   {
