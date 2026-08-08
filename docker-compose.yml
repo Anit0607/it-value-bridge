@@ -1,14 +1,17 @@
-# IT Value Bridge — local PostgreSQL for development.
+# IT Value Bridge — self-hosted stack (app + PostgreSQL).
 # Data lives in a named Docker volume on THIS host — nothing leaves the machine
 # (Indian banking data-residency requirement).
 #
-#   Start the dev database:   docker compose up -d
-#   Stop it:                  docker compose down        (data is kept in the volume)
+#   Full stack (app + db):    docker compose up -d --build
+#   Database only (for dev):  docker compose up -d db
+#   Stop:                     docker compose down        (data is kept in the volume)
 #   Wipe the data:            docker compose down -v     (deletes the volume)
 #
-# During development the Next.js app runs via `npm run dev` against localhost:5432.
-# A bundled `app` service (built from the Dockerfile) for the full self-hosted
-# bank deployment is added in a later phase.
+# During local development the app usually runs via `npm run dev` against
+# localhost:5432 — start only the `db` service in that case.
+#
+# For a real deployment, override POSTGRES_PASSWORD and AUTH_SECRET via a .env
+# file or the orchestrator's secret store. Never ship these defaults.
 
 services:
   db:
@@ -17,7 +20,7 @@ services:
     restart: unless-stopped
     environment:
       POSTGRES_USER: itvb
-      POSTGRES_PASSWORD: itvb # dev only — change for any real deployment
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-itvb} # dev only — change for any real deployment
       POSTGRES_DB: itvb
     ports:
       - "5432:5432"
@@ -28,6 +31,26 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: itvb-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # `db` is the compose service name — resolved on the internal network.
+      DATABASE_URL: postgresql://itvb:${POSTGRES_PASSWORD:-itvb}@db:5432/itvb
+      AUTH_SECRET: ${AUTH_SECRET:-dev-only-secret-change-me-in-any-real-deployment}
+      AUTH_TRUST_HOST: "true"
+      ENABLE_AI_NARRATIVE: "false"
+      NEXT_PUBLIC_DEMO_MODE: ${NEXT_PUBLIC_DEMO_MODE:-false}
+      NEXT_PUBLIC_WORKSPACE_NAME: ${NEXT_PUBLIC_WORKSPACE_NAME:-IT Value Bridge}
+    ports:
+      - "3000:3000"
 
 volumes:
   itvb-db-data:

@@ -26,9 +26,9 @@ client data import. Organization- and role-scoped data access enforced through a
 
 | Gap | Detail |
 |---|---|
-| ROI denominator is fabricated | `lib/actions/initiatives.ts:245` sets `estimatedCostInr = totalValue × 0.3`. The Value Board publishes a ROI multiple built on that guess. |
-| Docker bundle never built | `Dockerfile` exists and is well-formed, but `next.config.mjs` lacks `output: 'standalone'`, so the image cannot build. `docker-compose.yml` runs Postgres only — no `app` service. |
-| Migrations run at image build | `package.json` build script is `prisma migrate deploy && next build`. Wrong for on-prem: migrations must run at container start, not image build. |
+| ~~ROI denominator is fabricated~~ | **Fixed in M0.** Cost is no longer synthesised; ROI is suppressed when cost is unknown and partial coverage is disclosed. Real TCO capture lands in M1. |
+| ~~Docker bundle never built~~ | **Fixed in M0.** Image builds, full stack runs, migrations apply at container start. |
+| ~~Migrations run at image build~~ | **Fixed in M0.** Moved to `docker-entrypoint.sh`; Vercel keeps migrating via `vercel.json`. |
 | No automated tests | `package.json` has no test script. All verification to date has been typecheck + lint + build + manual browser checks. |
 | No background jobs | Reminders compute on page load. `MonthlyReport` model exists but nothing generates it. No scheduled snapshots, no notifications. |
 | No Finance role | Deliberately deferred. Business signs off value; nobody independently certifies cost. |
@@ -90,17 +90,38 @@ Recorded so the reasoning survives.
 
 ## 4. Milestones
 
-### M0 — Stop the bleeding
-**Size: 1–2 days. Blocking: do before any further demo.**
+### M0 — Stop the bleeding ✅ COMPLETE (2026-08-09)
+**Actual: 1 session.**
 
-- [ ] Remove `estimatedCostInr = totalValue × 0.3` from `createInitiative`
-- [ ] Hide the ROI tile on `/value` when cost is null; show "cost not captured"
-- [ ] Add `output: 'standalone'` to `next.config.mjs`
-- [ ] Move `prisma migrate deploy` out of the build script into a container entrypoint
-- [ ] Add the `app` service to `docker-compose.yml`
-- [ ] Actually run `docker build` and `docker compose up` end to end and record that it worked
+- [x] Remove `estimatedCostInr = totalValue × 0.3` from `createInitiative`
+- [x] Hide the ROI tile on `/value` when cost is null; show "cost not captured"
+- [x] Add `output: 'standalone'` to `next.config.mjs`
+- [x] Move `prisma migrate deploy` out of the build script into a container entrypoint
+- [x] Add the `app` service to `docker-compose.yml`
+- [x] Actually run `docker build` and `docker compose up` end to end and record that it worked
 
-**Exit:** no fabricated number is visible anywhere, and the container has demonstrably run at least once.
+**Exit met.** ROI now renders `—  cost not captured` when no cost exists, and discloses
+`partial — N of M costed` when coverage is incomplete. Both states verified in the browser
+against the running container. Image builds and the full stack boots: migrations apply at
+container start, app serves HTTP 200.
+
+**What the build actually taught us** — five real defects, none visible by reading the files:
+
+1. `postinstall: prisma generate` runs during `npm ci`, so `prisma/` must be copied into the
+   deps stage *before* install, or install fails with "schema.prisma: file not found".
+2. Next collects page data at build time, which instantiates Auth.js and Prisma — both refuse
+   to initialise without `AUTH_SECRET` / `DATABASE_URL`. Build-stage placeholders are required
+   (scoped to the `RUN` command so they never persist in image metadata).
+3. There is no `public/` directory in this project; the original `COPY` of it failed the build.
+4. Prisma on Alpine needs `openssl` + `libc6-compat` installed, **and** an explicit
+   `linux-musl-openssl-3.0.x` binary target in `schema.prisma` — otherwise it tries to download
+   an engine at container start and fails on a non-root filesystem.
+5. Runtime files must be `--chown=nextjs:nodejs`; Prisma writes to its engine directory on boot.
+
+**Supporting changes made:** added `.dockerignore` (host `node_modules` would otherwise carry
+Windows binaries into a Linux image), and `vercel.json` pinning
+`buildCommand: prisma migrate deploy && next build` so the hosted demo keeps migrating after
+`npm run build` was reduced to plain `next build`.
 
 ---
 
@@ -259,3 +280,4 @@ make the rupee number more credible?* Milestones and dependencies would not have
 | Date | Change |
 |---|---|
 | 2026-07-26 | Document created. Supersedes `PLAN.md` / `PHASE-PLAN.md` for forward work. |
+| 2026-08-09 | **M0 complete.** Fabricated ROI removed; on-prem container build fixed and verified running end to end. Five latent Docker defects found and fixed — see M0 notes. R4 (claims ahead of reality) now has a worked resolution rather than an open example. |

@@ -40,9 +40,15 @@ export interface BoardSummary {
     signedOff: number;
     realized: number;
     cost: number;
-    roiRatio: number; // signed-off value ÷ cost
+    roiRatio: number; // signed-off value ÷ cost — only meaningful when initiativesWithCost > 0
     initiativesWithValue: number;
     signedOffCount: number;
+    // How many initiatives actually carry a human-entered cost figure. ROI must
+    // never be rendered as a number when this is 0 — a missing denominator is
+    // "not captured", not "zero". Partial coverage must be disclosed alongside
+    // the ratio so nobody reads it as whole-portfolio ROI.
+    initiativesWithCost: number;
+    initiativesTotal: number;
   };
   periodLabel: string;
   realizedInPeriod: number;
@@ -112,6 +118,7 @@ export async function getBoardSummary(
   let realized = 0;
   let cost = 0;
   let initiativesWithValue = 0;
+  let initiativesWithCost = 0;
   let signedOffCount = 0;
   let realizedInPeriod = 0;
   let deliveredInPeriod = 0;
@@ -134,7 +141,11 @@ export async function getBoardSummary(
       signedOff += initProjected;
       signedOffCount++;
     }
-    cost += i.actualCostInr ?? i.estimatedCostInr ?? 0;
+    const initCost = i.actualCostInr ?? i.estimatedCostInr ?? null;
+    if (initCost != null) {
+      cost += initCost;
+      initiativesWithCost++;
+    }
 
     const initRealized = i.benefitClaims.reduce((s, c) => s + latestRealized(c.measurements), 0);
     realized += initRealized;
@@ -221,6 +232,8 @@ export async function getBoardSummary(
       roiRatio: cost > 0 ? signedOff / cost : 0,
       initiativesWithValue,
       signedOffCount,
+      initiativesWithCost,
+      initiativesTotal: initiatives.length,
     },
     realizedInPeriod,
     deliveredInPeriod,

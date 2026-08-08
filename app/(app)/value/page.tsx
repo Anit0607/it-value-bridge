@@ -26,6 +26,12 @@ export default async function ValueDashboard({
   const maxVh = s.byVertical[0]?.projected ?? 1;
   const maxOkr = s.byOkr[0]?.projected ?? 1;
 
+  // ROI is only shown when a human actually entered a cost. A missing
+  // denominator is "not captured", never "0.0x" — and partial coverage is
+  // disclosed rather than presented as whole-portfolio ROI.
+  const hasCost = s.totals.initiativesWithCost > 0;
+  const fullCostCoverage = hasCost && s.totals.initiativesWithCost === s.totals.initiativesTotal;
+
   return (
     <div className="space-y-6">
       <PageHeader
@@ -63,8 +69,14 @@ export default async function ValueDashboard({
         />
         <KpiCard
           label="Value vs Cost"
-          value={`${s.totals.roiRatio.toFixed(1)}x`}
-          sub="projected ROI"
+          value={hasCost ? `${s.totals.roiRatio.toFixed(1)}x` : '—'}
+          sub={
+            !hasCost
+              ? 'cost not captured'
+              : fullCostCoverage
+              ? 'projected ROI'
+              : `partial — ${s.totals.initiativesWithCost} of ${s.totals.initiativesTotal} costed`
+          }
           icon={Scale}
           accent="slate"
         />
@@ -160,6 +172,16 @@ export default async function ValueDashboard({
             <Scale className="h-4 w-4 text-slate-400" />
             <h2 className="text-sm font-semibold text-slate-800">Value vs Cost</h2>
           </div>
+          {!hasCost ? (
+            <div className="rounded-lg border border-dashed border-slate-300 bg-slate-50/60 p-5 text-center">
+              <p className="text-sm font-medium text-slate-700">Delivery cost not captured</p>
+              <p className="mx-auto mt-1 max-w-xs text-xs leading-relaxed text-slate-500">
+                ROI can&apos;t be calculated without a cost figure. PMO or CIO can record delivery
+                cost against each initiative — until then this stays blank rather than showing an
+                estimated number.
+              </p>
+            </div>
+          ) : (
           <div className="space-y-4">
             <div>
               <div className="mb-1 flex items-center justify-between text-xs text-slate-500">
@@ -188,7 +210,14 @@ export default async function ValueDashboard({
                 return on every ₹ invested (signed-off)
               </div>
             </div>
+            {!fullCostCoverage && (
+              <p className="rounded-lg bg-amber-50 px-3 py-2 text-[11px] leading-relaxed text-amber-800">
+                Based on {s.totals.initiativesWithCost} of {s.totals.initiativesTotal} initiatives with a
+                recorded cost. Not whole-portfolio ROI.
+              </p>
+            )}
           </div>
+          )}
         </div>
       </div>
 

@@ -1,6 +1,11 @@
 // prisma/schema.prisma
 generator client {
   provider = "prisma-client-js"
+  // "native" covers local development. The musl target is required by the
+  // on-prem Docker image (node:20-alpine, OpenSSL 3.x) — without it Prisma
+  // tries to download an engine at container start and fails on a read-only,
+  // non-root filesystem.
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {

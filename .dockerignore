@@ -1,0 +1,26 @@
+# Never copy host-built artefacts into the image. node_modules in particular
+# would carry Windows/macOS native binaries into a Linux container and break
+# the build in confusing ways — dependencies are installed inside the image.
+node_modules
+.next
+.git
+.github
+.claude
+
+# Local env and secrets — the container gets its config injected at runtime.
+.env
+.env.local
+.env.*.local
+
+# Dev/test scratch and docs that don't belong in a production image.
+docs
+scripts/_test-*
+*.log
+dev-server*.log
+tsconfig.tsbuildinfo
+.vscode
+.idea
+Dockerfile
+docker-compose.yml
+.dockerignore
+README.md

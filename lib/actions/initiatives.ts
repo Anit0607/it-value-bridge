@@ -213,7 +213,6 @@ export async function createInitiative(input: CreateInitiativeInput) {
   const primary = [...parsed.benefits].sort(
     (a, b) => b.estimatedAnnualValueInr - a.estimatedAnnualValueInr,
   )[0];
-  const totalValue = parsed.benefits.reduce((s, b) => s + b.estimatedAnnualValueInr, 0);
 
   const today = new Date();
   const expectedDate = new Date(Date.now() + 21 * 86_400_000);
@@ -242,7 +241,10 @@ export async function createInitiative(input: CreateInitiativeInput) {
       lastUpdated: today,
       notes: '',
       delayed: false,
-      estimatedCostInr: Math.round(totalValue * 0.3),
+      // Cost is deliberately NOT set here. It was previously synthesised as
+      // `totalValue * 0.3`, which made the Value Board's ROI figure rest on a
+      // hardcoded guess. Cost must be entered by a human or left unknown —
+      // real TCO capture (build + run + horizon) lands in M1, see docs/ROADMAP.md.
       valueSignedOff: false,
       organizationId: user.organizationId,
       isRegulatory: parsed.isRegulatory ?? false,
