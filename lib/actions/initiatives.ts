@@ -5,6 +5,7 @@ import { requireRole, requireRoleWithOrg, assertVisibleInitiativeAccess } from '
 import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES, buildInitiativeVisibilityWhere } from '@/lib/rbac';
 import { STAGE_LABEL, STAGE_TO_PROCESS_GROUP, nextStage } from '@/lib/stage-map';
 import { computeTco, formatInr } from '@/lib/value';
+import { INVESTMENT_CATEGORY_LABEL } from '@/lib/investment';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { CLASSIFICATION_LABEL } from '@/lib/types';
@@ -69,6 +70,7 @@ function toItem(i: InitiativeWithRelations): Item {
     delaySource: i.delaySource as DelaySource | undefined,
     delayReason: i.delayReason,
     committedMonth: i.committedMonth ?? undefined,
+    investmentCategory: i.investmentCategory,
     isRegulatory: i.isRegulatory,
     regulatoryBody: i.regulatoryBody,
     regulatoryDueDate: i.regulatoryDueDate ? iso(i.regulatoryDueDate) : null,
@@ -193,6 +195,7 @@ const CreateSchema = z.object({
   businessHeadName: z.string().optional(),
   businessUnit: z.string().optional(),
   subBusinessUnit: z.string().optional(),
+  investmentCategory: z.enum(['VALUE_GENERATING','REGULATORY_MANDATORY','FOUNDATIONAL','STRATEGIC']).optional(),
   // Cost at creation — optional. Absent means "not captured", never 0.
   buildCostInr: z.number().min(0).nullable().optional(),
   annualRunCostInr: z.number().min(0).nullable().optional(),
@@ -267,6 +270,7 @@ export async function createInitiative(input: CreateInitiativeInput) {
       businessHeadName: parsed.businessHeadName?.trim() || null,
       businessUnit: parsed.businessUnit?.trim() || null,
       subBusinessUnit: parsed.subBusinessUnit?.trim() || null,
+      investmentCategory: parsed.investmentCategory ?? 'VALUE_GENERATING',
       buildCostInr: parsed.buildCostInr ?? null,
       annualRunCostInr: parsed.annualRunCostInr ?? null,
       tcoHorizonYears: parsed.tcoHorizonYears ?? null,
@@ -578,6 +582,7 @@ const EditSchema = z.object({
   businessHeadName:   z.string().optional(),
   businessUnit:       z.string().optional(),
   subBusinessUnit:    z.string().optional(),
+  investmentCategory: z.enum(['VALUE_GENERATING','REGULATORY_MANDATORY','FOUNDATIONAL','STRATEGIC']).optional(),
   // Cost — all optional. Empty means "not captured", which is a valid and
   // honest state; it must never be coerced to 0 (see computeTco in lib/value.ts).
   buildCostInr:     z.number().min(0).nullable().optional(),
@@ -620,6 +625,7 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
       businessHeadName: true,
       businessUnit: true,
       subBusinessUnit: true,
+      investmentCategory: true,
       buildCostInr: true,
       annualRunCostInr: true,
       tcoHorizonYears: true,
@@ -690,6 +696,13 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
         );
       }
     }
+    // Recategorising changes what justifies the funding — and can move an
+    // initiative in or out of ROI gating entirely. Always audited.
+    if (parsed.investmentCategory && current.investmentCategory !== parsed.investmentCategory) {
+      changes.push(
+        `Investment category changed from ${INVESTMENT_CATEGORY_LABEL[current.investmentCategory]} to ${INVESTMENT_CATEGORY_LABEL[parsed.investmentCategory]}`,
+      );
+    }
     if ((current.tcoHorizonYears ?? null) !== (parsed.tcoHorizonYears ?? null)) {
       changes.push(
         `TCO horizon changed from ${current.tcoHorizonYears ?? '—'} to ${parsed.tcoHorizonYears ?? '—'} years`,
@@ -717,6 +730,7 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
       businessUnit: parsed.businessUnit?.trim() || null,
       subBusinessUnit: parsed.subBusinessUnit?.trim() || null,
       // `?? null` (not `|| null`) so a legitimate 0 is stored as 0, not wiped.
+      investmentCategory: parsed.investmentCategory ?? undefined,
       buildCostInr: parsed.buildCostInr ?? null,
       annualRunCostInr: parsed.annualRunCostInr ?? null,
       tcoHorizonYears: parsed.tcoHorizonYears ?? null,

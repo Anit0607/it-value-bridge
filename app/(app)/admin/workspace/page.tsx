@@ -5,10 +5,11 @@ import { redirect, notFound } from 'next/navigation';
 import { prisma } from '@/lib/db';
 import { PageHeader } from '@/components/PageHeader';
 import { SectionCard } from '@/components/ui/SectionCard';
+import { RoiThresholdControl } from './RoiThresholdControl';
 import { KpiCard } from '@/components/KpiCard';
 import { Badge } from '@/components/ui/Badge';
 import {
-  Building2, Users, Activity, Lightbulb, Target, FileBarChart, Hash, Tag,
+  Building2, Users, Activity, Lightbulb, Target, FileBarChart, Hash, Tag, Scale,
 } from 'lucide-react';
 
 const STATUS_TONE: Record<string, 'success' | 'warning' | 'slate'> = {
@@ -40,6 +41,11 @@ export default async function WorkspacePage() {
   return (
     <div className="space-y-6">
       <PageHeader title="Workspace" subtitle="Tenant identity and workspace-level record counts" />
+
+      {/* ── Investment gate ──────────────────────────────────────────────────── */}
+      <SectionCard title="Investment ROI Gate" icon={Scale}>
+        <RoiThresholdControl current={org.roiThreshold} />
+      </SectionCard>
 
       {/* ── Identity ─────────────────────────────────────────────────────────── */}
       <SectionCard title="Workspace Identity" icon={Building2}>

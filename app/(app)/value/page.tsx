@@ -11,7 +11,8 @@ import { PageHeader } from '@/components/PageHeader';
 import { PeriodPicker } from '@/components/PeriodPicker';
 import { KpiCard } from '@/components/KpiCard';
 import Link from 'next/link';
-import { TrendingUp, BadgeCheck, Coins, Scale, Target, Building2, Printer, LineChart, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
+import { TrendingUp, BadgeCheck, Coins, Scale, Target, Building2, Printer, LineChart, CheckCircle2, Clock, AlertTriangle, Layers } from 'lucide-react';
+import { INVESTMENT_CATEGORY_LABEL, INVESTMENT_CATEGORY_TONE } from '@/lib/investment';
 
 export default async function ValueDashboard({
   searchParams,
@@ -141,6 +142,90 @@ export default async function ValueDashboard({
         </div>
       ) : (
       <>
+      {/* Capital allocation — what the portfolio spend is actually justified by.
+          This is the section a board can act on: a single blended ROI hides that
+          regulatory and foundational work was never meant to clear it. */}
+      {s.byInvestmentCategory.length > 0 && (
+        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-card">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 px-5 py-3.5">
+            <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-800">
+              <Layers className="h-4 w-4 text-slate-400" />
+              Capital Allocation by Investment Basis
+            </h2>
+            <span className="text-xs text-slate-400">
+              {s.roiThreshold != null
+                ? `ROI gate: ${s.roiThreshold.toFixed(1)}x minimum on value-generating work`
+                : 'No ROI threshold configured'}
+            </span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-slate-100 bg-slate-50/60">
+                  <th className="px-5 py-2.5 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500">Basis</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">Initiatives</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">Projected Value</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">Cost</th>
+                  <th className="px-4 py-2.5 text-right text-[11px] font-semibold uppercase tracking-wider text-slate-500">ROI</th>
+                </tr>
+              </thead>
+              <tbody>
+                {s.byInvestmentCategory.map((a, idx) => (
+                  <tr key={a.category} className={`border-t border-slate-100 ${idx % 2 === 1 ? 'bg-slate-50/40' : ''}`}>
+                    <td className="px-5 py-2.5">
+                      <span className="inline-flex items-center gap-2 font-medium text-slate-800">
+                        <span className={`h-2 w-2 rounded-full ${INVESTMENT_CATEGORY_TONE[a.category]}`} />
+                        {INVESTMENT_CATEGORY_LABEL[a.category]}
+                      </span>
+                      {a.category !== 'VALUE_GENERATING' && (
+                        <span className="ml-4 text-[11px] text-slate-400">not ROI-gated</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-right tabular text-slate-600">{a.count}</td>
+                    <td className="px-4 py-2.5 text-right tabular font-semibold text-slate-800">{formatInr(a.projected)}</td>
+                    <td className="px-4 py-2.5 text-right tabular text-slate-600">
+                      {a.costedCount > 0 ? formatInr(a.cost) : <span className="text-slate-400">not captured</span>}
+                      {a.costedCount > 0 && a.costedCount < a.count && (
+                        <span className="ml-1 text-[11px] text-amber-600">({a.costedCount}/{a.count})</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2.5 text-right">
+                      {a.roi == null ? (
+                        <span className="text-slate-400">—</span>
+                      ) : a.category === 'VALUE_GENERATING' && s.roiThreshold != null ? (
+                        <span className={`tabular font-semibold ${a.roi >= s.roiThreshold ? 'text-emerald-700' : 'text-rose-600'}`}>
+                          {a.roi.toFixed(1)}x
+                        </span>
+                      ) : (
+                        <span className="tabular text-slate-600">{a.roi.toFixed(1)}x</span>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {(s.gateCounts.exception_required > 0 || s.gateCounts.exception_approved > 0 || s.gateCounts.insufficient_data > 0) && (
+            <div className="flex flex-wrap gap-4 border-t border-slate-100 bg-slate-50/40 px-5 py-3 text-xs">
+              {s.gateCounts.exception_required > 0 && (
+                <span className="font-medium text-rose-700">
+                  {s.gateCounts.exception_required} below threshold, awaiting justification
+                </span>
+              )}
+              {s.gateCounts.exception_approved > 0 && (
+                <span className="font-medium text-violet-700">
+                  {s.gateCounts.exception_approved} funded as an approved exception
+                </span>
+              )}
+              {s.gateCounts.insufficient_data > 0 && (
+                <span className="text-slate-500">{s.gateCounts.insufficient_data} cannot be assessed yet</span>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Value by category */}
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-card lg:col-span-2">

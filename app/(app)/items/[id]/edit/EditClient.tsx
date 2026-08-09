@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 import { updateInitiative, type EditInitiativeInput } from '@/lib/actions/initiatives';
 import { VERTICAL_HEADS, CLASSIFICATIONS, type ItemClassification } from '@/lib/types';
 import { computeTco, formatInr, DEFAULT_TCO_HORIZON_YEARS } from '@/lib/value';
+import { InvestmentCategoryPicker } from '@/components/investment/InvestmentCategoryPicker';
+import type { InvestmentCategory } from '@prisma/client';
 import { PageHeader } from '@/components/PageHeader';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Button } from '@/components/ui/Button';
@@ -48,6 +50,7 @@ interface Props {
     annualRunCostCr: string;
     tcoHorizonYears: string;
     actualCostCr: string;
+    investmentCategory: InvestmentCategory;
   };
 }
 
@@ -92,6 +95,7 @@ export function EditClient({ id, defaults }: Props) {
   const [annualRunCostCr, setAnnualRunCostCr] = useState(defaults.annualRunCostCr);
   const [tcoHorizonYears, setTcoHorizonYears] = useState(defaults.tcoHorizonYears);
   const [actualCostCr, setActualCostCr] = useState(defaults.actualCostCr);
+  const [investmentCategory, setInvestmentCategory] = useState<InvestmentCategory>(defaults.investmentCategory);
 
   // Live preview of what the entered figures resolve to, so the person typing
   // sees the same TCO the Value Board will compute.
@@ -133,6 +137,7 @@ export function EditClient({ id, defaults }: Props) {
       annualRunCostInr: crToInr(annualRunCostCr),
       tcoHorizonYears: toYears(tcoHorizonYears),
       actualCostInr: crToInr(actualCostCr),
+      investmentCategory,
     };
 
     startTransition(async () => {
@@ -219,6 +224,14 @@ export function EditClient({ id, defaults }: Props) {
           <Field label="Expected Go-Live Date" required>
             <input type="date" value={goLiveDate} onChange={e => setGoLiveDate(e.target.value)} className={inputCls} />
           </Field>
+        </SectionCard>
+
+        {/* Investment basis */}
+        <SectionCard
+          title="Investment Basis"
+          subtitle="What justifies funding this. Only value-generating work is measured against the ROI threshold."
+        >
+          <InvestmentCategoryPicker value={investmentCategory} onChange={setInvestmentCategory} />
         </SectionCard>
 
         {/* Cost / TCO */}

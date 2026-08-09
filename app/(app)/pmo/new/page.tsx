@@ -9,6 +9,9 @@ import { PageHeader } from '@/components/PageHeader';
 import { BenefitPicker, type BenefitDraft } from '@/components/value/BenefitPicker';
 import { Button } from '@/components/ui/Button';
 import { formatInr, computeTco, computeRoi, DEFAULT_TCO_HORIZON_YEARS, BENEFIT_CATEGORY_LABEL } from '@/lib/value';
+import { InvestmentCategoryPicker } from '@/components/investment/InvestmentCategoryPicker';
+import { INVESTMENT_CATEGORY_LABEL } from '@/lib/investment';
+import type { InvestmentCategory } from '@prisma/client';
 import type { BenefitCategory } from '@prisma/client';
 import { CheckCircle2, ChevronRight, ChevronLeft } from 'lucide-react';
 
@@ -69,6 +72,7 @@ export default function NewItemPage() {
   const [buildCostCr, setBuildCostCr] = useState('');
   const [annualRunCostCr, setAnnualRunCostCr] = useState('');
   const [tcoHorizonYears, setTcoHorizonYears] = useState('');
+  const [investmentCategory, setInvestmentCategory] = useState<InvestmentCategory>('VALUE_GENERATING');
 
   // Step 3 — Delivery Commitment
   const [goLiveDate, setGoLiveDate] = useState('');
@@ -151,6 +155,7 @@ export default function NewItemPage() {
           buildCostInr: crToInr(buildCostCr),
           annualRunCostInr: crToInr(annualRunCostCr),
           tcoHorizonYears: toYears(tcoHorizonYears),
+          investmentCategory,
         });
         router.push(`/items/${id}?created=1`);
       } catch {
@@ -329,6 +334,14 @@ export default function NewItemPage() {
             )}
 
             <div className="border-t border-slate-100 pt-4">
+              <h3 className="text-sm font-semibold text-slate-800">Investment Basis</h3>
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                What justifies funding this. Only value-generating work is measured against the ROI threshold.
+              </p>
+              <InvestmentCategoryPicker value={investmentCategory} onChange={setInvestmentCategory} className="mt-3" />
+            </div>
+
+            <div className="border-t border-slate-100 pt-4">
               <h3 className="text-sm font-semibold text-slate-800">Delivery Cost</h3>
               <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
                 Optional — but the Value Board can&apos;t show ROI for this initiative without it.
@@ -436,6 +449,7 @@ export default function NewItemPage() {
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Delivery Commitment</p>
                 <dl className="divide-y divide-slate-100">
                   <SummaryRow label="Go-Live Date" value={goLiveDate} />
+                  <SummaryRow label="Investment Basis" value={INVESTMENT_CATEGORY_LABEL[investmentCategory]} />
                   <SummaryRow label="Total Cost" value={draftTco != null ? formatInr(draftTco) : 'Not captured'} />
                   <SummaryRow label="ROI" value={draftRoi != null ? `${draftRoi.toFixed(1)}x` : '—'} />
                 </dl>

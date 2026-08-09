@@ -11,7 +11,10 @@ import { ValueRealizationPanel } from '@/components/value/ValueRealizationPanel'
 import { DependencyPanel } from '@/components/dependencies/DependencyPanel';
 import { MilestonesPanel, type MilestoneView } from '@/components/milestones/MilestonesPanel';
 import { RegulatoryControl } from '@/components/RegulatoryControl';
-import { addMonthsIso, realizationStatus } from '@/lib/value';
+import { addMonthsIso, realizationStatus, computeTco } from '@/lib/value';
+import { evaluateInvestmentGate } from '@/lib/investment';
+import { InvestmentGatePanel } from '@/components/investment/InvestmentGatePanel';
+import { prisma } from '@/lib/db';
 
 export default async function ItemDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
@@ -30,7 +33,44 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
   const canRecord = isPmoEquivalent(role) || role === 'CIO';
   const canEditDeps = isPmoEquivalent(role) || role === 'CIO' || role === 'VERTICAL_HEAD';
   const canEditMilestones = isPmoEquivalent(role) || role === 'CIO';
+  // Exception approval sits one tier above the PMO-equivalent roles that fund
+  // initiatives day to day — a PMO manager cannot wave through their own shortfall.
+  const canApproveException = role === 'CIO' || role === 'ADMIN';
   const canCompleteMilestones = canEditMilestones || role === 'VERTICAL_HEAD' || isBusinessEquivalent(role);
+
+  // Investment gate. Read straight from the row rather than via the Item
+  // adapter so the exception log comes back in the same round trip.
+  const gateRow = await prisma.initiative.findUnique({
+    where: { id: params.id },
+    select: {
+      investmentCategory: true,
+      estimatedCostInr: true, actualCostInr: true,
+      buildCostInr: true, annualRunCostInr: true, tcoHorizonYears: true,
+      benefitClaims: { select: { estimatedAnnualValueInr: true } },
+      organization: { select: { roiThreshold: true } },
+      investmentExceptions: { orderBy: { approvedAt: 'desc' } },
+    },
+  });
+  const investmentCategory = gateRow?.investmentCategory ?? 'VALUE_GENERATING';
+  const gateValueInr = gateRow?.benefitClaims.reduce((s, c) => s + c.estimatedAnnualValueInr, 0) ?? 0;
+  const gate = evaluateInvestmentGate({
+    category: investmentCategory,
+    valueInr: gateValueInr,
+    tcoInr: gateRow ? computeTco(gateRow) : null,
+    threshold: gateRow?.organization?.roiThreshold ?? null,
+    hasApprovedException: (gateRow?.investmentExceptions.length ?? 0) > 0,
+  });
+  const exceptionRows = (gateRow?.investmentExceptions ?? []).map(e => ({
+    id: e.id,
+    roiAtApproval: e.roiAtApproval,
+    thresholdAtApproval: e.thresholdAtApproval,
+    valueInrAtApproval: e.valueInrAtApproval,
+    tcoInrAtApproval: e.tcoInrAtApproval,
+    justification: e.justification,
+    approvedBy: e.approvedBy,
+    approvedByRole: e.approvedByRole,
+    approvedAt: e.approvedAt.toISOString().slice(0, 10),
+  }));
 
   const milestones: MilestoneView[] = milestonesRaw.map(m => ({
     id: m.id,
@@ -76,6 +116,15 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
           <ValueRealizationPanel initiativeId={params.id} value={value} canRecord={canRecord} realization={realization} />
         </div>
       )}
+      <div className="mx-auto max-w-5xl">
+        <InvestmentGatePanel
+          initiativeId={params.id}
+          category={investmentCategory}
+          gate={gate}
+          exceptions={exceptionRows}
+          canApprove={canApproveException}
+        />
+      </div>
       <div className="mx-auto max-w-5xl">
         <MilestonesPanel
           initiativeId={params.id}

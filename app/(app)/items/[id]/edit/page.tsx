@@ -47,6 +47,7 @@ export default async function EditInitiativePage({ params }: { params: { id: str
         annualRunCostCr:  inrToCr(item.annualRunCostInr),
         tcoHorizonYears:  item.tcoHorizonYears != null ? String(item.tcoHorizonYears) : '',
         actualCostCr:     inrToCr(item.actualCostInr),
+        investmentCategory: item.investmentCategory ?? 'VALUE_GENERATING',
       }}
     />
   );

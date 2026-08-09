@@ -2,6 +2,8 @@ import { prisma } from '@/lib/db';
 import { addMonthsIso, realizationStatus, computeTco, computePaybackMonths, type RealizationStatus } from '@/lib/value';
 import { inPeriod, type Period } from '@/lib/period';
 import { buildInitiativeVisibilityWhere } from '@/lib/rbac';
+import { evaluateInvestmentGate, type GateStatus } from '@/lib/investment';
+import type { InvestmentCategory } from '@prisma/client';
 import type { BenefitCategory, Stage } from '@prisma/client';
 
 export interface BoardCategoryRow {
@@ -34,6 +36,16 @@ export interface BoardInitiativeRow {
   signedOff: boolean;
 }
 
+export interface BoardCategoryAllocationRow {
+  category: InvestmentCategory;
+  projected: number;
+  cost: number;
+  /** Null when no initiative in this category has a captured cost. */
+  roi: number | null;
+  count: number;
+  costedCount: number;
+}
+
 export interface BoardSummary {
   totals: {
     projected: number;
@@ -56,6 +68,11 @@ export interface BoardSummary {
   periodLabel: string;
   realizedInPeriod: number;
   deliveredInPeriod: number;
+  /** Capital allocation split by what justifies the spend — the board view. */
+  byInvestmentCategory: BoardCategoryAllocationRow[];
+  /** Organization ROI minimum, or null when the gate is not configured. */
+  roiThreshold: number | null;
+  gateCounts: Record<GateStatus, number>;
   byCategory: BoardCategoryRow[];
   byOkr: BoardOkrRow[];
   byVertical: BoardVerticalRow[];
@@ -102,9 +119,17 @@ export async function getBoardSummary(
   const where = user.organizationId
     ? buildInitiativeVisibilityWhere({ ...user, organizationId: user.organizationId })
     : { organizationId: '__no_active_organization__' }; // no org context — see nothing, same safe default as listVisibleInitiativesForUser
+  const org = user.organizationId
+    ? await prisma.organization.findUnique({ where: { id: user.organizationId }, select: { roiThreshold: true } })
+    : null;
+  const roiThreshold = org?.roiThreshold ?? null;
+
   const initiatives = await prisma.initiative.findMany({
     where,
     include: {
+      // Only need to know whether ANY exception exists — take: 1 keeps this
+      // cheap across a large portfolio.
+      investmentExceptions: { select: { id: true }, take: 1 },
       benefitClaims: { include: { measurements: true } },
       okrLinks: { include: { okr: true } },
       valueRealization: { select: { id: true } },
@@ -131,6 +156,10 @@ export async function getBoardSummary(
   let unconfirmedValueInr = 0;
   const realizationRows: BoardSummary['realization']['rows'] = [];
 
+  const allocMap = new Map<InvestmentCategory, BoardCategoryAllocationRow>();
+  const gateCounts: Record<GateStatus, number> = {
+    not_applicable: 0, insufficient_data: 0, pass: 0, exception_required: 0, exception_approved: 0,
+  };
   const catMap = new Map<BenefitCategory, BoardCategoryRow>();
   const okrMap = new Map<string, BoardOkrRow>();
   const vhMap = new Map<string, BoardVerticalRow>();
@@ -151,6 +180,25 @@ export async function getBoardSummary(
       cost += initCost;
       initiativesWithCost++;
     }
+
+    // Capital allocation by funding basis, plus the gate verdict per initiative.
+    const alloc = allocMap.get(i.investmentCategory) ?? {
+      category: i.investmentCategory, projected: 0, cost: 0, roi: null, count: 0, costedCount: 0,
+    };
+    alloc.projected += initProjected;
+    alloc.count += 1;
+    if (initCost != null) { alloc.cost += initCost; alloc.costedCount += 1; }
+    allocMap.set(i.investmentCategory, alloc);
+
+    gateCounts[
+      evaluateInvestmentGate({
+        category: i.investmentCategory,
+        valueInr: initProjected,
+        tcoInr: initCost,
+        threshold: roiThreshold,
+        hasApprovedException: i.investmentExceptions.length > 0,
+      }).status
+    ]++;
 
     const initRealized = i.benefitClaims.reduce((s, c) => s + latestRealized(c.measurements), 0);
     realized += initRealized;
@@ -243,6 +291,11 @@ export async function getBoardSummary(
     },
     realizedInPeriod,
     deliveredInPeriod,
+    roiThreshold,
+    gateCounts,
+    byInvestmentCategory: [...allocMap.values()]
+      .map(a => ({ ...a, roi: a.costedCount > 0 && a.cost > 0 ? a.projected / a.cost : null }))
+      .sort((a, b) => b.projected - a.projected),
     byCategory: [...catMap.values()].sort((a, b) => b.projected - a.projected),
     byOkr: [...okrMap.values()].sort((a, b) => b.projected - a.projected),
     byVertical: [...vhMap.values()].sort((a, b) => b.projected - a.projected),

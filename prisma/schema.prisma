@@ -76,6 +76,22 @@ enum BenefitCategory {
   RISK_REDUCTION
 }
 
+// Why an investment is funded — which determines what justifies it.
+// DELIBERATELY SEPARATE from `isRegulatory`: that flag drives deadline
+// tracking and Regulatory Watch, this drives funding logic. An initiative can
+// be both (RBI-mandated AND revenue-generating); the category records what the
+// funding decision actually rests on.
+//
+// Only VALUE_GENERATING is gated on ROI. Gating the others would block the one
+// category that is legally non-negotiable (regulatory) and starve the work that
+// enables everything else (foundational) — see docs/ROADMAP.md §3.
+enum InvestmentCategory {
+  VALUE_GENERATING // justified by return — ROI gate applies
+  REGULATORY_MANDATORY // justified by a mandate; ROI is irrelevant
+  FOUNDATIONAL // enables other initiatives; returns indirectly
+  STRATEGIC // defensive or positioning; return is unmeasurable
+}
+
 enum DelaySource {
   IT
   BUSINESS
@@ -169,6 +185,13 @@ model Organization {
   status    String   @default("PILOT")
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  // Minimum ROI a VALUE_GENERATING initiative must clear before it needs an
+  // approved exception. Deliberately nullable with NO default: required return
+  // varies enormously by sector and cost of capital, so shipping a universal
+  // "1.5x" would be a fabricated number of exactly the kind M0 removed.
+  // null = no threshold configured = the gate is inactive.
+  roiThreshold Float?
 
   users       User[]
   initiatives Initiative[]
@@ -267,6 +290,10 @@ model Initiative {
   signedOffValueInr Float?
   signedOffTcoInr   Float?
 
+  // What justifies funding this. Separate concern from isRegulatory below —
+  // see the InvestmentCategory enum comment.
+  investmentCategory InvestmentCategory @default(VALUE_GENERATING)
+
   // regulatory / compliance criticality (e.g. RBI/NPCI-mandated, externally-fixed deadline)
   isRegulatory      Boolean   @default(false)
   regulatoryBody    String?
@@ -306,6 +333,7 @@ model Initiative {
   originDemand     Demand?                   @relation("DemandInitiative")
   dependsOn        Dependency[]              @relation("Dependent")
   blocking         Dependency[]              @relation("Blocker")
+  investmentExceptions InvestmentException[]
 
   @@index([verticalHeadName])
   @@index([currentStage])
@@ -475,6 +503,39 @@ model HistoryLog {
   @@index([initiativeId])
 }
 
+// A VALUE_GENERATING initiative funded below the organization's ROI threshold,
+// with the justification and the approver on record.
+//
+// APPEND-ONLY BY CONVENTION: rows are never updated or deleted. Re-approving
+// after the numbers change writes a NEW row, so the sequence of decisions stays
+// intact — "we approved this at 0.8x in March and again at 1.1x in July" is
+// exactly the governance history a board or auditor asks for.
+//
+// The gate this backs is deliberately SOFT: below-threshold work is escalated
+// for explicit justification, never blocked. Hard thresholds get gamed —
+// sponsors inflate benefits until they clear the bar — which would manufacture
+// the dishonesty the rest of this product exists to eliminate.
+model InvestmentException {
+  id           String     @id @default(cuid())
+  initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId String
+
+  // Frozen at the moment of approval. The live ROI will drift as value and cost
+  // are edited; what matters for accountability is what was on the table when
+  // somebody signed.
+  roiAtApproval       Float
+  thresholdAtApproval Float
+  valueInrAtApproval  Float
+  tcoInrAtApproval    Float
+
+  justification  String // free text — why this is worth funding anyway
+  approvedBy     String // denormalised for display stability
+  approvedByRole String
+  approvedAt     DateTime @default(now())
+
+  @@index([initiativeId])
+}
+
 model MonthlyReport {
   id          String   @id @default(cuid())
   month       Int // 1..12
@@ -588,6 +649,10 @@ model Demand {
   buildCostInr     Float?
   annualRunCostInr Float?
   tcoHorizonYears  Int?
+
+  // Carried onto the Initiative on approval, so the funding rationale set at
+  // intake survives conversion.
+  investmentCategory InvestmentCategory @default(VALUE_GENERATING)
 
   convertedInitiative   Initiative? @relation("DemandInitiative", fields: [convertedInitiativeId], references: [id])
   convertedInitiativeId String?     @unique

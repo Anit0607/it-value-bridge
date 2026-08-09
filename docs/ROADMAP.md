@@ -168,18 +168,58 @@ denominator silently moves every ROI it feeds, so it must be traceable) — veri
 
 ---
 
-### M2 — Investment governance
-**Size: 3–4 weeks.**
+### M2 — Investment governance ✅ COMPLETE (2026-08-09)
+**Actual: 1 session.**
 
-- [ ] `InvestmentCategory` enum, kept **separate** from the existing `isRegulatory` flag (a project can be both)
-- [ ] Backfill decision for existing initiatives
-- [ ] Org-configurable ROI threshold — never hardcoded, no universal default
-- [ ] Soft gate: below-threshold value-generating initiatives flagged as exceptions, not blocked
-- [ ] Exception requires written justification + approval one tier up
-- [ ] Exception log: who approved, when, why, ROI at the time
-- [ ] Segmented portfolio view by investment category
+- [x] `InvestmentCategory` enum, kept **separate** from the existing `isRegulatory` flag (a project can be both)
+- [x] Backfill decision for existing initiatives
+- [x] Org-configurable ROI threshold — never hardcoded, no universal default
+- [x] Soft gate: below-threshold value-generating initiatives flagged as exceptions, not blocked
+- [x] Exception requires written justification + approval one tier up
+- [x] Exception log: who approved, when, why, ROI at the time
+- [x] Segmented portfolio view by investment category
 
-**Exit:** a board-grade capital allocation view exists that no project tracker can produce.
+**Exit met.** `/value` now leads with **Capital Allocation by Investment Basis**:
+
+| Basis | Initiatives | Projected Value | Cost | ROI |
+|---|---|---|---|---|
+| Value-generating | 17 | ₹153.5 Cr | ₹43.67 Cr (16/17) | 3.5x |
+| Regulatory / mandatory *(not ROI-gated)* | 7 | ₹107.5 Cr | ₹35.75 Cr | 3.0x |
+
+That split is the thing no tracker produces — a single blended ROI hides that regulatory work was
+never meant to clear the bar.
+
+**The gate is soft, and that is enforced in code.** `GateStatus` has five values —
+`not_applicable`, `insufficient_data`, `pass`, `exception_required`, `exception_approved`. There is
+no "blocked", and a test asserts none of the five can be a rejection. Below-threshold work
+escalates; it is never prevented.
+
+**Separation of duties verified live, not assumed.** With the threshold at 5.0x, an initiative at
+3.3x showed *"Exception required"*. As **PMO**: no approve button, and an explicit *"Only the CIO
+can approve an exception — one tier above the roles that fund initiatives day to day."* As **CIO**:
+approved with justification → status flipped to *"Exception approved"*, the log recorded *"Approved
+at 3.3x against a 5.0x minimum · ₹8 Cr value vs ₹2.4 Cr cost"*, the audit trail captured it, and
+board counts moved from *16 below threshold* to *15 below threshold, 1 funded as an approved
+exception*. The UI restriction is backed by `requireRole('CIO','ADMIN')` in the server action, not
+just hidden buttons.
+
+**The test suite caught a real bug.** `computeRoi(0, cost)` correctly returns `0` as pure
+arithmetic — but the gate read that as "0x, gate failed" for any initiative with no benefit claims
+recorded, flagging unassessed work as a *funding failure* rather than missing data. The gate now
+assesses value and cost directly; zero recorded value is `insufficient_data`. **49 tests passing.**
+
+**Backfill was an inference, and is labelled as one.** The migration sets `REGULATORY_MANDATORY`
+where `isRegulatory = true` (7 initiatives) — otherwise every RBI/NPCI item would sit under a gate
+it can never pass. That assumes regulatory work is funded on its mandate: right as a default, but
+**PMO should review categories once**, since an initiative can be regulatory *and* primarily
+justified by return.
+
+**Exceptions are append-only by convention.** Re-approving after the numbers move writes a new row
+rather than updating, so *"approved at 0.8x in March and again at 1.1x in July"* survives as
+governance history.
+
+**Demo data note:** threshold left at **2.0x** (5.0x was used only to exercise the exception path).
+The approved exception remains on record.
 
 ---
 
@@ -310,4 +350,5 @@ make the rupee number more credible?* Milestones and dependencies would not have
 |---|---|
 | 2026-07-26 | Document created. Supersedes `PLAN.md` / `PHASE-PLAN.md` for forward work. |
 | 2026-08-09 | **M0 complete.** Fabricated ROI removed; on-prem container build fixed and verified running end to end. Five latent Docker defects found and fixed — see M0 notes. R4 (claims ahead of reality) now has a worked resolution rather than an open example. |
+| 2026-08-09 | **M2 complete.** Investment categorisation, org-configurable ROI threshold, soft gate with CIO-tier exception approval and an append-only exception log, and the board-grade Capital Allocation view. Separation of duties verified live (PMO blocked, CIO approved). Tests caught a gate bug where zero recorded value read as a failed gate. |
 | 2026-08-09 | **M1 complete.** Real TCO capture across all four surfaces, ROI + payback per initiative and portfolio, sign-off snapshot, and the first test suite (35 tests). A second fabricated `× 0.3` cost was found on the demand-approval path and removed. Currency abstraction deliberately deferred with reasoning recorded. |

@@ -125,6 +125,7 @@ const InitiativeRowInput = z.object({
   buildCostInr: z.number().min(0).optional(),
   annualRunCostInr: z.number().min(0).optional(),
   tcoHorizonYears: z.number().int().min(1).max(20).optional(),
+  investmentCategory: z.enum(['VALUE_GENERATING','REGULATORY_MANDATORY','FOUNDATIONAL','STRATEGIC']).optional(),
 });
 
 export type InitiativeImportRow = z.infer<typeof InitiativeRowInput>;
@@ -180,6 +181,7 @@ export async function importInitiatives(rows: InitiativeImportRow[]): Promise<{ 
           buildCostInr: r.buildCostInr ?? null,
           annualRunCostInr: r.annualRunCostInr ?? null,
           tcoHorizonYears: r.tcoHorizonYears ?? null,
+          investmentCategory: r.investmentCategory ?? 'VALUE_GENERATING',
           organizationId: user.organizationId,
           history: {
             create: { stage: r.currentStage, note: 'Imported via Client Data Import.', userId: user.id, userName: user.name },

@@ -94,6 +94,10 @@ export interface Item {
   validation?: BusinessValidation;
   committedMonth?: string;
 
+  // What justifies funding this — drives the ROI gate. Separate from
+  // isRegulatory, which drives deadline tracking; an item can be both.
+  investmentCategory?: 'VALUE_GENERATING' | 'REGULATORY_MANDATORY' | 'FOUNDATIONAL' | 'STRATEGIC';
+
   // regulatory / compliance criticality
   isRegulatory: boolean;
   regulatoryBody?: string | null;

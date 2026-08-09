@@ -30,6 +30,7 @@ const CreateDemandInput = z.object({
   buildCostInr: z.number().min(0).nullable().optional(),
   annualRunCostInr: z.number().min(0).nullable().optional(),
   tcoHorizonYears: z.number().int().min(1).max(20).nullable().optional(),
+  investmentCategory: z.enum(['VALUE_GENERATING','REGULATORY_MANDATORY','FOUNDATIONAL','STRATEGIC']).optional(),
 });
 
 export type CreateDemandInput = z.infer<typeof CreateDemandInput>;
@@ -51,6 +52,7 @@ export async function createDemand(input: CreateDemandInput) {
       buildCostInr: parsed.buildCostInr ?? null,
       annualRunCostInr: parsed.annualRunCostInr ?? null,
       tcoHorizonYears: parsed.tcoHorizonYears ?? null,
+      investmentCategory: parsed.investmentCategory ?? 'VALUE_GENERATING',
       benefitClaims: {
         create: parsed.benefits.map(b => ({
           category: b.category,
@@ -167,6 +169,7 @@ export async function approveDemand(id: string, input: ApproveDemandInput) {
       buildCostInr: demand.buildCostInr,
       annualRunCostInr: demand.annualRunCostInr,
       tcoHorizonYears: demand.tcoHorizonYears,
+      investmentCategory: demand.investmentCategory,
       valueSignedOff: false,
       organizationId: user.organizationId,
       benefitClaims: {

@@ -7,6 +7,8 @@ import { DEMAND_PRIORITIES, DEMAND_PRIORITY_LABEL } from '@/lib/demand';
 import { PageHeader } from '@/components/PageHeader';
 import { BenefitPicker, type BenefitDraft } from '@/components/value/BenefitPicker';
 import { computeTco, formatInr, DEFAULT_TCO_HORIZON_YEARS } from '@/lib/value';
+import { InvestmentCategoryPicker } from '@/components/investment/InvestmentCategoryPicker';
+import type { InvestmentCategory } from '@prisma/client';
 import type { DemandPriority } from '@prisma/client';
 
 const inputCls =
@@ -23,6 +25,7 @@ export default function RaiseDemandPage() {
   const [buildCostCr, setBuildCostCr] = useState('');
   const [annualRunCostCr, setAnnualRunCostCr] = useState('');
   const [tcoHorizonYears, setTcoHorizonYears] = useState('');
+  const [investmentCategory, setInvestmentCategory] = useState<InvestmentCategory>('VALUE_GENERATING');
 
   // "" → null (not captured). Never coerce a blank cost field to 0.
   const crToInr = (s: string): number | null => {
@@ -63,6 +66,7 @@ export default function RaiseDemandPage() {
           buildCostInr: crToInr(buildCostCr),
           annualRunCostInr: crToInr(annualRunCostCr),
           tcoHorizonYears: toYears(tcoHorizonYears),
+          investmentCategory,
         });
         router.push(`/demands/${id}`);
       } catch {
@@ -101,6 +105,14 @@ export default function RaiseDemandPage() {
             Targeted Business Value <span className="text-rose-500">*</span>
           </h2>
           <BenefitPicker onChange={setBenefits} />
+        </div>
+
+        <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-card">
+          <h2 className="text-xs font-semibold uppercase tracking-wider text-slate-500">Investment Basis</h2>
+          <p className="text-xs leading-relaxed text-slate-500">
+            What would justify funding this. Only value-generating work is measured against the ROI threshold.
+          </p>
+          <InvestmentCategoryPicker value={investmentCategory} onChange={setInvestmentCategory} />
         </div>
 
         <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-5 shadow-card">
