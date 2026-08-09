@@ -6,10 +6,11 @@ import { prisma } from '@/lib/db';
 import { PageHeader } from '@/components/PageHeader';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { RoiThresholdControl } from './RoiThresholdControl';
+import { MaterialityThresholdControl } from './MaterialityThresholdControl';
 import { KpiCard } from '@/components/KpiCard';
 import { Badge } from '@/components/ui/Badge';
 import {
-  Building2, Users, Activity, Lightbulb, Target, FileBarChart, Hash, Tag, Scale,
+  Building2, Users, Activity, Lightbulb, Target, FileBarChart, Hash, Tag, Scale, UserCheck,
 } from 'lucide-react';
 
 const STATUS_TONE: Record<string, 'success' | 'warning' | 'slate'> = {
@@ -45,6 +46,10 @@ export default async function WorkspacePage() {
       {/* ── Investment gate ──────────────────────────────────────────────────── */}
       <SectionCard title="Investment ROI Gate" icon={Scale}>
         <RoiThresholdControl current={org.roiThreshold} />
+      </SectionCard>
+
+      <SectionCard title="Maker-Checker Materiality" icon={UserCheck}>
+        <MaterialityThresholdControl current={org.materialityThresholdInr} />
       </SectionCard>
 
       {/* ── Identity ─────────────────────────────────────────────────────────── */}

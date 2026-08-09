@@ -6,6 +6,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useRole } from '@/components/RoleProvider';
 import { isPmoEquivalent, isBusinessEquivalent } from '@/lib/rbac';
 import { advanceStage, updateNotes, signOffValue, type InitiativeValue } from '@/lib/actions/initiatives';
+import { proposeValueSignOff } from '@/lib/actions/integrity';
+import { isMaterial } from '@/lib/integrity';
 import { computeRAG, daysInStage, daysFromNow, daysSinceUpdate } from '@/lib/rag';
 import {
   formatInr, formatPayback, computeTco, computeRoi, computePaybackMonths,
@@ -114,11 +116,26 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const canAdvance     = isPmoEquivalent(user?.role) || user?.role === 'CIO' || user?.role === 'VERTICAL_HEAD';
   // canValidate declared below after `closed` is computed
 
+  // Maker-checker (M3). Above the organization's materiality threshold, one
+  // signature is a proposal rather than a decision. The server enforces both
+  // branches; this only picks the right call and labels the button honestly.
+  const signOffNeedsSecondApprover = isMaterial(totalValue, value?.materialityThresholdInr ?? null);
+  const [signOffError, setSignOffError] = useState('');
+
   const handleSignOff = () => {
     if (!user) return;
+    setSignOffError('');
     startTransition(async () => {
-      await signOffValue(item.id);
-      router.refresh();
+      try {
+        if (signOffNeedsSecondApprover) {
+          await proposeValueSignOff(item.id);
+        } else {
+          await signOffValue(item.id);
+        }
+        router.refresh();
+      } catch (e) {
+        setSignOffError(e instanceof Error ? e.message : 'Could not record the sign-off.');
+      }
     });
   };
   const [localNotes, setLocalNotes] = useState<string | null>(null);
@@ -414,11 +431,18 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                   className="inline-flex items-center gap-1 rounded-lg border border-emerald-300 px-2.5 py-1 text-[11px] font-medium text-emerald-700 transition-colors hover:bg-emerald-50 disabled:opacity-60"
                 >
                   <BadgeCheck className="h-3.5 w-3.5" />
-                  Sign off value
+                  {signOffNeedsSecondApprover ? 'Propose sign-off' : 'Sign off value'}
                 </button>
               ) : undefined
             }
           >
+            {signOffNeedsSecondApprover && !value?.valueSignedOff && (
+              <p className="mb-3 rounded-lg bg-amber-50 px-3 py-2 text-xs text-amber-800 ring-1 ring-inset ring-amber-600/20">
+                This value is above the workspace materiality threshold, so sign-off needs a second approver.
+                Proposing it records the request; someone else must approve it before it counts.
+              </p>
+            )}
+            {signOffError && <p className="mb-3 text-xs font-medium text-rose-600">{signOffError}</p>}
             {claims.length > 0 ? (
               <ul className="space-y-2.5">
                 {claims.map(b => (

@@ -13,6 +13,10 @@ import { KpiCard } from '@/components/KpiCard';
 import Link from 'next/link';
 import { TrendingUp, BadgeCheck, Coins, Scale, Target, Building2, Printer, LineChart, CheckCircle2, Clock, AlertTriangle, Layers } from 'lucide-react';
 import { INVESTMENT_CATEGORY_LABEL, INVESTMENT_CATEGORY_TONE } from '@/lib/investment';
+import { getDoubleCountRisks, listBoardSnapshots } from '@/lib/queries/integrity';
+import { DoubleCountPanel } from '@/components/value/DoubleCountPanel';
+import { BoardSnapshotPanel } from '@/components/value/BoardSnapshotPanel';
+import { isPmoEquivalent } from '@/lib/rbac';
 
 export default async function ValueDashboard({
   searchParams,
@@ -22,7 +26,15 @@ export default async function ValueDashboard({
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
 
-  const s = await getBoardSummary(resolvePeriod(searchParams), session.user);
+  const [s, doubleCountRisks, snapshots] = await Promise.all([
+    getBoardSummary(resolvePeriod(searchParams), session.user),
+    getDoubleCountRisks(session.user),
+    listBoardSnapshots(session.user.organizationId),
+  ]);
+  // Publishing freezes what the board is told, so it stays with the roles that
+  // answer for the number rather than everyone who can read the page.
+  const canPublishSnapshot =
+    session.user.role === 'CIO' || session.user.role === 'ADMIN' || isPmoEquivalent(session.user.role);
   const maxCat = s.byCategory[0]?.projected ?? 1;
   const maxVh = s.byVertical[0]?.projected ?? 1;
   const maxOkr = s.byOkr[0]?.projected ?? 1;
@@ -409,6 +421,10 @@ export default async function ValueDashboard({
       </div>
       </>
       )}
+
+      {/* Integrity controls — how the figures above can be defended (M3) */}
+      <DoubleCountPanel risks={doubleCountRisks} />
+      <BoardSnapshotPanel snapshots={snapshots} canPublish={canPublishSnapshot} />
     </div>
   );
 }

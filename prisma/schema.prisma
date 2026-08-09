@@ -193,6 +193,16 @@ model Organization {
   // null = no threshold configured = the gate is inactive.
   roiThreshold Float?
 
+  // ₹ above which a value sign-off or a cost change needs a second approver.
+  // Nullable with no default, for the same reason as roiThreshold: what counts
+  // as material varies by organization. null = maker-checker inactive.
+  //
+  // Tiering matters here. Four-eyes on every ₹20 lakh BAU change gets bypassed
+  // within a month, and a bypassed control is worse than no control because it
+  // creates false assurance. Apply it where the number is material; let small
+  // items move on a single sign-off.
+  materialityThresholdInr Float?
+
   users       User[]
   initiatives Initiative[]
   demands     Demand[]
@@ -334,6 +344,8 @@ model Initiative {
   dependsOn        Dependency[]              @relation("Dependent")
   blocking         Dependency[]              @relation("Blocker")
   investmentExceptions InvestmentException[]
+  pendingApprovals     PendingApproval[]
+  valueRestatements    ValueRestatement[]
 
   @@index([verticalHeadName])
   @@index([currentStage])
@@ -536,6 +548,79 @@ model InvestmentException {
   @@index([initiativeId])
 }
 
+enum PendingApprovalKind {
+  VALUE_SIGN_OFF
+  COST_CHANGE
+}
+
+enum PendingApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// Maker-checker. A material change is PROPOSED here and does not take effect
+// until a DIFFERENT person approves it — segregation of duties, enforced
+// server-side by comparing proposedBy against the approver, not by hiding a
+// button.
+//
+// Only changes at or above the organization's materiality threshold come
+// through here. Below it, changes apply immediately as before: a control
+// applied to everything gets routed around, and a routed-around control is
+// worse than none because it manufactures false assurance.
+model PendingApproval {
+  id           String     @id @default(cuid())
+  initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId String
+
+  kind    PendingApprovalKind
+  // The proposed change, applied verbatim on approval. Shape depends on kind.
+  payload Json
+  // Human-readable description of what will change, frozen at proposal time so
+  // the approver sees exactly what they are agreeing to.
+  summary String
+  // The ₹ figure that made this material — recorded so a later reader can see
+  // why four-eyes was triggered even if the threshold has since moved.
+  materialityInr Float
+
+  proposedBy     String
+  proposedByRole String
+  proposedAt     DateTime @default(now())
+
+  status        PendingApprovalStatus @default(PENDING)
+  decidedBy     String?
+  decidedByRole String?
+  decidedAt     DateTime?
+  decisionNote  String?
+
+  @@index([initiativeId])
+  @@index([status])
+}
+
+// A committed number that changed after sign-off.
+//
+// Financial reporting does not quietly edit a published figure — it restates,
+// visibly. Same rule here: once value is signed off, the claim is locked, and
+// altering it requires an explicit restatement recording what it was, what it
+// became, and why. Append-only; never updated.
+model ValueRestatement {
+  id           String     @id @default(cuid())
+  initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
+  initiativeId String
+
+  previousValueInr Float
+  newValueInr      Float
+  previousTcoInr   Float?
+  newTcoInr        Float?
+
+  reason         String
+  restatedBy     String
+  restatedByRole String
+  restatedAt     DateTime @default(now())
+
+  @@index([initiativeId])
+}
+
 model MonthlyReport {
   id          String   @id @default(cuid())
   month       Int // 1..12
@@ -547,7 +632,9 @@ model MonthlyReport {
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id])
 
-  @@unique([year, month])
+  // Scoped per organization: two client workspaces must be able to publish
+  // the same period independently.
+  @@unique([organizationId, year, month])
 }
 
 // ---------- Value Realization Layer ----------
@@ -567,6 +654,13 @@ model BenefitClaim {
   metricName               String // e.g. "UPI transaction drop rate"
   baselineValue            Float?
   targetValue              Float?
+
+  // PROVENANCE — where each figure came from. Optional because existing claims
+  // predate this, but a claim without a source is an assertion, not evidence:
+  // the UI marks it as unsourced rather than letting it pass silently.
+  // "Which report, which system, which extract, which date."
+  baselineSource String?
+  targetSource   String?
   unit                     BenefitUnit     @default(INR)
   estimatedAnnualValueInr  Float           @default(0) // ₹ value for board rollups
   confidence               Confidence      @default(MEDIUM)
@@ -591,6 +685,10 @@ model ValueMeasurement {
   actualValue    Float?
   realizedInr    Float?
   note           String       @default("")
+  // Where this reading came from — a system, report or extract, not just a
+  // free-text note. A realized ₹ figure typed by a human with no source is the
+  // weakest link in the whole value chain.
+  evidenceSource String?
   recordedByName String?
 
   @@index([benefitClaimId])

@@ -260,6 +260,12 @@ const ValueClaimRowInput = z.object({
   estimatedAnnualValueInr: z.number().min(0),
   confidence: z.enum(['HIGH', 'MEDIUM', 'LOW']).optional(),
   realizationHorizonMonths: z.number().int().min(1).optional(),
+  // Provenance (M3). Where the baseline and target came from — a system report,
+  // a business estimate, a regulator's circular. Optional because an honest
+  // blank is better than a forced answer, but it is what turns a number into
+  // evidence.
+  baselineSource: z.string().optional(),
+  targetSource: z.string().optional(),
 });
 
 export type ValueClaimImportRow = z.infer<typeof ValueClaimRowInput>;
@@ -270,6 +276,23 @@ export async function importValueClaims(rows: ValueClaimImportRow[]): Promise<{ 
   const parsed = z.array(ValueClaimRowInput).min(1).parse(rows);
   await assertAllVisible(parsed.map(r => r.initiativeId));
 
+  // Claims lock at sign-off (M3). A signed-off value is a committed promise;
+  // silently appending to it after the fact would change the board's number
+  // with no record that anything moved. Restate instead — that clears the
+  // sign-off and forces the new figure to be approved on its own merits.
+  const lockedIds = [...new Set(parsed.map(r => r.initiativeId))];
+  const locked = await prisma.initiative.findMany({
+    where: { id: { in: lockedIds }, valueSignedOff: true },
+    select: { id: true, title: true },
+  });
+  if (locked.length > 0) {
+    throw new Error(
+      `Value is already signed off on ${locked.length} initiative(s): ` +
+        `${locked.map(i => i.title).join(', ')}. ` +
+        'Restate the value on those initiatives before adding claims — a signed-off figure cannot be topped up silently.',
+    );
+  }
+
   await prisma.$transaction(
     parsed.map(r =>
       prisma.benefitClaim.create({
@@ -279,6 +302,8 @@ export async function importValueClaims(rows: ValueClaimImportRow[]): Promise<{ 
           metricName: r.metricName,
           baselineValue: r.baselineValue ?? null,
           targetValue: r.targetValue ?? null,
+          baselineSource: r.baselineSource?.trim() || null,
+          targetSource: r.targetSource?.trim() || null,
           unit: r.unit ?? 'INR',
           estimatedAnnualValueInr: r.estimatedAnnualValueInr,
           confidence: r.confidence ?? 'MEDIUM',

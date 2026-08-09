@@ -4,8 +4,9 @@ import { prisma } from '@/lib/db';
 import { requireRole, requireRoleWithOrg, assertVisibleInitiativeAccess } from '@/lib/authz';
 import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES, buildInitiativeVisibilityWhere } from '@/lib/rbac';
 import { STAGE_LABEL, STAGE_TO_PROCESS_GROUP, nextStage } from '@/lib/stage-map';
-import { computeTco, formatInr } from '@/lib/value';
+import { computeTco, formatInr, DEFAULT_TCO_HORIZON_YEARS } from '@/lib/value';
 import { INVESTMENT_CATEGORY_LABEL } from '@/lib/investment';
+import { isMaterial, costChangeMagnitude } from '@/lib/integrity';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { CLASSIFICATION_LABEL } from '@/lib/types';
@@ -449,6 +450,7 @@ export interface ValueMeasurementView {
   actualValue: number | null;
   realizedInr: number | null;
   note: string;
+  evidenceSource: string | null;
   recordedByName: string | null;
 }
 
@@ -457,6 +459,8 @@ export interface InitiativeValue {
   actualCostInr: number | null;
   valueSignedOff: boolean;
   valueSignOffBy: string | null;
+  /** Org materiality threshold — null means maker-checker is not configured. */
+  materialityThresholdInr: number | null;
   benefitClaims: {
     id: string;
     category: string;
@@ -465,6 +469,8 @@ export interface InitiativeValue {
     estimatedAnnualValueInr: number;
     baselineValue: number | null;
     targetValue: number | null;
+    baselineSource: string | null;
+    targetSource: string | null;
     narrative: string;
     measurements: ValueMeasurementView[];
   }[];
@@ -482,10 +488,12 @@ export async function getInitiativeValue(
       actualCostInr: true,
       valueSignedOff: true,
       valueSignOffBy: true,
+      organization: { select: { materialityThresholdInr: true } },
       benefitClaims: {
         select: {
           id: true, category: true, metricName: true, unit: true,
           estimatedAnnualValueInr: true, baselineValue: true, targetValue: true, narrative: true,
+          baselineSource: true, targetSource: true,
           measurements: { orderBy: { measuredAt: 'desc' } },
         },
         orderBy: { estimatedAnnualValueInr: 'desc' },
@@ -495,6 +503,7 @@ export async function getInitiativeValue(
   if (!i) return null;
   return {
     ...i,
+    materialityThresholdInr: i.organization?.materialityThresholdInr ?? null,
     benefitClaims: i.benefitClaims.map(c => ({
       ...c,
       measurements: c.measurements.map(m => ({
@@ -504,6 +513,7 @@ export async function getInitiativeValue(
         actualValue: m.actualValue,
         realizedInr: m.realizedInr,
         note: m.note,
+        evidenceSource: m.evidenceSource,
         recordedByName: m.recordedByName,
       })),
     })),
@@ -526,12 +536,24 @@ export async function signOffValue(id: string) {
       estimatedCostInr: true, actualCostInr: true,
       buildCostInr: true, annualRunCostInr: true, tcoHorizonYears: true,
       benefitClaims: { select: { estimatedAnnualValueInr: true } },
+      organization: { select: { materialityThresholdInr: true } },
     },
   });
   const snapshotValue = initiative
     ? initiative.benefitClaims.reduce((s, c) => s + c.estimatedAnnualValueInr, 0)
     : 0;
   const snapshotTco = initiative ? computeTco(initiative) : null;
+
+  // Maker-checker (M3). Above the organization's materiality threshold a
+  // sign-off cannot take effect on one signature — it becomes a proposal that
+  // someone else has to approve. Below it, sign-off applies immediately, which
+  // is the point of having a threshold at all.
+  if (isMaterial(snapshotValue, initiative?.organization?.materialityThresholdInr ?? null)) {
+    throw new Error(
+      'MATERIAL_SIGN_OFF: this value is above the materiality threshold and needs a second approver. ' +
+      'Propose it for approval instead.',
+    );
+  }
 
   await prisma.initiative.update({
     where: { id },
@@ -630,10 +652,14 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
       annualRunCostInr: true,
       tcoHorizonYears: true,
       actualCostInr: true,
+      currentStage: true,
+      organization: { select: { materialityThresholdInr: true } },
     },
   });
 
   const changes: string[] = [];
+  const costChanges: string[] = [];
+  let costChangeInr = 0;
   if (current) {
     const oldDate = current.expectedGoLiveDate?.toISOString().slice(0, 10) ?? '';
     const newDate = parsed.goLiveDate ?? '';
@@ -682,6 +708,9 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
 
     // Cost changes are audited individually — a shifting denominator silently
     // moves every ROI figure this initiative feeds, so it must be traceable.
+    // They are collected separately from the other edits because above the
+    // materiality threshold they are deferred for a second approver while the
+    // rest of the edit still applies.
     const costFields: { key: 'buildCostInr' | 'annualRunCostInr' | 'actualCostInr'; label: string; newValue: number | null | undefined }[] = [
       { key: 'buildCostInr', label: 'Build cost', newValue: parsed.buildCostInr },
       { key: 'annualRunCostInr', label: 'Annual run cost', newValue: parsed.annualRunCostInr },
@@ -691,9 +720,13 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
       const oldValue = current[f.key] ?? null;
       const newValue = f.newValue ?? null;
       if (oldValue !== newValue) {
-        changes.push(
+        costChanges.push(
           `${f.label} changed from ${oldValue == null ? 'not captured' : formatInr(oldValue)} to ${newValue == null ? 'not captured' : formatInr(newValue)}`,
         );
+        // The largest single movement decides materiality. Summing build and
+        // run would double-count one decision; the new total would route every
+        // trivial correction on a large initiative through four-eyes.
+        costChangeInr = Math.max(costChangeInr, costChangeMagnitude(oldValue, newValue));
       }
     }
     // Recategorising changes what justifies the funding — and can move an
@@ -703,12 +736,40 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
         `Investment category changed from ${INVESTMENT_CATEGORY_LABEL[current.investmentCategory]} to ${INVESTMENT_CATEGORY_LABEL[parsed.investmentCategory]}`,
       );
     }
-    if ((current.tcoHorizonYears ?? null) !== (parsed.tcoHorizonYears ?? null)) {
-      changes.push(
-        `TCO horizon changed from ${current.tcoHorizonYears ?? '—'} to ${parsed.tcoHorizonYears ?? '—'} years`,
+    const oldHorizon = current.tcoHorizonYears ?? null;
+    const newHorizon = parsed.tcoHorizonYears ?? null;
+    if (oldHorizon !== newHorizon) {
+      costChanges.push(`TCO horizon changed from ${oldHorizon ?? '—'} to ${newHorizon ?? '—'} years`);
+      // A horizon change is a ₹ decision even though it is entered as a number
+      // of years: it multiplies the run cost. Measure it by what it does to TCO.
+      const runCost = parsed.annualRunCostInr ?? current.annualRunCostInr ?? 0;
+      costChangeInr = Math.max(
+        costChangeInr,
+        Math.abs(runCost * ((newHorizon ?? DEFAULT_TCO_HORIZON_YEARS) - (oldHorizon ?? DEFAULT_TCO_HORIZON_YEARS))),
       );
     }
   }
+
+  // Maker-checker on cost (M3). Above the organization's materiality threshold
+  // a cost change does not take effect on one signature. The rest of the edit
+  // still applies — deferring the title because the build cost moved would
+  // teach people to route around the control.
+  const deferCost =
+    costChangeInr > 0 && isMaterial(costChangeInr, current?.organization?.materialityThresholdInr ?? null);
+
+  if (deferCost) {
+    const alreadyPending = await prisma.pendingApproval.findFirst({
+      where: { initiativeId: id, kind: 'COST_CHANGE', status: 'PENDING' },
+    });
+    if (alreadyPending) {
+      throw new Error(
+        'A cost change is already awaiting approval on this initiative. It must be approved or rejected before another is proposed.',
+      );
+    }
+  } else {
+    changes.push(...costChanges);
+  }
+
   const historyNote = changes.length > 0 ? changes.join('; ') : 'Initiative metadata updated';
 
   await prisma.initiative.update({
@@ -731,16 +792,53 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
       subBusinessUnit: parsed.subBusinessUnit?.trim() || null,
       // `?? null` (not `|| null`) so a legitimate 0 is stored as 0, not wiped.
       investmentCategory: parsed.investmentCategory ?? undefined,
-      buildCostInr: parsed.buildCostInr ?? null,
-      annualRunCostInr: parsed.annualRunCostInr ?? null,
-      tcoHorizonYears: parsed.tcoHorizonYears ?? null,
-      actualCostInr: parsed.actualCostInr ?? null,
+      // Omitted entirely when deferred, so the stored cost stays whatever the
+      // last approved figure was until a second approver acts.
+      ...(deferCost
+        ? {}
+        : {
+            buildCostInr: parsed.buildCostInr ?? null,
+            annualRunCostInr: parsed.annualRunCostInr ?? null,
+            tcoHorizonYears: parsed.tcoHorizonYears ?? null,
+            actualCostInr: parsed.actualCostInr ?? null,
+          }),
       lastUpdated: today,
       history: {
         create: { stage: null, note: historyNote, userName: user.name, createdAt: today },
       },
     },
   });
+
+  if (deferCost) {
+    const summary = `Cost change: ${costChanges.join('; ')}`;
+    await prisma.pendingApproval.create({
+      data: {
+        initiative: { connect: { id } },
+        kind: 'COST_CHANGE',
+        payload: {
+          cost: {
+            buildCostInr: parsed.buildCostInr ?? null,
+            annualRunCostInr: parsed.annualRunCostInr ?? null,
+            tcoHorizonYears: parsed.tcoHorizonYears ?? null,
+            actualCostInr: parsed.actualCostInr ?? null,
+          },
+        },
+        summary,
+        materialityInr: costChangeInr,
+        proposedBy: user.name,
+        proposedByRole: user.role,
+      },
+    });
+    await prisma.historyLog.create({
+      data: {
+        initiativeId: id,
+        stage: current?.currentStage ?? null,
+        note: `${summary} — proposed by ${user.name}, awaiting a second approver. Cost is unchanged until then.`,
+        userId: user.id,
+        userName: user.name,
+      },
+    });
+  }
 
   revalidatePath(`/items/${id}`);
   revalidatePath('/pmo');

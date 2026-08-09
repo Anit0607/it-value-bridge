@@ -14,18 +14,21 @@ import { RegulatoryControl } from '@/components/RegulatoryControl';
 import { addMonthsIso, realizationStatus, computeTco } from '@/lib/value';
 import { evaluateInvestmentGate } from '@/lib/investment';
 import { InvestmentGatePanel } from '@/components/investment/InvestmentGatePanel';
+import { IntegrityPanel } from '@/components/value/IntegrityPanel';
+import { getInitiativeIntegrity } from '@/lib/queries/integrity';
 import { prisma } from '@/lib/db';
 
 export default async function ItemDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
 
-  const [item, value, deps, linkOptions, milestonesRaw] = await Promise.all([
+  const [item, value, deps, linkOptions, milestonesRaw, integrity] = await Promise.all([
     getVisibleInitiativeItem(params.id, session.user),
     getInitiativeValue(params.id, session.user.organizationId),
     getInitiativeDependencies(params.id, session.user.organizationId),
     listLinkableInitiatives(params.id, session.user.organizationId),
     listMilestones(params.id, session.user),
+    getInitiativeIntegrity(params.id, session.user.organizationId),
   ]);
   if (!item) notFound();
 
@@ -114,6 +117,18 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
       {value && (
         <div className="mx-auto max-w-5xl">
           <ValueRealizationPanel initiativeId={params.id} value={value} canRecord={canRecord} realization={realization} />
+        </div>
+      )}
+      {integrity && (
+        <div className="mx-auto max-w-5xl">
+          <IntegrityPanel
+            initiativeId={params.id}
+            integrity={integrity}
+            currentUserName={session.user.name ?? ''}
+            canDecide={canRecord}
+            canRestate={canRecord}
+            valueSignedOff={value?.valueSignedOff ?? false}
+          />
         </div>
       )}
       <div className="mx-auto max-w-5xl">

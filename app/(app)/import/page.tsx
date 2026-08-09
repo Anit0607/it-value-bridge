@@ -257,7 +257,7 @@ export default function ImportPage() {
               Optional: <code className="rounded bg-slate-100 px-1 py-0.5">description</code>, <code className="rounded bg-slate-100 px-1 py-0.5">owner_role</code>, <code className="rounded bg-slate-100 px-1 py-0.5">status</code>.
             </>
           }
-          note={initiativesError || `initiative_title must exactly match an existing initiative's title${initiatives ? ` — ${initiatives.length} visible to you` : ''}.`}
+          note={initiativesError || `initiative_title must exactly match an existing initiative's title${initiatives ? ` — ${initiatives.length} visible to you` : ''}. Initiatives whose value is already signed off are locked — restate the value there before adding claims.`}
           previewHead={['Initiative', 'Milestone', 'Owner', 'Due Date', 'Status']}
           renderPreviewRow={r => [initiatives?.find(i => i.id === r.initiativeId)?.title ?? r.initiativeId, r.title, r.owner, r.dueDate.toISOString().slice(0, 10), r.status ?? 'NOT_STARTED']}
           onSubmit={importMilestones}
@@ -304,7 +304,8 @@ export default function ImportPage() {
           columnsHint={
             <>
               Required: <code className="rounded bg-slate-100 px-1 py-0.5">initiative_title</code>, <code className="rounded bg-slate-100 px-1 py-0.5">category</code>, <code className="rounded bg-slate-100 px-1 py-0.5">metric_name</code>, <code className="rounded bg-slate-100 px-1 py-0.5">value_cr</code> (₹ crore).
-              Optional: <code className="rounded bg-slate-100 px-1 py-0.5">baseline_value</code>, <code className="rounded bg-slate-100 px-1 py-0.5">target_value</code>, <code className="rounded bg-slate-100 px-1 py-0.5">unit</code>, <code className="rounded bg-slate-100 px-1 py-0.5">confidence</code>, <code className="rounded bg-slate-100 px-1 py-0.5">realization_horizon_months</code>.
+              Optional: <code className="rounded bg-slate-100 px-1 py-0.5">baseline_value</code>, <code className="rounded bg-slate-100 px-1 py-0.5">baseline_source</code>, <code className="rounded bg-slate-100 px-1 py-0.5">target_value</code>, <code className="rounded bg-slate-100 px-1 py-0.5">target_source</code>, <code className="rounded bg-slate-100 px-1 py-0.5">unit</code>, <code className="rounded bg-slate-100 px-1 py-0.5">confidence</code>, <code className="rounded bg-slate-100 px-1 py-0.5">realization_horizon_months</code>.
+              The two <code className="rounded bg-slate-100 px-1 py-0.5">_source</code> columns record where each figure came from — they are what lets a claim be defended later.
             </>
           }
           note={initiativesError || `initiative_title must exactly match an existing initiative's title${initiatives ? ` — ${initiatives.length} visible to you` : ''}.`}
@@ -342,6 +343,8 @@ export default function ImportPage() {
                 unit, confidence,
                 baselineValue: baselineRaw ? parseFloat(baselineRaw) : undefined,
                 targetValue: targetRaw ? parseFloat(targetRaw) : undefined,
+                baselineSource: get(cells, col('baseline_source')) || undefined,
+                targetSource: get(cells, col('target_source')) || undefined,
                 realizationHorizonMonths: horizonRaw ? parseInt(horizonRaw, 10) : undefined,
               },
             };

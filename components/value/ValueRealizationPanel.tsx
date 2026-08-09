@@ -41,7 +41,7 @@ export function ValueRealizationPanel({
   const [isPending, startTransition] = useTransition();
   const [openClaim, setOpenClaim] = useState<string | null>(null);
   const [error, setError] = useState('');
-  const [form, setForm] = useState({ horizonLabel: '+3m' as (typeof HORIZONS)[number], realizedInr: '', scale: 10_000_000, actualValue: '', note: '' });
+  const [form, setForm] = useState({ horizonLabel: '+3m' as (typeof HORIZONS)[number], realizedInr: '', scale: 10_000_000, actualValue: '', note: '', evidenceSource: '' });
 
   const claims = value.benefitClaims;
   if (claims.length === 0) {
@@ -73,6 +73,13 @@ export function ValueRealizationPanel({
       setError('Enter a realized ₹ value or an actual metric reading.');
       return;
     }
+    // Mirrors the server rule in addValueMeasurement — a ₹ figure that reaches
+    // the board must say where it came from. Checked here too so the user is
+    // told before the round trip, never instead of it.
+    if (realized != null && !form.evidenceSource.trim()) {
+      setError('State the evidence source for a realized ₹ figure (system report, finance extract, business confirmation).');
+      return;
+    }
     startTransition(async () => {
       try {
         await addValueMeasurement({
@@ -82,12 +89,13 @@ export function ValueRealizationPanel({
           realizedInr: realized,
           actualValue: actual,
           note: form.note.trim(),
+          evidenceSource: form.evidenceSource.trim(),
         });
         setOpenClaim(null);
-        setForm({ horizonLabel: '+3m', realizedInr: '', scale: 10_000_000, actualValue: '', note: '' });
+        setForm({ horizonLabel: '+3m', realizedInr: '', scale: 10_000_000, actualValue: '', note: '', evidenceSource: '' });
         router.refresh();
-      } catch {
-        setError('Could not save the reading. Please try again.');
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Could not save the reading. Please try again.');
       }
     });
   };
@@ -130,6 +138,12 @@ export function ValueRealizationPanel({
                 </span>
               </div>
               <div className="mt-1 text-xs text-slate-500">{c.metricName}</div>
+              {(c.baselineSource || c.targetSource) && (
+                <div className="mt-1 space-y-0.5 text-[11px] text-slate-400">
+                  {c.baselineSource && <div>Baseline source: {c.baselineSource}</div>}
+                  {c.targetSource && <div>Target source: {c.targetSource}</div>}
+                </div>
+              )}
 
               {/* projected vs realized bar */}
               <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
@@ -146,6 +160,9 @@ export function ValueRealizationPanel({
                         {m.realizedInr != null && <> · {formatInr(m.realizedInr)}</>}
                         {m.actualValue != null && <> · actual {m.actualValue}{BENEFIT_UNIT_LABEL[c.unit as BenefitUnit]}</>}
                         {m.note && <> · {m.note}</>}
+                        {m.evidenceSource
+                          ? <> · <span className="text-slate-600">source: {m.evidenceSource}</span></>
+                          : m.realizedInr != null && <> · <span className="text-amber-600">source not recorded</span></>}
                       </span>
                       <span className="flex-shrink-0 tabular text-slate-400">{m.measuredAt}</span>
                     </li>
@@ -180,6 +197,7 @@ export function ValueRealizationPanel({
                         <input type="number" step="any" value={form.actualValue} onChange={e => setForm(f => ({ ...f, actualValue: e.target.value }))} className={inputCls} placeholder="—" />
                       </div>
                     </div>
+                    <input value={form.evidenceSource} onChange={e => setForm(f => ({ ...f, evidenceSource: e.target.value }))} className={inputCls} placeholder="Evidence source — required for a realized ₹ figure (e.g. Finance MIS Jul-2026, core banking report)" />
                     <input value={form.note} onChange={e => setForm(f => ({ ...f, note: e.target.value }))} className={inputCls} placeholder="Note (optional)" />
                     {error && <p className="text-xs font-medium text-rose-600">{error}</p>}
                     <div className="flex gap-2">

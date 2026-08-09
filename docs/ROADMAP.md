@@ -29,8 +29,8 @@ client data import. Organization- and role-scoped data access enforced through a
 | ~~ROI denominator is fabricated~~ | **Fixed in M0.** Cost is no longer synthesised; ROI is suppressed when cost is unknown and partial coverage is disclosed. Real TCO capture lands in M1. |
 | ~~Docker bundle never built~~ | **Fixed in M0.** Image builds, full stack runs, migrations apply at container start. |
 | ~~Migrations run at image build~~ | **Fixed in M0.** Moved to `docker-entrypoint.sh`; Vercel keeps migrating via `vercel.json`. |
-| ~~No automated tests~~ | **Started in M1.** `npm test` (vitest) covers TCO/ROI/payback math and RBAC visibility scoping — 35 tests. Server actions, forms, and E2E remain uncovered. |
-| No background jobs | Reminders compute on page load. `MonthlyReport` model exists but nothing generates it. No scheduled snapshots, no notifications. |
+| ~~No automated tests~~ | **Started in M1.** `npm test` (vitest) covers TCO/ROI/payback math, RBAC visibility scoping, the investment gate and the integrity helpers — 69 tests. Server actions, forms, and E2E remain uncovered; the maker-checker and claim-lock rules are verified live in the browser, not by test. |
+| No background jobs | Reminders compute on page load. **`MonthlyReport` is now written (M3)** — but only when a human publishes a period from the Value Board. Nothing is scheduled, and there are still no notifications. |
 | No Finance role | Deliberately deferred. Business signs off value; nobody independently certifies cost. |
 | Lifecycle and roles hardcoded | `Stage` and `Role` are Postgres enums. Blocks SME configuration. |
 | Currency hardcoded | `formatInr` assumes ₹ with lakh/crore grouping. Blocks global SME. |
@@ -223,17 +223,79 @@ The approved exception remains on record.
 
 ---
 
-### M3 — Integrity controls
+### M3 — Integrity controls ✅ **DONE**
 **Size: 2–3 weeks.**
 
-- [ ] Maker-checker on sign-off and cost changes, gated by materiality thresholds
-- [ ] Lock benefit claims at sign-off; changes require a visible, formal re-baseline
-- [ ] Evidence/provenance fields — source for every baseline, target, and realized figure
-- [ ] Activate period snapshots using the existing unused `MonthlyReport` model; board figures freeze at publication
-- [ ] Restatement flow — corrections recorded, never silent
-- [ ] Double-count detection across initiatives claiming the same benefit pool
+- [x] Maker-checker on sign-off and cost changes, gated by materiality thresholds
+- [x] Lock benefit claims at sign-off; changes require a visible, formal re-baseline
+- [x] Evidence/provenance fields — source for every baseline, target, and realized figure
+- [x] Activate period snapshots using the existing unused `MonthlyReport` model; board figures freeze at publication
+- [x] Restatement flow — corrections recorded, never silent
+- [x] Double-count detection across initiatives claiming the same benefit pool
 
-**Exit:** the full chain of custody for any published number can be shown without saying "trust us."
+**Exit met.** Every published figure now carries a traceable custody chain. The claim is deliberately
+**not** "our numbers are correct" — no system can guarantee a forecast was right. It is: *you can
+always see whose number it is, what it rested on, who approved it, whether anyone changed it, and
+what it became.*
+
+**Materiality is what makes four-eyes survivable.** `isMaterial()` returns false for a null
+threshold — maker-checker off — which is a distinct state from `0`, meaning "review everything".
+Four-eyes on every ₹20 lakh BAU change gets routed around within a month, and a routed-around
+control is worse than none because it manufactures false assurance. A cost change is measured by
+**the size of the movement, not the new total**: ₹50 Cr → ₹51 Cr is a ₹1 Cr decision. A TCO-horizon
+change is measured by what it does to TCO, since changing 3 years to 5 on a large run cost is a ₹
+decision entered as a number of years.
+
+**The four-eyes check lives on the server.** `approvePendingChange` refuses when
+`approval.proposedBy === user.name`; the "You proposed this" message is a courtesy on top of the
+rule, not the rule itself.
+
+**Verified live, role by role.** Threshold set to ₹10 Cr. A ₹40 Cr initiative showed *"Propose
+sign-off"* instead of *"Sign off value"*. As **PMO (Anita Desai)**: proposed → initiative stayed
+unsigned, panel showed *"You proposed this — it has to be decided by someone else."* As **CIO
+(Mahesh Iyer)**: Approve/Reject appeared → approved with a note → signed off, and the record read
+*"proposed by Anita Desai, decided by Mahesh Iyer."* A ₹25 Cr build-cost edit by the CIO was
+deferred the same way — `buildCostInr` confirmed still `null` in the database while the rest of the
+edit applied, because deferring the title because the cost moved teaches people to route around the
+control.
+
+**Restatement clears the sign-off.** Financial reporting does not quietly edit a published figure.
+A restatement records before, after and why (≥20 characters), then clears the sign-off so the
+revised number is committed to again on its own merits rather than inheriting the old approval.
+Verified: after restating, the button returned to *"Propose sign-off"* and the restatement stayed on
+the record.
+
+**Claims lock at sign-off.** Importing a claim onto an already-signed-off initiative is refused:
+*"Value is already signed off on 1 initiative(s): UPI Enhancement v2.0. Restate the value on those
+initiatives before adding claims — a signed-off figure cannot be topped up silently."*
+
+**Provenance is required exactly where it matters.** `baseline_source` and `target_source` are
+optional CSV columns — an honest blank beats a forced answer. But a **realized ₹ figure** cannot be
+saved without an evidence source, checked in the client *and* the Zod schema, because that is the
+number that reaches the board. Measurements without one render *"source not recorded"* in amber
+rather than silently looking fine.
+
+**Double-count detection is a prompt, not a verdict.** Grouping is by benefit category plus a
+normalised metric name, so *"UPI Drop-Rate"* matches *"upi drop rate"*. Claims within one initiative
+are never flagged — an initiative legitimately splits one benefit across rows. Verified live: two
+initiatives claiming the same metric surfaced as *"₹46 Cr across 1 shared metric"* with both named.
+Framed as "review these", since two business units improving the same metric is a legitimate
+pattern only a human can tell from a duplicate.
+
+**Snapshots freeze what the board was told.** `MonthlyReport` (previously modelled but unused) now
+stores the published payload, round-tripped through JSON so a 2028 reader does not need 2026
+TypeScript types to make sense of it. Its unique key moved from `[year, month]` to
+`[organizationId, year, month]` — the old key would have let one tenant's publication collide with
+another's. Verified: *"Aug 2026 · ₹200.5 Cr signed off · by Mahesh Iyer · 2026-08-09 15:41"*.
+
+**69 tests passing** (20 new integrity tests covering materiality, cost-change magnitude, metric
+normalisation and double-count grouping). Migration:
+`20260809090000_add_integrity_controls`, applied via `migrate diff` + `migrate deploy` because the
+`MonthlyReport` key change is destructive to `migrate dev` in non-interactive mode (the table had 0
+rows; verified before applying).
+
+**Configuration note:** materiality threshold left at **₹10 Cr** in the pilot workspace. Records
+created during live verification were removed afterwards.
 
 ---
 
@@ -352,3 +414,4 @@ make the rupee number more credible?* Milestones and dependencies would not have
 | 2026-08-09 | **M0 complete.** Fabricated ROI removed; on-prem container build fixed and verified running end to end. Five latent Docker defects found and fixed — see M0 notes. R4 (claims ahead of reality) now has a worked resolution rather than an open example. |
 | 2026-08-09 | **M2 complete.** Investment categorisation, org-configurable ROI threshold, soft gate with CIO-tier exception approval and an append-only exception log, and the board-grade Capital Allocation view. Separation of duties verified live (PMO blocked, CIO approved). Tests caught a gate bug where zero recorded value read as a failed gate. |
 | 2026-08-09 | **M1 complete.** Real TCO capture across all four surfaces, ROI + payback per initiative and portfolio, sign-off snapshot, and the first test suite (35 tests). A second fabricated `× 0.3` cost was found on the demand-approval path and removed. Currency abstraction deliberately deferred with reasoning recorded. |
+| 2026-08-09 | **M3 complete.** Maker-checker on value sign-off and cost changes gated by an org materiality threshold, claims locked at sign-off, formal restatement flow, evidence/provenance fields (mandatory for realized ₹ figures), portfolio double-count review, and period snapshots that freeze board figures at publication. The whole chain — proposed by, approved by, restated by, sourced from — is verified live across PMO and CIO. `MonthlyReport`'s unique key moved to `[organizationId, year, month]`, closing a cross-tenant collision that had never been exercised because the model was unused. |

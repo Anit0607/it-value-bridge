@@ -14,6 +14,18 @@ const MeasurementInput = z.object({
   actualValue: z.number().nullable().optional(),
   realizedInr: z.number().min(0).nullable().optional(),
   note: z.string().default(''),
+  // Provenance (M3). A realized figure with no stated source is an assertion.
+  // Required whenever a ₹ amount is claimed as realized — that is the number
+  // that reaches the board, so it is the one that must be traceable.
+  evidenceSource: z.string().optional(),
+}).superRefine((data, ctx) => {
+  if (data.realizedInr != null && !data.evidenceSource?.trim()) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['evidenceSource'],
+      message: 'State where this realized figure came from (system report, finance extract, business confirmation)',
+    });
+  }
 });
 
 export type AddMeasurementInput = z.infer<typeof MeasurementInput>;
@@ -47,6 +59,7 @@ export async function addValueMeasurement(input: AddMeasurementInput) {
       actualValue: parsed.actualValue ?? null,
       realizedInr: parsed.realizedInr ?? null,
       note: parsed.note,
+      evidenceSource: parsed.evidenceSource?.trim() || null,
       recordedByName: user.name,
     },
   });
