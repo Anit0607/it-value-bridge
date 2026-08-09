@@ -241,11 +241,31 @@ model Initiative {
   expectedGoLiveDate DateTime
 
   // value governance / cost (Value Realization Layer)
+  //
+  // COST — two capture modes, deliberately tiered so small initiatives aren't
+  // strangled by a 5-field form (see docs/ROADMAP.md M1):
+  //   Simple   — estimatedCostInr alone: one total-cost-over-horizon number.
+  //   Detailed — buildCostInr + annualRunCostInr + tcoHorizonYears, for
+  //              material initiatives where the breakdown is checkable.
+  // actualCostInr overrides both once real spend is known.
+  // Never synthesise any of these: a missing cost is "not captured", and ROI
+  // must be suppressed rather than shown against a guessed denominator.
+  // Resolve with computeTco() in lib/value.ts — never sum these inline.
   estimatedCostInr Float?
   actualCostInr    Float?
+  buildCostInr     Float?
+  annualRunCostInr Float?
+  tcoHorizonYears  Int?
+
   valueSignedOff   Boolean   @default(false)
   valueSignOffBy   String?
   valueSignOffAt   DateTime?
+  // Frozen at the moment of sign-off so the promise can be compared against the
+  // outcome years later. These cannot be reconstructed after the fact — if the
+  // claim or cost is edited later, these still hold what was actually committed
+  // to. Formal re-baseline/restatement handling is M3.
+  signedOffValueInr Float?
+  signedOffTcoInr   Float?
 
   // regulatory / compliance criticality (e.g. RBI/NPCI-mandated, externally-fixed deadline)
   isRegulatory      Boolean   @default(false)
@@ -559,6 +579,15 @@ model Demand {
   status           DemandStatus   @default(RAISED)
   priority         DemandPriority @default(MEDIUM)
   reviewNote       String         @default("")
+
+  // Indicative cost at intake. Captured here so a demand can be assessed on
+  // value-vs-cost before it is ever funded — the ROI gate in M2 runs at this
+  // point, not after the initiative exists. Carried onto the Initiative on
+  // conversion. Same tiered shape as Initiative; same rule — never synthesised.
+  estimatedCostInr Float?
+  buildCostInr     Float?
+  annualRunCostInr Float?
+  tcoHorizonYears  Int?
 
   convertedInitiative   Initiative? @relation("DemandInitiative", fields: [convertedInitiativeId], references: [id])
   convertedInitiativeId String?     @unique

@@ -23,6 +23,13 @@ const CreateDemandInput = z.object({
   requirement: z.string().min(1),
   priority: z.enum(['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']).default('MEDIUM'),
   benefits: z.array(BenefitInput).min(1, 'Add at least one benefit'),
+  // Indicative cost at intake — optional, and never defaulted. Captured here
+  // so value-vs-cost can be assessed before funding; carried onto the
+  // initiative on approval.
+  estimatedCostInr: z.number().min(0).nullable().optional(),
+  buildCostInr: z.number().min(0).nullable().optional(),
+  annualRunCostInr: z.number().min(0).nullable().optional(),
+  tcoHorizonYears: z.number().int().min(1).max(20).nullable().optional(),
 });
 
 export type CreateDemandInput = z.infer<typeof CreateDemandInput>;
@@ -40,6 +47,10 @@ export async function createDemand(input: CreateDemandInput) {
       raisedById: user.id,
       status: 'RAISED',
       organizationId: user.organizationId,
+      estimatedCostInr: parsed.estimatedCostInr ?? null,
+      buildCostInr: parsed.buildCostInr ?? null,
+      annualRunCostInr: parsed.annualRunCostInr ?? null,
+      tcoHorizonYears: parsed.tcoHorizonYears ?? null,
       benefitClaims: {
         create: parsed.benefits.map(b => ({
           category: b.category,
@@ -147,7 +158,15 @@ export async function approveDemand(id: string, input: ApproveDemandInput) {
       stageStartDate: today,
       stageExpectedDate: expectedDate,
       lastUpdated: today,
-      estimatedCostInr: Math.round(primary.estimatedAnnualValueInr * 0.3),
+      // Carry whatever cost the demand actually captured at intake. This used
+      // to synthesise `primary value * 0.3` — the same fabricated denominator
+      // M0 removed from createInitiative, which survived here on the demand
+      // approval path. Null stays null: an uncosted demand becomes an uncosted
+      // initiative, and the Value Board shows "not captured" rather than a guess.
+      estimatedCostInr: demand.estimatedCostInr,
+      buildCostInr: demand.buildCostInr,
+      annualRunCostInr: demand.annualRunCostInr,
+      tcoHorizonYears: demand.tcoHorizonYears,
       valueSignedOff: false,
       organizationId: user.organizationId,
       benefitClaims: {

@@ -4,7 +4,7 @@ import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getBoardSummary } from '@/lib/queries/value';
 import { PrintButton } from '@/components/PrintButton';
-import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE } from '@/lib/value';
+import { formatInr, formatPayback, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE } from '@/lib/value';
 import { resolvePeriod } from '@/lib/period';
 import { STAGE_LABEL } from '@/lib/stage-map';
 import { PageHeader } from '@/components/PageHeader';
@@ -204,10 +204,18 @@ export default async function ValueDashboard({
                 />
               </div>
             </div>
-            <div className="rounded-lg bg-brand-50 p-3 text-center">
-              <div className="tabular text-2xl font-semibold text-brand-700">{s.totals.roiRatio.toFixed(1)}x</div>
-              <div className="mt-0.5 text-[11px] font-medium text-brand-600">
-                return on every ₹ invested (signed-off)
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-lg bg-brand-50 p-3 text-center">
+                <div className="tabular text-2xl font-semibold text-brand-700">{s.totals.roiRatio.toFixed(1)}x</div>
+                <div className="mt-0.5 text-[11px] font-medium text-brand-600">
+                  per ₹ invested (signed-off)
+                </div>
+              </div>
+              <div className="rounded-lg bg-slate-50 p-3 text-center">
+                <div className="tabular text-2xl font-semibold text-slate-700">{formatPayback(s.totals.paybackMonths)}</div>
+                <div className="mt-0.5 text-[11px] font-medium text-slate-500">
+                  payback period
+                </div>
               </div>
             </div>
             {!fullCostCoverage && (

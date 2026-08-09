@@ -8,7 +8,7 @@ import { VERTICAL_HEADS, CLASSIFICATIONS, type ItemClassification } from '@/lib/
 import { PageHeader } from '@/components/PageHeader';
 import { BenefitPicker, type BenefitDraft } from '@/components/value/BenefitPicker';
 import { Button } from '@/components/ui/Button';
-import { formatInr, BENEFIT_CATEGORY_LABEL } from '@/lib/value';
+import { formatInr, computeTco, computeRoi, DEFAULT_TCO_HORIZON_YEARS, BENEFIT_CATEGORY_LABEL } from '@/lib/value';
 import type { BenefitCategory } from '@prisma/client';
 import { CheckCircle2, ChevronRight, ChevronLeft } from 'lucide-react';
 
@@ -66,6 +66,9 @@ export default function NewItemPage() {
   const [businessHeadName, setBusinessHeadName] = useState('');
   const [businessUnit, setBusinessUnit] = useState('');
   const [subBusinessUnit, setSubBusinessUnit] = useState('');
+  const [buildCostCr, setBuildCostCr] = useState('');
+  const [annualRunCostCr, setAnnualRunCostCr] = useState('');
+  const [tcoHorizonYears, setTcoHorizonYears] = useState('');
 
   // Step 3 — Delivery Commitment
   const [goLiveDate, setGoLiveDate] = useState('');
@@ -145,6 +148,9 @@ export default function NewItemPage() {
           businessHeadName: businessHeadName || undefined,
           businessUnit: businessUnit || undefined,
           subBusinessUnit: subBusinessUnit || undefined,
+          buildCostInr: crToInr(buildCostCr),
+          annualRunCostInr: crToInr(annualRunCostCr),
+          tcoHorizonYears: toYears(tcoHorizonYears),
         });
         router.push(`/items/${id}?created=1`);
       } catch {
@@ -156,6 +162,26 @@ export default function NewItemPage() {
   if (!user) return null;
 
   const totalProjectedValue = benefits.reduce((s, b) => s + b.estimatedAnnualValueInr, 0);
+
+  // "" → null (not captured). A blank cost must never become 0.
+  const crToInr = (s: string): number | null => {
+    const t = s.trim();
+    if (!t) return null;
+    const n = parseFloat(t);
+    return Number.isFinite(n) && n >= 0 ? n * 10_000_000 : null;
+  };
+  const toYears = (s: string): number | null => {
+    const t = s.trim();
+    if (!t) return null;
+    const n = parseInt(t, 10);
+    return Number.isFinite(n) && n >= 1 && n <= 20 ? n : null;
+  };
+  const draftTco = computeTco({
+    buildCostInr: crToInr(buildCostCr),
+    annualRunCostInr: crToInr(annualRunCostCr),
+    tcoHorizonYears: toYears(tcoHorizonYears),
+  });
+  const draftRoi = computeRoi(totalProjectedValue, draftTco);
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -301,6 +327,37 @@ export default function NewItemPage() {
                 <span className="tabular text-base font-semibold text-brand-700">{formatInr(totalProjectedValue)}</span>
               </div>
             )}
+
+            <div className="border-t border-slate-100 pt-4">
+              <h3 className="text-sm font-semibold text-slate-800">Delivery Cost</h3>
+              <p className="mt-0.5 text-xs leading-relaxed text-slate-500">
+                Optional — but the Value Board can&apos;t show ROI for this initiative without it.
+                Leave blank if unknown; a blank is more honest than an estimate nobody owns.
+              </p>
+              <div className="mt-3 grid gap-4 sm:grid-cols-3">
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Build cost (₹ Cr)</label>
+                  <input type="number" step="any" min="0" value={buildCostCr} onChange={e => setBuildCostCr(e.target.value)} className={inputCls} placeholder="one-off" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Annual run cost (₹ Cr)</label>
+                  <input type="number" step="any" min="0" value={annualRunCostCr} onChange={e => setAnnualRunCostCr(e.target.value)} className={inputCls} placeholder="per year" />
+                </div>
+                <div>
+                  <label className="mb-1 block text-sm font-medium text-slate-700">Horizon (years)</label>
+                  <input type="number" step="1" min="1" max="20" value={tcoHorizonYears} onChange={e => setTcoHorizonYears(e.target.value)} className={inputCls} placeholder={String(DEFAULT_TCO_HORIZON_YEARS)} />
+                </div>
+              </div>
+              {draftTco != null && (
+                <div className="mt-3 flex items-center justify-between rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-2.5">
+                  <span className="text-sm font-medium text-slate-600">
+                    Total cost of ownership
+                    {draftRoi != null && <span className="ml-2 text-xs text-emerald-700">· {draftRoi.toFixed(1)}x ROI</span>}
+                  </span>
+                  <span className="tabular text-base font-semibold text-slate-800">{formatInr(draftTco)}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -379,6 +436,8 @@ export default function NewItemPage() {
                 <p className="mb-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400">Delivery Commitment</p>
                 <dl className="divide-y divide-slate-100">
                   <SummaryRow label="Go-Live Date" value={goLiveDate} />
+                  <SummaryRow label="Total Cost" value={draftTco != null ? formatInr(draftTco) : 'Not captured'} />
+                  <SummaryRow label="ROI" value={draftRoi != null ? `${draftRoi.toFixed(1)}x` : '—'} />
                 </dl>
               </div>
               <div className="rounded-lg border border-slate-100 bg-slate-50/40 p-4">

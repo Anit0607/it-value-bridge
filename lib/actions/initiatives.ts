@@ -4,6 +4,7 @@ import { prisma } from '@/lib/db';
 import { requireRole, requireRoleWithOrg, assertVisibleInitiativeAccess } from '@/lib/authz';
 import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES, buildInitiativeVisibilityWhere } from '@/lib/rbac';
 import { STAGE_LABEL, STAGE_TO_PROCESS_GROUP, nextStage } from '@/lib/stage-map';
+import { computeTco, formatInr } from '@/lib/value';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { CLASSIFICATION_LABEL } from '@/lib/types';
@@ -71,6 +72,13 @@ function toItem(i: InitiativeWithRelations): Item {
     isRegulatory: i.isRegulatory,
     regulatoryBody: i.regulatoryBody,
     regulatoryDueDate: i.regulatoryDueDate ? iso(i.regulatoryDueDate) : null,
+    estimatedCostInr: i.estimatedCostInr,
+    actualCostInr: i.actualCostInr,
+    buildCostInr: i.buildCostInr,
+    annualRunCostInr: i.annualRunCostInr,
+    tcoHorizonYears: i.tcoHorizonYears,
+    signedOffValueInr: i.signedOffValueInr,
+    signedOffTcoInr: i.signedOffTcoInr,
     validation: i.valueRealization
       ? {
           outcomeAchieved:
@@ -185,6 +193,10 @@ const CreateSchema = z.object({
   businessHeadName: z.string().optional(),
   businessUnit: z.string().optional(),
   subBusinessUnit: z.string().optional(),
+  // Cost at creation — optional. Absent means "not captured", never 0.
+  buildCostInr: z.number().min(0).nullable().optional(),
+  annualRunCostInr: z.number().min(0).nullable().optional(),
+  tcoHorizonYears: z.number().int().min(1).max(20).nullable().optional(),
 }).superRefine((data, ctx) => {
   // Go-live date must not be in the past
   const today = new Date().toISOString().slice(0, 10);
@@ -255,6 +267,9 @@ export async function createInitiative(input: CreateInitiativeInput) {
       businessHeadName: parsed.businessHeadName?.trim() || null,
       businessUnit: parsed.businessUnit?.trim() || null,
       subBusinessUnit: parsed.subBusinessUnit?.trim() || null,
+      buildCostInr: parsed.buildCostInr ?? null,
+      annualRunCostInr: parsed.annualRunCostInr ?? null,
+      tcoHorizonYears: parsed.tcoHorizonYears ?? null,
       benefitClaims: {
         create: parsed.benefits.map(b => ({
           category: b.category,
@@ -495,17 +510,39 @@ export async function signOffValue(id: string) {
   const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO');
   await assertVisibleInitiativeAccess(id, user);
   const today = new Date();
-  const initiative = await prisma.initiative.findUnique({ where: { id }, select: { currentStage: true } });
+
+  // Snapshot the promise as it stands right now. These two figures are what the
+  // business actually committed to, and M6's claim-accuracy analytics compares
+  // outcomes against them years later — they cannot be reconstructed after the
+  // fact if the claim or cost is edited, so they must be frozen here.
+  const initiative = await prisma.initiative.findUnique({
+    where: { id },
+    select: {
+      currentStage: true,
+      estimatedCostInr: true, actualCostInr: true,
+      buildCostInr: true, annualRunCostInr: true, tcoHorizonYears: true,
+      benefitClaims: { select: { estimatedAnnualValueInr: true } },
+    },
+  });
+  const snapshotValue = initiative
+    ? initiative.benefitClaims.reduce((s, c) => s + c.estimatedAnnualValueInr, 0)
+    : 0;
+  const snapshotTco = initiative ? computeTco(initiative) : null;
+
   await prisma.initiative.update({
     where: { id },
     data: {
       valueSignedOff: true,
       valueSignOffBy: user.name,
       valueSignOffAt: today,
+      signedOffValueInr: snapshotValue,
+      signedOffTcoInr: snapshotTco,
       history: {
         create: {
           stage: initiative?.currentStage ?? null,
-          note: `Value signed off by ${user.name}`,
+          note:
+            `Value signed off by ${user.name} — projected ${formatInr(snapshotValue)}` +
+            (snapshotTco != null ? ` against ${formatInr(snapshotTco)} total cost` : ' (cost not captured)'),
           userName: user.name,
           createdAt: today,
         },
@@ -541,6 +578,12 @@ const EditSchema = z.object({
   businessHeadName:   z.string().optional(),
   businessUnit:       z.string().optional(),
   subBusinessUnit:    z.string().optional(),
+  // Cost — all optional. Empty means "not captured", which is a valid and
+  // honest state; it must never be coerced to 0 (see computeTco in lib/value.ts).
+  buildCostInr:     z.number().min(0).nullable().optional(),
+  annualRunCostInr: z.number().min(0).nullable().optional(),
+  tcoHorizonYears:  z.number().int().min(1).max(20).nullable().optional(),
+  actualCostInr:    z.number().min(0).nullable().optional(),
 }).superRefine((data, ctx) => {
   if (data.isRegulatory) {
     if (!data.regulatoryBody?.trim())
@@ -577,6 +620,10 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
       businessHeadName: true,
       businessUnit: true,
       subBusinessUnit: true,
+      buildCostInr: true,
+      annualRunCostInr: true,
+      tcoHorizonYears: true,
+      actualCostInr: true,
     },
   });
 
@@ -626,6 +673,28 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
         changes.push(`${f.label} changed from ${oldValue || '—'} to ${trimmedNew || '—'}`);
       }
     }
+
+    // Cost changes are audited individually — a shifting denominator silently
+    // moves every ROI figure this initiative feeds, so it must be traceable.
+    const costFields: { key: 'buildCostInr' | 'annualRunCostInr' | 'actualCostInr'; label: string; newValue: number | null | undefined }[] = [
+      { key: 'buildCostInr', label: 'Build cost', newValue: parsed.buildCostInr },
+      { key: 'annualRunCostInr', label: 'Annual run cost', newValue: parsed.annualRunCostInr },
+      { key: 'actualCostInr', label: 'Actual cost', newValue: parsed.actualCostInr },
+    ];
+    for (const f of costFields) {
+      const oldValue = current[f.key] ?? null;
+      const newValue = f.newValue ?? null;
+      if (oldValue !== newValue) {
+        changes.push(
+          `${f.label} changed from ${oldValue == null ? 'not captured' : formatInr(oldValue)} to ${newValue == null ? 'not captured' : formatInr(newValue)}`,
+        );
+      }
+    }
+    if ((current.tcoHorizonYears ?? null) !== (parsed.tcoHorizonYears ?? null)) {
+      changes.push(
+        `TCO horizon changed from ${current.tcoHorizonYears ?? '—'} to ${parsed.tcoHorizonYears ?? '—'} years`,
+      );
+    }
   }
   const historyNote = changes.length > 0 ? changes.join('; ') : 'Initiative metadata updated';
 
@@ -647,6 +716,11 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
       businessHeadName: parsed.businessHeadName?.trim() || null,
       businessUnit: parsed.businessUnit?.trim() || null,
       subBusinessUnit: parsed.subBusinessUnit?.trim() || null,
+      // `?? null` (not `|| null`) so a legitimate 0 is stored as 0, not wiped.
+      buildCostInr: parsed.buildCostInr ?? null,
+      annualRunCostInr: parsed.annualRunCostInr ?? null,
+      tcoHorizonYears: parsed.tcoHorizonYears ?? null,
+      actualCostInr: parsed.actualCostInr ?? null,
       lastUpdated: today,
       history: {
         create: { stage: null, note: historyNote, userName: user.name, createdAt: today },

@@ -7,7 +7,10 @@ import { useRole } from '@/components/RoleProvider';
 import { isPmoEquivalent, isBusinessEquivalent } from '@/lib/rbac';
 import { advanceStage, updateNotes, signOffValue, type InitiativeValue } from '@/lib/actions/initiatives';
 import { computeRAG, daysInStage, daysFromNow, daysSinceUpdate } from '@/lib/rag';
-import { formatInr, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE, BENEFIT_UNIT_LABEL } from '@/lib/value';
+import {
+  formatInr, formatPayback, computeTco, computeRoi, computePaybackMonths,
+  BENEFIT_CATEGORY_LABEL, CATEGORY_TONE, BENEFIT_UNIT_LABEL,
+} from '@/lib/value';
 import { RagBadge, RagDot } from '@/components/RagBadge';
 import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { StageProgress } from '@/components/StageProgress';
@@ -97,6 +100,13 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
 
   const claims = value?.benefitClaims ?? [];
   const totalValue = claims.reduce((s, b) => s + b.estimatedAnnualValueInr, 0);
+
+  // Resolved through the same helpers the Value Board uses, so a single
+  // initiative and the portfolio rollup can never disagree. All three are null
+  // when cost was never captured — rendered as "Not captured", not "0".
+  const itemTco = computeTco(item);
+  const itemRoi = computeRoi(totalValue, itemTco);
+  const itemPayback = computePaybackMonths(totalValue, itemTco);
 
   // Role-specific UI permissions (server actions enforce the same rules server-side)
   const canSignOff     = isPmoEquivalent(user?.role) || user?.role === 'CIO';
@@ -305,6 +315,25 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
               label: 'Business Value',
               node: totalValue > 0 ? (
                 <span className="text-sm font-semibold text-brand-700">{formatInr(totalValue)}</span>
+              ) : (
+                <span className="text-sm text-slate-400">—</span>
+              ),
+            },
+            {
+              label: 'Total Cost',
+              node: itemTco != null ? (
+                <span className="text-sm font-semibold text-slate-700">{formatInr(itemTco)}</span>
+              ) : (
+                <span className="text-sm text-slate-400">Not captured</span>
+              ),
+            },
+            {
+              label: 'ROI',
+              node: itemRoi != null ? (
+                <span className="text-sm font-semibold text-emerald-700">
+                  {itemRoi.toFixed(1)}x
+                  <span className="ml-1 font-normal text-slate-400">· {formatPayback(itemPayback)}</span>
+                </span>
               ) : (
                 <span className="text-sm text-slate-400">—</span>
               ),

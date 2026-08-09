@@ -1,5 +1,5 @@
 import { prisma } from '@/lib/db';
-import { addMonthsIso, realizationStatus, type RealizationStatus } from '@/lib/value';
+import { addMonthsIso, realizationStatus, computeTco, computePaybackMonths, type RealizationStatus } from '@/lib/value';
 import { inPeriod, type Period } from '@/lib/period';
 import { buildInitiativeVisibilityWhere } from '@/lib/rbac';
 import type { BenefitCategory, Stage } from '@prisma/client';
@@ -49,6 +49,9 @@ export interface BoardSummary {
     // the ratio so nobody reads it as whole-portfolio ROI.
     initiativesWithCost: number;
     initiativesTotal: number;
+    // Months for signed-off annual value to cover total cost. Null when cost
+    // is unknown or there is no signed-off value to pay it back with.
+    paybackMonths: number | null;
   };
   periodLabel: string;
   realizedInPeriod: number;
@@ -141,7 +144,9 @@ export async function getBoardSummary(
       signedOff += initProjected;
       signedOffCount++;
     }
-    const initCost = i.actualCostInr ?? i.estimatedCostInr ?? null;
+    // Resolved through computeTco() so the detailed breakdown (build + run ×
+    // horizon) and the simple single-figure estimate roll up identically.
+    const initCost = computeTco(i);
     if (initCost != null) {
       cost += initCost;
       initiativesWithCost++;
@@ -234,6 +239,7 @@ export async function getBoardSummary(
       signedOffCount,
       initiativesWithCost,
       initiativesTotal: initiatives.length,
+      paybackMonths: computePaybackMonths(signedOff, initiativesWithCost > 0 ? cost : null),
     },
     realizedInPeriod,
     deliveredInPeriod,

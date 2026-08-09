@@ -29,7 +29,7 @@ client data import. Organization- and role-scoped data access enforced through a
 | ~~ROI denominator is fabricated~~ | **Fixed in M0.** Cost is no longer synthesised; ROI is suppressed when cost is unknown and partial coverage is disclosed. Real TCO capture lands in M1. |
 | ~~Docker bundle never built~~ | **Fixed in M0.** Image builds, full stack runs, migrations apply at container start. |
 | ~~Migrations run at image build~~ | **Fixed in M0.** Moved to `docker-entrypoint.sh`; Vercel keeps migrating via `vercel.json`. |
-| No automated tests | `package.json` has no test script. All verification to date has been typecheck + lint + build + manual browser checks. |
+| ~~No automated tests~~ | **Started in M1.** `npm test` (vitest) covers TCO/ROI/payback math and RBAC visibility scoping — 35 tests. Server actions, forms, and E2E remain uncovered. |
 | No background jobs | Reminders compute on page load. `MonthlyReport` model exists but nothing generates it. No scheduled snapshots, no notifications. |
 | No Finance role | Deliberately deferred. Business signs off value; nobody independently certifies cost. |
 | Lifecycle and roles hardcoded | `Stage` and `Role` are Postgres enums. Blocks SME configuration. |
@@ -125,17 +125,46 @@ Windows binaries into a Linux image), and `vercel.json` pinning
 
 ---
 
-### M1 — Make ROI real
-**Size: 2–3 weeks.**
+### M1 — Make ROI real ✅ COMPLETE (2026-08-09)
+**Actual: 1 session.**
 
-- [ ] Add `buildCostInr`, `annualRunCostInr`, `tcoHorizonYears` to `Initiative`; TCO = build + (run × years)
-- [ ] Capture cost in the creation wizard, edit form, **demand intake**, and the initiative CSV template
-- [ ] Compute and display ROI + payback period, per initiative and at portfolio level
-- [ ] **Currency decision** — either abstract to `currency` + number-system on `Organization`, or defer in writing. TCO forces this; do not drift into it.
-- [ ] **Value snapshot** — record projected value and TCO at sign-off, immutably. *Cannot be backfilled later.*
-- [ ] Introduce the test suite: start with ROI/value math and RBAC scoping
+- [x] Add `buildCostInr`, `annualRunCostInr`, `tcoHorizonYears` to `Initiative`; TCO = build + (run × years)
+- [x] Capture cost in the creation wizard, edit form, **demand intake**, and the initiative CSV template
+- [x] Compute and display ROI + payback period, per initiative and at portfolio level
+- [x] **Currency decision** — *deferred, deliberately.* See below.
+- [x] **Value snapshot** — record projected value and TCO at sign-off, immutably
+- [x] Introduce the test suite: start with ROI/value math and RBAC scoping
 
-**Exit:** every ROI figure on screen traces to a number a human entered, and value calculations have test coverage.
+**Exit met.** Verified end to end in the browser: entered ₹8 Cr build + ₹1.5 Cr/yr run × 4 yrs
+on an uncosted initiative → TCO resolved to ₹14 Cr in the live form preview → saved → item
+detail showed **₹14 Cr / 2.1x / 6 mo** → the Value Board's coverage moved 22 → 23 of 24 and
+recomputed → sign-off froze `signedOffValueInr` ₹30 Cr and `signedOffTcoInr` ₹14 Cr in the
+database. **35 tests passing.**
+
+**Design: three capture modes, one resolver.** `computeTco()` in `lib/value.ts` is the single
+source of truth, resolving in priority order — actual spend > detailed breakdown > simple
+estimate. Nothing sums these fields inline, so a single initiative and the portfolio rollup
+can never disagree. The governing rule throughout: **a missing cost returns `null`, never 0**,
+and every surface renders that as "not captured".
+
+**A second fabricated cost was found and removed.** M0 removed `totalValue × 0.3` from
+`createInitiative`, but the identical heuristic survived in `lib/actions/demands.ts` on the
+demand→initiative approval path (`primary.estimatedAnnualValueInr * 0.3`). Any initiative
+created by approving a demand was still getting a fabricated denominator. It now carries the
+demand's real captured cost through, and null stays null.
+
+**Currency decision — deferred, with reasoning.** New fields keep the `Inr` suffix, matching
+the existing `estimatedAnnualValueInr` / `estimatedCostInr` convention. Abstracting currency
+now would be speculative work for the SME/global market, which is still an unvalidated
+hypothesis (see the checkpoint before M4). A consistent all-`Inr` schema is also a cleaner
+single rename later than a half-abstracted one. **Revisit when — not if — the SME checkpoint
+passes;** the work is `currency` + number-system on `Organization` plus a locale-aware
+replacement for `formatInr`, and it grows with every new money field added meanwhile.
+
+**Also added:** cost changes are individually audited on the initiative timeline (a shifting
+denominator silently moves every ROI it feeds, so it must be traceable) — verified reading
+*"Build cost changed from not captured to ₹8 Cr; Annual run cost changed from not captured to
+₹1.5 Cr; TCO horizon changed from — to 4 years"*.
 
 ---
 
@@ -255,9 +284,9 @@ If a checkpoint fails, the plan changes. That is what they are for.
 per-organization table is trivial with seed data and painful once clients hold live
 history. If M4 is going to happen at all, it must happen before the first signed customer.
 
-**R2 — Test debt compounds.** Every week of untested code is more surface to retrofit,
-and retrofitting is several times harder than writing alongside. The curve bends badly
-right around the time money calculations enter the codebase (M1).
+**R2 — Test debt compounds.** *Partly mitigated in M1* — a suite now exists and covers the
+money math and visibility scoping, the two places a silent bug does most damage. Server
+actions, forms, and end-to-end flows are still untested, so the risk is reduced, not closed.
 
 **R3 — Building everything before meeting the market.** Four to five months of work, zero
 users today. Mitigated only by §6 checkpoints being treated as genuinely blocking.
@@ -281,3 +310,4 @@ make the rupee number more credible?* Milestones and dependencies would not have
 |---|---|
 | 2026-07-26 | Document created. Supersedes `PLAN.md` / `PHASE-PLAN.md` for forward work. |
 | 2026-08-09 | **M0 complete.** Fabricated ROI removed; on-prem container build fixed and verified running end to end. Five latent Docker defects found and fixed — see M0 notes. R4 (claims ahead of reality) now has a worked resolution rather than an open example. |
+| 2026-08-09 | **M1 complete.** Real TCO capture across all four surfaces, ROI + payback per initiative and portfolio, sign-off snapshot, and the first test suite (35 tests). A second fabricated `× 0.3` cost was found on the demand-approval path and removed. Currency abstraction deliberately deferred with reasoning recorded. |

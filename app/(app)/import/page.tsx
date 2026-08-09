@@ -80,8 +80,8 @@ const TABS: { key: TabKey; label: string; icon: typeof Layers }[] = [
 ];
 
 const INITIATIVE_TEMPLATE =
-  'title,type,classification,stage,vertical_head,business_spoc,business_sponsor,go_live_date,benefit_category,outcome_description,target_metric,program_head,program_manager,business_head,business_unit,sub_business_unit,is_regulatory,regulatory_body,regulatory_due_date,delayed,delay_source,delay_reason\n' +
-  'UPI Enhancement v3.0,Project,Strategic,SIT,Rajesh Kumar,Anil Kumar,Ramesh Jain,2026-12-15,Revenue,Enable UPI Lite for offline payments,Increase UPI transaction volume by 15%,Karan Mehta,Neha Kapoor,Rohit Malhotra,Retail Banking,Digital Channels,Yes,NPCI,2026-11-01,No,,\n';
+  'title,type,classification,stage,vertical_head,business_spoc,business_sponsor,go_live_date,benefit_category,outcome_description,target_metric,program_head,program_manager,business_head,business_unit,sub_business_unit,is_regulatory,regulatory_body,regulatory_due_date,delayed,delay_source,delay_reason,build_cost_cr,annual_run_cost_cr,tco_horizon_years\n' +
+  'UPI Enhancement v3.0,Project,Strategic,SIT,Rajesh Kumar,Anil Kumar,Ramesh Jain,2026-12-15,Revenue,Enable UPI Lite for offline payments,Increase UPI transaction volume by 15%,Karan Mehta,Neha Kapoor,Rohit Malhotra,Retail Banking,Digital Channels,Yes,NPCI,2026-11-01,No,,,8,1.5,3\n';
 
 const MILESTONE_TEMPLATE =
   'initiative_title,title,description,owner,owner_role,due_date,status\n' +
@@ -157,7 +157,7 @@ export default function ImportPage() {
           columnsHint={
             <>
               Required: <code className="rounded bg-slate-100 px-1 py-0.5">title</code>, <code className="rounded bg-slate-100 px-1 py-0.5">type</code>, <code className="rounded bg-slate-100 px-1 py-0.5">classification</code>, <code className="rounded bg-slate-100 px-1 py-0.5">stage</code>, <code className="rounded bg-slate-100 px-1 py-0.5">vertical_head</code>, <code className="rounded bg-slate-100 px-1 py-0.5">business_spoc</code>, <code className="rounded bg-slate-100 px-1 py-0.5">business_sponsor</code>, <code className="rounded bg-slate-100 px-1 py-0.5">go_live_date</code>, <code className="rounded bg-slate-100 px-1 py-0.5">benefit_category</code>, <code className="rounded bg-slate-100 px-1 py-0.5">outcome_description</code>, <code className="rounded bg-slate-100 px-1 py-0.5">target_metric</code>.
-              Optional: <code className="rounded bg-slate-100 px-1 py-0.5">program_head</code>, <code className="rounded bg-slate-100 px-1 py-0.5">program_manager</code>, <code className="rounded bg-slate-100 px-1 py-0.5">business_head</code>, <code className="rounded bg-slate-100 px-1 py-0.5">business_unit</code>, <code className="rounded bg-slate-100 px-1 py-0.5">sub_business_unit</code>, <code className="rounded bg-slate-100 px-1 py-0.5">is_regulatory</code>, <code className="rounded bg-slate-100 px-1 py-0.5">regulatory_body</code>, <code className="rounded bg-slate-100 px-1 py-0.5">regulatory_due_date</code>, <code className="rounded bg-slate-100 px-1 py-0.5">delayed</code>, <code className="rounded bg-slate-100 px-1 py-0.5">delay_source</code>, <code className="rounded bg-slate-100 px-1 py-0.5">delay_reason</code>.
+              Optional: <code className="rounded bg-slate-100 px-1 py-0.5">program_head</code>, <code className="rounded bg-slate-100 px-1 py-0.5">program_manager</code>, <code className="rounded bg-slate-100 px-1 py-0.5">business_head</code>, <code className="rounded bg-slate-100 px-1 py-0.5">business_unit</code>, <code className="rounded bg-slate-100 px-1 py-0.5">sub_business_unit</code>, <code className="rounded bg-slate-100 px-1 py-0.5">is_regulatory</code>, <code className="rounded bg-slate-100 px-1 py-0.5">regulatory_body</code>, <code className="rounded bg-slate-100 px-1 py-0.5">regulatory_due_date</code>, <code className="rounded bg-slate-100 px-1 py-0.5">delayed</code>, <code className="rounded bg-slate-100 px-1 py-0.5">delay_source</code>, <code className="rounded bg-slate-100 px-1 py-0.5">delay_reason</code>, <code className="rounded bg-slate-100 px-1 py-0.5">build_cost_cr</code>, <code className="rounded bg-slate-100 px-1 py-0.5">annual_run_cost_cr</code>, <code className="rounded bg-slate-100 px-1 py-0.5">tco_horizon_years</code>.
               See <Link href="/admin/client-data-readiness" className="font-medium text-brand-600 hover:underline">Client Data Mapping</Link> for full field detail.
             </>
           }
@@ -197,10 +197,23 @@ export default function ImportPage() {
             const regulatoryDueDate = regDueRaw ? new Date(regDueRaw) : undefined;
             if (regDueRaw && isNaN((regulatoryDueDate as Date).getTime())) return { row: null, error: 'Invalid regulatory_due_date' };
 
+            // Cost columns are optional and expressed in ₹ Crore. A blank cell
+            // stays undefined ("not captured") rather than becoming 0 — a
+            // guessed denominator is exactly what M0 removed.
+            const buildCr = get(cells, col('build_cost_cr'));
+            const runCr = get(cells, col('annual_run_cost_cr'));
+            const horizon = get(cells, col('tco_horizon_years'));
+            if (buildCr && !Number.isFinite(parseFloat(buildCr))) return { row: null, error: 'Invalid build_cost_cr' };
+            if (runCr && !Number.isFinite(parseFloat(runCr))) return { row: null, error: 'Invalid annual_run_cost_cr' };
+            if (horizon && !Number.isFinite(parseInt(horizon, 10))) return { row: null, error: 'Invalid tco_horizon_years' };
+
             return {
               row: {
                 title, type, classification, currentStage, verticalHeadName, businessSpoc, businessSponsor,
                 expectedGoLiveDate, benefitCategory, outcomeDescription, targetMetric,
+                buildCostInr: buildCr ? parseFloat(buildCr) * 10_000_000 : undefined,
+                annualRunCostInr: runCr ? parseFloat(runCr) * 10_000_000 : undefined,
+                tcoHorizonYears: horizon ? parseInt(horizon, 10) : undefined,
                 programHeadName: get(cells, col('program_head')) || undefined,
                 programManagerName: get(cells, col('program_manager')) || undefined,
                 businessHeadName: get(cells, col('business_head')) || undefined,

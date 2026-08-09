@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { updateInitiative, type EditInitiativeInput } from '@/lib/actions/initiatives';
 import { VERTICAL_HEADS, CLASSIFICATIONS, type ItemClassification } from '@/lib/types';
+import { computeTco, formatInr, DEFAULT_TCO_HORIZON_YEARS } from '@/lib/value';
 import { PageHeader } from '@/components/PageHeader';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Button } from '@/components/ui/Button';
@@ -41,7 +42,30 @@ interface Props {
     businessHeadName: string;
     businessUnit: string;
     subBusinessUnit: string;
+    // Cost inputs are held as ₹ Crore strings — empty means "not captured",
+    // which is a valid state and must never round-trip as 0.
+    buildCostCr: string;
+    annualRunCostCr: string;
+    tcoHorizonYears: string;
+    actualCostCr: string;
   };
+}
+
+const CRORE = 10_000_000;
+
+/** "" → null (not captured); "2.5" → 25000000. Never coerces blank to 0. */
+function crToInr(s: string): number | null {
+  const t = s.trim();
+  if (!t) return null;
+  const n = parseFloat(t);
+  return Number.isFinite(n) && n >= 0 ? n * CRORE : null;
+}
+
+function toYears(s: string): number | null {
+  const t = s.trim();
+  if (!t) return null;
+  const n = parseInt(t, 10);
+  return Number.isFinite(n) && n >= 1 && n <= 20 ? n : null;
 }
 
 export function EditClient({ id, defaults }: Props) {
@@ -64,6 +88,19 @@ export function EditClient({ id, defaults }: Props) {
   const [businessHeadName, setBusinessHeadName] = useState(defaults.businessHeadName);
   const [businessUnit, setBusinessUnit] = useState(defaults.businessUnit);
   const [subBusinessUnit, setSubBusinessUnit] = useState(defaults.subBusinessUnit);
+  const [buildCostCr, setBuildCostCr] = useState(defaults.buildCostCr);
+  const [annualRunCostCr, setAnnualRunCostCr] = useState(defaults.annualRunCostCr);
+  const [tcoHorizonYears, setTcoHorizonYears] = useState(defaults.tcoHorizonYears);
+  const [actualCostCr, setActualCostCr] = useState(defaults.actualCostCr);
+
+  // Live preview of what the entered figures resolve to, so the person typing
+  // sees the same TCO the Value Board will compute.
+  const previewTco = computeTco({
+    buildCostInr: crToInr(buildCostCr),
+    annualRunCostInr: crToInr(annualRunCostCr),
+    tcoHorizonYears: toYears(tcoHorizonYears),
+    actualCostInr: crToInr(actualCostCr),
+  });
 
   const validate = (): string => {
     if (!title.trim() || title.trim().length < 5) return 'Title must be at least 5 characters.';
@@ -92,6 +129,10 @@ export function EditClient({ id, defaults }: Props) {
       businessHeadName: businessHeadName || undefined,
       businessUnit: businessUnit || undefined,
       subBusinessUnit: subBusinessUnit || undefined,
+      buildCostInr: crToInr(buildCostCr),
+      annualRunCostInr: crToInr(annualRunCostCr),
+      tcoHorizonYears: toYears(tcoHorizonYears),
+      actualCostInr: crToInr(actualCostCr),
     };
 
     startTransition(async () => {
@@ -178,6 +219,66 @@ export function EditClient({ id, defaults }: Props) {
           <Field label="Expected Go-Live Date" required>
             <input type="date" value={goLiveDate} onChange={e => setGoLiveDate(e.target.value)} className={inputCls} />
           </Field>
+        </SectionCard>
+
+        {/* Cost / TCO */}
+        <SectionCard
+          title="Delivery Cost"
+          subtitle="Optional — but ROI cannot be shown on the Value Board without it. Leave blank rather than guessing."
+        >
+          <div className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-3">
+              <Field label="Build cost (₹ Cr)">
+                <input
+                  type="number" step="any" min="0"
+                  value={buildCostCr}
+                  onChange={e => setBuildCostCr(e.target.value)}
+                  className={inputCls}
+                  placeholder="one-off delivery"
+                />
+              </Field>
+              <Field label="Annual run cost (₹ Cr)">
+                <input
+                  type="number" step="any" min="0"
+                  value={annualRunCostCr}
+                  onChange={e => setAnnualRunCostCr(e.target.value)}
+                  className={inputCls}
+                  placeholder="infra, licences, support"
+                />
+              </Field>
+              <Field label="TCO horizon (years)">
+                <input
+                  type="number" step="1" min="1" max="20"
+                  value={tcoHorizonYears}
+                  onChange={e => setTcoHorizonYears(e.target.value)}
+                  className={inputCls}
+                  placeholder={String(DEFAULT_TCO_HORIZON_YEARS)}
+                />
+              </Field>
+            </div>
+            <Field label="Actual cost to date (₹ Cr)">
+              <input
+                type="number" step="any" min="0"
+                value={actualCostCr}
+                onChange={e => setActualCostCr(e.target.value)}
+                className={inputCls}
+                placeholder="overrides the estimate once real spend is known"
+              />
+            </Field>
+            <div className="rounded-lg border border-slate-200 bg-slate-50/70 px-4 py-3">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-medium text-slate-600">Total cost of ownership</span>
+                <span className="tabular text-sm font-semibold text-slate-800">
+                  {previewTco == null ? 'Not captured' : formatInr(previewTco)}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] leading-relaxed text-slate-500">
+                {previewTco == null
+                  ? 'ROI stays blank on the Value Board until a cost is recorded — an honest gap is better than a guessed number.'
+                  : `Build + (annual run × ${toYears(tcoHorizonYears) ?? DEFAULT_TCO_HORIZON_YEARS} years). Actual cost, when entered, overrides the estimate.`}
+              </p>
+            </div>
+          </div>
         </SectionCard>
 
         {/* Regulatory */}

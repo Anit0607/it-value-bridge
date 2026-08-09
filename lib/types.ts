@@ -99,6 +99,18 @@ export interface Item {
   regulatoryBody?: string | null;
   regulatoryDueDate?: string | null; // ISO date
 
+  // Cost (₹). All nullable — null means "not captured", never zero. Resolve to
+  // a single TCO figure with computeTco() in lib/value.ts rather than summing
+  // these by hand, so every surface agrees on the same number.
+  estimatedCostInr?: number | null;
+  actualCostInr?: number | null;
+  buildCostInr?: number | null;
+  annualRunCostInr?: number | null;
+  tcoHorizonYears?: number | null;
+  // Frozen at sign-off — what was actually promised, for later comparison.
+  signedOffValueInr?: number | null;
+  signedOffTcoInr?: number | null;
+
   history: HistoryEntry[];
   createdAt: string;
 }
