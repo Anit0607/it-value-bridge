@@ -4,7 +4,9 @@ import { inPeriod, type Period } from '@/lib/period';
 import { buildInitiativeVisibilityWhere } from '@/lib/rbac';
 import { evaluateInvestmentGate, type GateStatus } from '@/lib/investment';
 import type { InvestmentCategory } from '@prisma/client';
-import type { BenefitCategory, Stage } from '@prisma/client';
+import type { BenefitCategory } from '@prisma/client';
+import { getLifecycle } from '@/lib/queries/lifecycle';
+import { stageLabel, goLiveStage, terminalStage } from '@/lib/lifecycle';
 
 export interface BoardCategoryRow {
   category: BenefitCategory;
@@ -32,7 +34,8 @@ export interface BoardInitiativeRow {
   title: string;
   category: BenefitCategory;
   projected: number;
-  stage: Stage;
+  stage: string;
+  stageLabel: string;
   signedOff: boolean;
 }
 
@@ -92,7 +95,8 @@ export interface BoardSummary {
   };
 }
 
-const LIVE_OR_CLOSED: Stage[] = ['GO_LIVE', 'BUSINESS_VALIDATION', 'CLOSED'];
+// Which stages count as "shipped" is now a property of the organization's
+// lifecycle (DeliveryPhase = POST_DELIVERY), not a fixed list of three names.
 
 /** Latest realized ₹ across a claim's measurements (max by measuredAt). */
 function latestRealized(measurements: { measuredAt: Date; realizedInr: number | null }[]): number {
@@ -116,6 +120,10 @@ export async function getBoardSummary(
   user: { role: string; name: string; verticalHead?: string | null; organizationId?: string | null },
 ): Promise<BoardSummary> {
   const todayIso = new Date().toISOString().slice(0, 10);
+  const lifecycle = await getLifecycle(user.organizationId);
+  const goLiveKey = goLiveStage(lifecycle)?.key ?? null;
+  const terminalKey = terminalStage(lifecycle)?.key ?? null;
+  const postDeliveryKeys = new Set(lifecycle.filter(s => s.deliveryPhase === 'POST_DELIVERY').map(s => s.key));
   const where = user.organizationId
     ? buildInitiativeVisibilityWhere({ ...user, organizationId: user.organizationId })
     : { organizationId: '__no_active_organization__' }; // no org context — see nothing, same safe default as listVisibleInitiativesForUser
@@ -202,12 +210,16 @@ export async function getBoardSummary(
 
     const initRealized = i.benefitClaims.reduce((s, c) => s + latestRealized(c.measurements), 0);
     realized += initRealized;
-    const closedEntry = i.history.find(h => h.stage === 'CLOSED');
+    const closedEntry = terminalKey ? i.history.find(h => h.stage === terminalKey) : undefined;
     const closedIso = closedEntry ? closedEntry.createdAt.toISOString().slice(0, 10) : null;
-    if (i.currentStage === 'CLOSED' && inPeriod(closedIso, period)) deliveredInPeriod++;
+    if (i.currentStage === terminalKey && inPeriod(closedIso, period)) deliveredInPeriod++;
 
     // Benefit-realization lifecycle (computed at render)
-    const goLiveEntry = i.history.find(h => h.stage === 'GO_LIVE') ?? i.history.find(h => h.stage === 'CLOSED');
+    // When the thing went live. Falls back to the terminal stage for a
+    // lifecycle where go-live and completion are the same event.
+    const goLiveEntry =
+      (goLiveKey ? i.history.find(h => h.stage === goLiveKey) : undefined) ??
+      (terminalKey ? i.history.find(h => h.stage === terminalKey) : undefined);
     const goLiveIso = goLiveEntry ? goLiveEntry.createdAt.toISOString().slice(0, 10) : null;
     const horizon = i.benefitClaims.length
       ? Math.min(...i.benefitClaims.map(c => c.realizationHorizonMonths))
@@ -216,7 +228,7 @@ export async function getBoardSummary(
     const confirmed =
       !!i.valueRealization || i.benefitClaims.some(c => c.measurements.some(m => m.realizedInr != null));
     const rStatus = realizationStatus({
-      isLiveOrClosed: LIVE_OR_CLOSED.includes(i.currentStage),
+      isLiveOrClosed: postDeliveryKeys.has(i.currentStage),
       confirmed,
       dueIso,
       todayIso,
@@ -270,6 +282,7 @@ export async function getBoardSummary(
         category: primary.category,
         projected: initProjected,
         stage: i.currentStage,
+        stageLabel: stageLabel(lifecycle, i.currentStage),
         signedOff: i.valueSignedOff,
       });
     }

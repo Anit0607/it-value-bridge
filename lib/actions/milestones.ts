@@ -3,6 +3,7 @@
 import { prisma } from '@/lib/db';
 import { requireRole, assertVisibleInitiativeAccess } from '@/lib/authz';
 import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES } from '@/lib/rbac';
+import { assertModuleEnabled } from '@/lib/queries/workspace';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import type { Milestone } from '@prisma/client';
@@ -74,6 +75,7 @@ export type CreateMilestoneInput = z.infer<typeof CreateMilestoneInput>;
 
 export async function createMilestone(initiativeId: string, input: CreateMilestoneInput): Promise<Milestone> {
   const user = await requireEditor();
+  await assertModuleEnabled(user.organizationId, 'milestones', 'Milestones');
   await assertVisibleInitiativeAccess(initiativeId, user);
   const parsed = CreateMilestoneInput.parse(input);
 

@@ -3,6 +3,9 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useRole } from './RoleProvider';
+import { useWorkspace } from './WorkspaceProvider';
+import type { WorkspaceModules } from '@/lib/queries/workspace';
+import type { TermKey } from '@/lib/terminology';
 import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES } from '@/lib/rbac';
 import type { Role } from '@/lib/types';
 import type { LucideIcon } from 'lucide-react';
@@ -27,6 +30,7 @@ import {
   ListChecks,
   ClipboardCheck,
   FileSpreadsheet,
+  Wrench,
 } from 'lucide-react';
 
 interface NavItem {
@@ -34,6 +38,10 @@ interface NavItem {
   label: string;
   icon: LucideIcon;
   roles: Role[];
+  /** Hidden entirely when this module is switched off for the workspace. */
+  module?: keyof WorkspaceModules;
+  /** Renamed from the workspace's own vocabulary when set. */
+  term?: TermKey;
 }
 
 interface NavGroup {
@@ -53,16 +61,16 @@ const NAV_GROUPS: NavGroup[] = [
   {
     label: 'Governance',
     items: [
-      { href: '/pmo/new', label: 'New Initiative', icon: PlusCircle, roles: PMO_EQUIVALENT_ROLES },
-      { href: '/demands', label: 'Demands', icon: Lightbulb, roles: ['CIO', ...PMO_EQUIVALENT_ROLES, 'VERTICAL_HEAD', ...BUSINESS_EQUIVALENT_ROLES] },
-      { href: '/dependencies', label: 'Dependencies', icon: Link2, roles: ['CIO', ...PMO_EQUIVALENT_ROLES, 'VERTICAL_HEAD'] },
+      { href: '/pmo/new', label: 'New Initiative', icon: PlusCircle, roles: PMO_EQUIVALENT_ROLES, term: 'initiative' },
+      { href: '/demands', label: 'Demands', icon: Lightbulb, roles: ['CIO', ...PMO_EQUIVALENT_ROLES, 'VERTICAL_HEAD', ...BUSINESS_EQUIVALENT_ROLES], term: 'demandPlural' },
+      { href: '/dependencies', label: 'Dependencies', icon: Link2, roles: ['CIO', ...PMO_EQUIVALENT_ROLES, 'VERTICAL_HEAD'], module: 'dependencies' },
     ],
   },
   {
     label: 'Value Intelligence',
     items: [
       { href: '/value', label: 'Value Board', icon: TrendingUp, roles: ['CIO', ...PMO_EQUIVALENT_ROLES] },
-      { href: '/okrs', label: 'Strategic OKRs', icon: Target, roles: ['CIO', ...PMO_EQUIVALENT_ROLES] },
+      { href: '/okrs', label: 'Strategic OKRs', icon: Target, roles: ['CIO', ...PMO_EQUIVALENT_ROLES], term: 'okrPlural' },
       { href: '/report', label: 'Value Report', icon: FileBarChart, roles: ['CIO', ...PMO_EQUIVALENT_ROLES] },
     ],
   },
@@ -83,6 +91,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Platform',
     items: [
       { href: '/admin', label: 'Workspace Settings', icon: Settings, roles: ['ADMIN'] },
+      { href: '/admin/setup', label: 'Workspace Setup', icon: Wrench, roles: ['ADMIN'] },
       { href: '/admin/workspace', label: 'Workspace', icon: Building2, roles: ['ADMIN'] },
       { href: '/admin/users', label: 'User Management', icon: Users, roles: ['ADMIN'] },
       { href: '/admin/pilot-readiness', label: 'Client UAT & Production Readiness', icon: ClipboardCheck, roles: ['ADMIN'] },
@@ -124,12 +133,25 @@ export function Sidebar({
   onNavigate?: () => void;
 }) {
   const { user, logout } = useRole();
+  const { terms, modules } = useWorkspace();
   const pathname = usePathname();
 
   if (!user) return null;
 
+  // Navigation reflects both what the role may see and what the workspace has
+  // switched on. A module that is off leaves no empty page to stumble into.
+  const label = (item: NavItem) => {
+    if (!item.term) return item.label;
+    if (item.term === 'initiative') return `New ${terms.initiative}`;
+    if (item.term === 'okrPlural') return `Strategic ${terms.okrPlural}`;
+    return terms[item.term];
+  };
+
   const visibleGroups = NAV_GROUPS
-    .map(g => ({ ...g, items: g.items.filter(i => i.roles.includes(user.role)) }))
+    .map(g => ({
+      ...g,
+      items: g.items.filter(i => i.roles.includes(user.role) && (!i.module || modules[i.module])),
+    }))
     .filter(g => g.items.length > 0);
 
   const initials = user.name
@@ -189,7 +211,7 @@ export function Sidebar({
                       }`}
                       strokeWidth={2}
                     />
-                    {item.label}
+                    {label(item)}
                   </Link>
                 );
               })}

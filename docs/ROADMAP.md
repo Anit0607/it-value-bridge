@@ -32,7 +32,7 @@ client data import. Organization- and role-scoped data access enforced through a
 | ~~No automated tests~~ | **Started in M1.** `npm test` (vitest) covers TCO/ROI/payback math, RBAC visibility scoping, the investment gate and the integrity helpers — 69 tests. Server actions, forms, and E2E remain uncovered; the maker-checker and claim-lock rules are verified live in the browser, not by test. |
 | No background jobs | Reminders compute on page load. **`MonthlyReport` is now written (M3)** — but only when a human publishes a period from the Value Board. Nothing is scheduled, and there are still no notifications. |
 | No Finance role | Deliberately deferred. Business signs off value; nobody independently certifies cost. |
-| Lifecycle and roles hardcoded | `Stage` and `Role` are Postgres enums. Blocks SME configuration. |
+| ~~Lifecycle and roles hardcoded~~ | **Fixed in M4.** `Stage` is now a per-organization table; roles are capability + visibility scope. `Role` remains a Postgres enum, but nothing keys off its name any more, so per-organization role definitions are an additive change rather than another rewrite. |
 | Currency hardcoded | `formatInr` assumes ₹ with lakh/crore grouping. Blocks global SME. |
 | No external API | Server Actions only. Blocks Jira/ServiceNow integration and BI extraction. |
 
@@ -299,17 +299,120 @@ created during live verification were removed afterwards.
 
 ---
 
-### M4 — Configurability and the SME path
+### M4 — Configurability and the SME path ✅ **DONE**
 **Size: 4–6 weeks. Time-sensitive — see risk R1.**
 
-- [ ] Terminology dictionary per organization (cheap, high perceived impact)
-- [ ] Module flags — regulatory / dependencies / milestones on-off
-- [ ] **Replace the `Stage` enum with a lifecycle table**, each stage tagged with its semantic role: go-live gate, validation gate, terminal, pre/in/post-delivery. The engine must key off meaning, not the string `UAT`.
-- [ ] Split `Role` into capability + visibility scope
-- [ ] Three templates: Regulated BFSI (11 stages), Mid-market IT (~6), Lean (~4)
-- [ ] Guided setup form
+- [x] Terminology dictionary per organization (cheap, high perceived impact)
+- [x] Module flags — regulatory / dependencies / milestones on-off
+- [x] **Replace the `Stage` enum with a lifecycle table**, each stage tagged with its semantic role: go-live gate, validation gate, terminal, pre/in/post-delivery. The engine must key off meaning, not the string `UAT`.
+- [x] Split `Role` into capability + visibility scope
+- [x] Three templates: Regulated BFSI (11 stages), Mid-market IT (~6), Lean (~4)
+- [x] Guided setup form
 
-**Exit:** an SME can be onboarded without writing code.
+**Exit met.** `/admin/setup` provisions a workspace end to end — lifecycle, vocabulary, modules — with
+no code and no deploy. **R1 is closed.**
+
+**The enum is gone, and no data went with it.** `prisma migrate diff` generates `DROP COLUMN` +
+`ADD COLUMN` for an enum→text conversion, which would have destroyed every initiative's stage and
+the entire audit trail. The migration is hand-written to convert in place with
+`ALTER COLUMN … TYPE TEXT USING`, and the backfill inserts exactly the eleven stages the enum
+already contained, in the order the application already enforced — so no initiative changed stage
+and no history was reinterpreted. Verified after applying: **24 initiatives kept their stage, 125
+history rows intact.**
+
+**The engine now asks what a stage MEANS.** Every stage carries a `DeliveryPhase`
+(`PRE_DELIVERY` / `IN_DELIVERY` / `POST_DELIVERY`) plus `isGoLiveGate`, `isValidationGate` and
+`isTerminal`. The 115 hardcoded references across 23 files are gone:
+
+| Was | Is |
+|---|---|
+| `currentStage === 'Closed'` | `stageIsTerminal` |
+| `['Go Live','Business Validation','Closed'].includes(…)` | `stageIsPostDelivery` |
+| `currentStage === 'Business Validation'` | `stageIsValidationGate` |
+| `STAGES.indexOf(stage) < STAGES.indexOf('UAT')` | `stageIsPreDelivery` |
+| `history.find(h => h.stage === 'Go Live')` | the lifecycle's go-live key |
+| Bottleneck = `{UAT, AppSec, CAB Approval}` | the in-delivery stages, whatever they are called |
+| Fixed "AppSec pending" / "UAT pending" chips | one chip per in-delivery stage that has work in it |
+
+Semantics are resolved **once**, in the `Item` adapter, and stamped onto the item — so the engine
+stays pure and testable, and no lifecycle has to be threaded through every component.
+
+**Tested against lifecycles the product has never shipped.** The suite builds all three templates and
+asserts the semantics hold in each — including the lean shape, where **one stage is both the
+confirmation gate and the final stage**, and where no stage anywhere is called "Go Live". A retired
+stage still renders its key rather than losing history, and `validateLifecycle()` catches the
+configurations that would break the engine (no go-live, two finals, a post-delivery stage sitting
+before go-live) — returning every problem at once rather than one per save.
+
+**Every template keeps an outcome-confirmation stage.** Delivery ceremony is negotiable; confirming
+the value is not. A lifecycle without it makes this a tracker, so the lean four-stage shape still
+has one — it is just merged with completion.
+
+**Roles are now capability + scope, and the shipped eight are derived from that table.** Nothing
+about their behaviour changed — that is the point. `PMO_EQUIVALENT_ROLES` is computed from
+`MANAGE_PORTFOLIO` instead of hand-listed, so a role granted that capability is picked up by
+middleware and `requireRole()` automatically. `buildInitiativeVisibilityWhere()` keys off
+`VisibilityScope`, so two roles sharing a scope filter identically by construction — the shape of
+the bug that over-shared the value board in M0.
+
+**One deliberate behaviour change, caught by a failing test.** The old visibility switch defaulted an
+unrecognised role to *full organization visibility*; adding a `Role` to the enum and forgetting its
+case silently exposed the whole portfolio. It now falls back to the **narrowest** scope. The test
+asserting the old behaviour was updated, with the reasoning recorded in it: the failure mode of a
+half-finished role should be "sees too little", never "sees everything".
+
+**Switching a module off removes it, and the removal is real.** Nav entry, panel, route and server
+action all go: `/dependencies` returns 404, and `addDependency`, `createMilestone` and
+`setRegulatory` each call `assertModuleEnabled()`. Hiding a nav link while the action still works is
+a cosmetic control, and a stale tab is exactly where those fail.
+
+**Terminology is a bounded set, on purpose.** Thirteen keys with shipped defaults, not a free-form
+dictionary — the product's own help text, error messages and CSV templates refer to these nouns, and
+every new key is another place they can drift. Storing a term identical to the default is skipped, so
+a later improvement to the shipped wording still reaches organizations that merely confirmed it.
+
+**Switching template refuses to strand live work.** If any initiative sits at a stage the new
+template lacks, the switch is rejected and names the stages and counts. Silently relocating live work
+would rewrite what the portfolio says about itself and show a transition nobody made. Removing a
+single stage is blocked the same way, and also if it would leave the lifecycle without a go-live or
+final stage.
+
+**Renaming a stage does not rewrite history.** The stable `key` is what initiatives and history
+reference; only the `label` moves. Renaming "UAT" to "Business Testing" re-labels the past as well as
+the present without touching a record — which is what an auditor wants, because nothing actually
+happened differently.
+
+**Live verification found four bugs the type checker could not.** A second workspace was provisioned
+on the four-stage Lean lifecycle — different stage names, two modules off, renamed vocabulary — and
+driven end to end:
+
+1. **The UI rendered stage keys, not labels.** `UAT`, `COMMERCIAL`, `DEVELOPMENT` appeared raw on the
+   item page, the tables and the audit trail. Both are strings, so nothing failed to compile; the
+   rename simply did not show. Fixed across eight files.
+2. **`isLiveOrClosed` was silently always false.** The item page still asked
+   `['Go Live','Business Validation','Closed'].includes(currentStage)`, which after the conversion
+   compares labels against keys — so value realization never started for anything. Now
+   `stageIsPostDelivery`.
+3. **A lean workspace could never confirm an outcome.** `canValidate` required
+   `stageIsValidationGate && !closed`. In the Lean shape those are the *same stage*, so the condition
+   was unsatisfiable and the confirmation step — the whole point of the product — was unreachable.
+   The `!closed` was redundant belt-and-braces in the BFSI lifecycle and hid the bug there.
+4. **A terminal stage got a "pending" work queue.** Queue chips were generated for every stage
+   rather than the in-delivery ones, so "Value Confirmed Pending" appeared for finished work.
+
+Each was then re-verified in the browser: rename propagates to current stage and history while the
+key and all 10 history rows stay untouched; the lean workspace shows *"Advance Stage: In Progress →
+Live"*, no regulatory or dependency surface anywhere, `New Project` in the nav from the terminology
+override, and a full confirmation saved against a merged confirm-and-close stage.
+
+**101 tests passing** (32 new: lifecycle semantics, template validity, capabilities, visibility
+scope). Migration: `20260809140000_configurable_lifecycle`.
+
+**One capability was deliberately dropped, not replaced.** The PMO dashboard's two fixed
+stage-specific insight cards and the item page's "Awaiting security clearance" / "Awaiting CAB
+approval" hints were hardcoded to BFSI stage names. The cards are now generated per in-delivery
+stage, but the two prose hints are gone: there is no semantic role for "security review", and
+inventing one to preserve two sentences would re-import the assumption M4 exists to remove.
 
 ---
 
@@ -382,9 +485,10 @@ If a checkpoint fails, the plan changes. That is what they are for.
 
 ## 8. Risks
 
-**R1 — The enum migration window closes.** Converting `Stage` from a Postgres enum to a
-per-organization table is trivial with seed data and painful once clients hold live
-history. If M4 is going to happen at all, it must happen before the first signed customer.
+**R1 — ~~The enum migration window closes.~~ CLOSED in M4.** The conversion happened while the only
+data was seed data, exactly as this risk asked. `Stage` is now a per-organization table, the
+migration preserved all 24 initiatives and 125 history rows, and no customer ever held live history
+under the enum.
 
 **R2 — Test debt compounds.** *Partly mitigated in M1* — a suite now exists and covers the
 money math and visibility scoping, the two places a silent bug does most damage. Server
@@ -414,4 +518,5 @@ make the rupee number more credible?* Milestones and dependencies would not have
 | 2026-08-09 | **M0 complete.** Fabricated ROI removed; on-prem container build fixed and verified running end to end. Five latent Docker defects found and fixed — see M0 notes. R4 (claims ahead of reality) now has a worked resolution rather than an open example. |
 | 2026-08-09 | **M2 complete.** Investment categorisation, org-configurable ROI threshold, soft gate with CIO-tier exception approval and an append-only exception log, and the board-grade Capital Allocation view. Separation of duties verified live (PMO blocked, CIO approved). Tests caught a gate bug where zero recorded value read as a failed gate. |
 | 2026-08-09 | **M1 complete.** Real TCO capture across all four surfaces, ROI + payback per initiative and portfolio, sign-off snapshot, and the first test suite (35 tests). A second fabricated `× 0.3` cost was found on the demand-approval path and removed. Currency abstraction deliberately deferred with reasoning recorded. |
+| 2026-08-11 | **M4 complete.** The `Stage` enum is gone — lifecycle is a per-organization table with semantic role tags, and the engine keys off meaning rather than the string `UAT`. Per-organization terminology, module switches that remove surfaces rather than empty them, roles expressed as capability + visibility scope, three shipped templates and a guided setup form at `/admin/setup`. Verified by provisioning a second workspace on the four-stage Lean lifecycle and driving it end to end, which found four bugs the type checker could not see — including one that made outcome confirmation unreachable in any lifecycle where confirm and close are the same stage. **R1 is closed.** |
 | 2026-08-09 | **M3 complete.** Maker-checker on value sign-off and cost changes gated by an org materiality threshold, claims locked at sign-off, formal restatement flow, evidence/provenance fields (mandatory for realized ₹ figures), portfolio double-count review, and period snapshots that freeze board figures at publication. The whole chain — proposed by, approved by, restated by, sourced from — is verified live across PMO and CIO. `MonthlyReport`'s unique key moved to `[organizationId, year, month]`, closing a cross-tenant collision that had never been exercised because the model was unused. |

@@ -6,8 +6,9 @@ import { requireRole, assertVisibleInitiativeAccess } from '@/lib/authz';
 import { PMO_EQUIVALENT_ROLES } from '@/lib/rbac';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { STAGE_LABEL } from '@/lib/stage-map';
-import type { Stage } from '@prisma/client';
+import { getLifecycle } from '@/lib/queries/lifecycle';
+import { assertModuleEnabled } from '@/lib/queries/workspace';
+import { stageLabel, terminalStage } from '@/lib/lifecycle';
 
 const MS_DAY = 86_400_000;
 function todayMid(): number {
@@ -17,16 +18,18 @@ function todayMid(): number {
 }
 
 interface RiskFields {
-  currentStage: Stage;
+  currentStage: string;
   stageExpectedDate: Date;
   lastUpdated: Date;
   delayed: boolean;
 }
 
 /** Frozen RAG "Red" intent, server-side: overdue, stale ≥7d, or flagged delayed
- *  (and not closed). Used to decide whether a blocker endangers its dependents. */
-function atRisk(i: RiskFields): boolean {
-  if (i.currentStage === 'CLOSED') return false;
+ *  (and not finished). Used to decide whether a blocker endangers its dependents.
+ *  `terminalKey` comes from the organization's lifecycle — a finished initiative
+ *  cannot block anything, whatever its final stage is called. */
+function atRisk(i: RiskFields, terminalKey: string | null): boolean {
+  if (terminalKey && i.currentStage === terminalKey) return false;
   const t = todayMid();
   const overdue = i.stageExpectedDate.getTime() < t;
   const stale = (t - i.lastUpdated.getTime()) / MS_DAY >= 7;
@@ -55,6 +58,8 @@ export async function getInitiativeDependencies(
   organizationId: string | null | undefined,
 ): Promise<InitiativeDependencies> {
   if (!organizationId) return { upstream: [], downstream: [], upstreamRiskCount: 0 };
+  const lifecycle = await getLifecycle(organizationId);
+  const terminalKey = terminalStage(lifecycle)?.key ?? null;
   const i = await prisma.initiative.findFirst({
     where: { id, organizationId },
     include: {
@@ -68,8 +73,8 @@ export async function getInitiativeDependencies(
     dependencyId: dep.id,
     initiativeId: other.id,
     title: other.title,
-    stage: STAGE_LABEL[other.currentStage],
-    atRisk: atRisk(other),
+    stage: stageLabel(lifecycle, other.currentStage),
+    atRisk: atRisk(other, terminalKey),
     delayed: other.delayed,
     systemLabel: dep.systemLabel,
     note: dep.note,
@@ -127,6 +132,7 @@ async function requireEditor() {
 
 export async function addDependency(input: AddDependencyInput) {
   const user = await requireEditor();
+  await assertModuleEnabled(user.organizationId, 'dependencies', 'Cross-system dependencies');
   const parsed = AddInput.parse(input);
   if (parsed.dependentId === parsed.blockerId) throw new Error('An item cannot depend on itself');
   await assertVisibleInitiativeAccess(parsed.dependentId, user);
@@ -186,6 +192,8 @@ export interface DependencyOverview {
 }
 
 export async function getDependencyOverview(organizationId: string): Promise<DependencyOverview> {
+  const lifecycle = await getLifecycle(organizationId);
+  const terminalKey = terminalStage(lifecycle)?.key ?? null;
   const all = await prisma.dependency.findMany({
     where: {
       dependent: { organizationId },
@@ -199,22 +207,22 @@ export async function getDependencyOverview(organizationId: string): Promise<Dep
 
   for (const d of all) {
     // downstream-risk rollup
-    if (atRisk(d.blocker) && d.dependent.currentStage !== 'CLOSED') {
+    if (atRisk(d.blocker, terminalKey) && d.dependent.currentStage !== terminalKey) {
       const e = byDependent.get(d.dependent.id) ?? {
         id: d.dependent.id,
         title: d.dependent.title,
-        stage: STAGE_LABEL[d.dependent.currentStage],
+        stage: stageLabel(lifecycle, d.dependent.currentStage),
         blockers: [],
       };
-      e.blockers.push({ title: d.blocker.title, system: d.systemLabel, stage: STAGE_LABEL[d.blocker.currentStage] });
+      e.blockers.push({ title: d.blocker.title, system: d.systemLabel, stage: stageLabel(lifecycle, d.blocker.currentStage) });
       byDependent.set(d.dependent.id, e);
     }
     // blocker fan-out
     const b = byBlocker.get(d.blocker.id) ?? {
       id: d.blocker.id,
       title: d.blocker.title,
-      stage: STAGE_LABEL[d.blocker.currentStage],
-      atRisk: atRisk(d.blocker),
+      stage: stageLabel(lifecycle, d.blocker.currentStage),
+      atRisk: atRisk(d.blocker, terminalKey),
       blocksCount: 0,
     };
     b.blocksCount += 1;

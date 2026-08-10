@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/Button';
 interface DelayedItem {
   title: string;
   verticalHead: string;
-  currentStage: string;
+  currentStageLabel: string;
   delaySource?: string | null;
   delayReason?: string | null;
   goLiveDate: string;
@@ -17,14 +17,14 @@ interface MissedItem {
   title: string;
   verticalHead: string;
   goLiveDate: string;
-  currentStage: string;
+  currentStageLabel: string;
 }
 
 interface RegulatoryItem {
   title: string;
   regulatoryBody?: string | null;
   regulatoryDueDate?: string | null;
-  currentStage: string;
+  currentStageLabel: string;
   isOverdue: boolean;
 }
 
@@ -73,19 +73,19 @@ export function ReportExportButtons({ delayed, missed, regulatory, delivered, pe
 
   const exportDelayed = () =>
     downloadCsv(`delayed-items-${slug}.csv`,
-      delayed.map(i => [i.title, i.verticalHead, i.currentStage, i.delaySource ?? '', i.delayReason ?? '', i.goLiveDate]),
+      delayed.map(i => [i.title, i.verticalHead, i.currentStageLabel, i.delaySource ?? '', i.delayReason ?? '', i.goLiveDate]),
       ['Initiative', 'Vertical Head', 'Current Stage', 'Delay Source', 'Delay Reason', 'Committed Go-Live'],
     );
 
   const exportMissed = () =>
     downloadCsv(`commitment-slippage-${slug}.csv`,
-      missed.map(i => [i.title, i.verticalHead, i.goLiveDate, i.currentStage]),
+      missed.map(i => [i.title, i.verticalHead, i.goLiveDate, i.currentStageLabel]),
       ['Initiative', 'Vertical Head', 'Committed Go-Live', 'Current Stage'],
     );
 
   const exportRegulatory = () =>
     downloadCsv(`regulatory-commitments-${slug}.csv`,
-      regulatory.map(i => [i.title, i.regulatoryBody ?? '', i.regulatoryDueDate ?? '', i.currentStage, i.isOverdue ? 'Overdue' : 'On Track']),
+      regulatory.map(i => [i.title, i.regulatoryBody ?? '', i.regulatoryDueDate ?? '', i.currentStageLabel, i.isOverdue ? 'Overdue' : 'On Track']),
       ['Initiative', 'Regulator / Body', 'Mandated Due Date', 'Current Stage', 'Status'],
     );
 

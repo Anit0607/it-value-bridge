@@ -2,12 +2,18 @@ import { listVisibleInitiativesForUser } from '@/lib/actions/initiatives';
 import { prisma } from '@/lib/db';
 import type { AuthUser } from '@/lib/types';
 import { ragCounts } from '@/lib/rag';
-import { STAGES, type Stage, type RAG } from '@/lib/types';
+import type { Stage, RAG } from '@/lib/types';
+import { getLifecycle } from '@/lib/queries/lifecycle';
+import { terminalStage } from '@/lib/lifecycle';
 import { inPeriod, onOrBeforeEnd, type Period } from '@/lib/period';
 import { applyPortfolioFilters, type PortfolioFilters } from '@/lib/portfolioFilters';
 import { enrichAll, type EnrichedItem } from './enrich';
 
-const closureDate = (i: EnrichedItem) => i.history.find(h => h.stage === 'Closed')?.date ?? null;
+/** When the initiative reached its lifecycle's final stage.
+ *  History stores stage KEYS, so this is matched against the terminal stage's
+ *  key rather than the word "Closed". */
+const closureDate = (i: EnrichedItem, terminalKey: string | null) =>
+  (terminalKey ? i.history.find(h => h.stage === terminalKey)?.date : null) ?? null;
 
 const monthKey = (dateIso: string) => dateIso.slice(0, 7); // YYYY-MM
 const monthLabel = (key: string) => {
@@ -39,6 +45,7 @@ export interface StrategicProjectRow {
   id: string;
   title: string;
   currentStage: Stage;
+  currentStageLabel: string;
   rag: RAG;
   goLiveDate: string;
   projectedValue: number;
@@ -88,7 +95,7 @@ export interface CioSummary {
   activeCount: number;
   counts: { green: number; amber: number; red: number };
   pct: (n: number) => number;
-  pipelineByStage: { stage: Stage; count: number }[];
+  pipelineByStage: { key: string; label: string; count: number; isTerminal: boolean; isGoLiveGate: boolean }[];
   vhSummary: VhSummaryRow[];
   /** Business-side counterpart to vhSummary — grouped by Business Head (falling
    *  back to Business Sponsor), interim view ahead of 5E's full filter toggle. */
@@ -160,7 +167,11 @@ export async function getCioSummary(
   filters: PortfolioFilters = {},
 ): Promise<CioSummary> {
   // Org + role-hierarchy scoped (5B/5C) — the ONLY read of all initiatives.
-  const items = enrichAll(await listVisibleInitiativesForUser(user));
+  const [items, lifecycle] = await Promise.all([
+    listVisibleInitiativesForUser(user).then(enrichAll),
+    getLifecycle(user.organizationId),
+  ]);
+  const terminalKey = terminalStage(lifecycle)?.key ?? null;
   const filterOptions = computeFilterOptions(items);
 
   // Everything below this line is scoped by the portfolio filter bar, ON TOP
@@ -168,14 +179,17 @@ export async function getCioSummary(
   // set, it never widens or re-queries it (5B/5C stays intact).
   const filteredItems = applyPortfolioFilters(items, filters);
 
-  const active = filteredItems.filter(i => i.currentStage !== 'Closed');
+  const active = filteredItems.filter(i => !i.stageIsTerminal);
   const counts = ragCounts(active.map(i => i.rag));
   const total = active.length;
   const pct = (n: number) => (total ? Math.round((n / total) * 100) : 0);
 
-  const pipelineByStage = STAGES.map(s => ({
-    stage: s,
-    count: filteredItems.filter(i => i.currentStage === s).length,
+  const pipelineByStage = lifecycle.map(s => ({
+    key: s.key,
+    label: s.label,
+    count: filteredItems.filter(i => i.currentStage === s.key).length,
+    isTerminal: s.isTerminal,
+    isGoLiveGate: s.isGoLiveGate,
   }));
 
   const activeVHs = [...new Set(filteredItems.map(i => i.verticalHead))].sort();
@@ -228,6 +242,7 @@ export async function getCioSummary(
       id: item.id,
       title: item.title,
       currentStage: item.currentStage,
+      currentStageLabel: item.currentStageLabel,
       rag: item.rag,
       goLiveDate: item.goLiveDate,
       projectedValue: value,
@@ -242,7 +257,7 @@ export async function getCioSummary(
   // regardless of when they were originally promised. Distinct from
   // "delivered" below, which is a business-value confirmation against what
   // was committed for the period.
-  const deliveredProjects = filteredItems.filter(i => inPeriod(closureDate(i), period));
+  const deliveredProjects = filteredItems.filter(i => inPeriod(closureDate(i, terminalKey), period));
 
   // Month-wise trend of the same closed items. When the period has bounds,
   // zero-fill every month in range so the chart reads as a continuous
@@ -250,22 +265,22 @@ export async function getCioSummary(
   // actually have data, capped to the most recent 12 to stay readable.
   let monthKeys = period.from && period.to
     ? monthRange(period.from, period.to)
-    : [...new Set(deliveredProjects.map(i => monthKey(closureDate(i)!)))].sort();
+    : [...new Set(deliveredProjects.map(i => monthKey(closureDate(i, terminalKey)!)))].sort();
   if (!period.from || !period.to) monthKeys = monthKeys.slice(-12);
   const completedByMonth: MonthlyCompletedPoint[] = monthKeys.map(key => ({
     month: key,
     label: monthLabel(key),
-    count: deliveredProjects.filter(i => monthKey(closureDate(i)!) === key).length,
+    count: deliveredProjects.filter(i => monthKey(closureDate(i, terminalKey)!) === key).length,
   }));
 
   // Promised to go live in the window; delivered = closed by the window's end.
   const committed = filteredItems.filter(i => inPeriod(i.goLiveDate, period));
   const delivered = committed.filter(i => {
-    const cd = closureDate(i);
+    const cd = closureDate(i, terminalKey);
     return !!cd && onOrBeforeEnd(cd, period);
   });
   const missed = committed.filter(i => {
-    const cd = closureDate(i);
+    const cd = closureDate(i, terminalKey);
     return !cd || !onOrBeforeEnd(cd, period);
   });
 
@@ -273,8 +288,8 @@ export async function getCioSummary(
   const regulatory = filteredItems
     .filter(i => i.isRegulatory)
     .sort((a, b) => {
-      const ac = a.currentStage === 'Closed' ? 1 : 0;
-      const bc = b.currentStage === 'Closed' ? 1 : 0;
+      const ac = a.stageIsTerminal ? 1 : 0;
+      const bc = b.stageIsTerminal ? 1 : 0;
       if (ac !== bc) return ac - bc;
       return (a.regulatoryDueDate ?? '9999').localeCompare(b.regulatoryDueDate ?? '9999');
     });
@@ -282,7 +297,7 @@ export async function getCioSummary(
   // Delays flagged on active items, worst slip first.
   const slip = (i: EnrichedItem) => (i.etaDays < 0 ? -i.etaDays : i.staleDays);
   const delays = filteredItems
-    .filter(i => i.delayed && i.currentStage !== 'Closed')
+    .filter(i => i.delayed && !i.stageIsTerminal)
     .sort((a, b) => slip(b) - slip(a));
 
   return {
@@ -330,7 +345,7 @@ export async function getPmoList(
   const items = enrichAll(await listVisibleInitiativesForUser(user));
   const filterOptions = computeFilterOptions(items);
   const filteredItems = applyPortfolioFilters(items, filters);
-  const active = filteredItems.filter(i => i.currentStage !== 'Closed');
+  const active = filteredItems.filter(i => !i.stageIsTerminal);
   return {
     items: filteredItems,
     totalCount: items.length,
@@ -363,6 +378,6 @@ export async function getBusinessValidations(
   user: Pick<AuthUser, 'role' | 'name' | 'verticalHead'> & { organizationId?: string | null },
 ): Promise<BusinessValidations> {
   const items = enrichAll(await listVisibleInitiativesForUser(user));
-  const pending = items.filter(i => i.currentStage === 'Business Validation' && !i.validation);
+  const pending = items.filter(i => i.stageIsValidationGate && !i.validation);
   return { items, pending };
 }

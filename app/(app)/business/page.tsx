@@ -147,7 +147,7 @@ export default async function BusinessSpocView({
                           {i.title}
                         </Link>
                       </td>
-                      <td className="px-4 py-2.5 text-slate-600">{i.currentStage}</td>
+                      <td className="px-4 py-2.5 text-slate-600">{i.currentStageLabel}</td>
                       <td className="px-4 py-2.5">
                         <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
                           <RagDot rag={rag} />
@@ -158,7 +158,7 @@ export default async function BusinessSpocView({
                       <td className="px-4 py-2.5 text-slate-600">{i.targetMetric}</td>
                       <td className="px-4 py-2.5 tabular text-slate-500">{i.goLiveDate.slice(5)}</td>
                       <td className="px-4 py-2.5 text-right">
-                        {i.currentStage === 'Business Validation' && !i.validation ? (
+                        {i.stageIsValidationGate && !i.validation ? (
                           <Link href={`/items/${i.id}/validate`} className="text-xs font-medium text-amber-600 hover:underline">
                             Pending ›
                           </Link>

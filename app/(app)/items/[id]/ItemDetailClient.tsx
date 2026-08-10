@@ -18,7 +18,7 @@ import { Badge, type BadgeTone } from '@/components/ui/Badge';
 import { StageProgress } from '@/components/StageProgress';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { Button, buttonCls } from '@/components/ui/Button';
-import { STAGES } from '@/lib/types';
+import type { StageOption } from '@/lib/types';
 import type { Item, DelaySource, Role, ItemClassification } from '@/lib/types';
 import type { BenefitCategory, BenefitUnit } from '@prisma/client';
 import {
@@ -89,7 +89,7 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
-export function ItemDetailClient({ item, value }: { item: Item; value: InitiativeValue | null }) {
+export function ItemDetailClient({ item, value, stages }: { item: Item; value: InitiativeValue | null; stages: StageOption[] }) {
   const { user } = useRole();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -146,11 +146,16 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
   const rag = computeRAG(item);
   const days = daysInStage(item.stageStartDate);
   const daysToEta = daysFromNow(item.stageExpectedDate);
-  const stageIdx = STAGES.indexOf(item.currentStage);
-  const canProgress = stageIdx < STAGES.length - 1;
-  const closed = item.currentStage === 'Closed';
+  const stageIdx = stages.findIndex(st => st.key === item.currentStage);
+  const canProgress = stageIdx >= 0 && stageIdx < stages.length - 1;
+  const nextStageLabel = canProgress ? stages[stageIdx + 1].label : null;
+  const closed = item.stageIsTerminal;
+  // Deliberately NOT gated on `!closed`. In a lean lifecycle the confirmation
+  // stage IS the final stage, and requiring the item to be un-finished meant
+  // such a workspace could never confirm an outcome at all. The validation gate
+  // is the only condition that matters.
   const canValidate = (isBusinessEquivalent(user?.role) || isPmoEquivalent(user?.role) || user?.role === 'CIO') &&
-                      item.currentStage === 'Business Validation' && !closed;
+                      item.stageIsValidationGate;
   const currentNotes = localNotes ?? item.notes;
   const currentDelayed = localDelayed ?? item.delayed;
   const currentDelaySource = localDelaySource ?? item.delaySource;
@@ -164,15 +169,13 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
       requiredActions.push({ label: 'Escalate delay owner — initiative is overdue', tone: 'danger' });
     if (daysSinceUpdate(item.lastUpdated) > 7)
       requiredActions.push({ label: 'Update stage notes — no update in over 7 days', tone: 'warning' });
-    if (item.currentStage === 'Business Validation' && !item.validation)
-      requiredActions.push({ label: 'Awaiting business outcome validation from Business SPOC', tone: 'warning' });
-    if (item.currentStage === 'AppSec')
-      requiredActions.push({ label: 'Awaiting security clearance from AppSec team', tone: 'brand' });
-    if (item.currentStage === 'CAB Approval')
-      requiredActions.push({ label: 'Awaiting CAB approval before go-live', tone: 'brand' });
     if (item.isRegulatory && item.regulatoryDueDate && daysFromNow(item.regulatoryDueDate) < 14)
       requiredActions.push({ label: `Regulatory deadline approaching: ${item.regulatoryDueDate}`, tone: 'danger' });
   }
+  // Outside the `!closed` block for the same reason as canValidate: a merged
+  // confirm-and-close stage still needs to be asked for its confirmation.
+  if (item.stageIsValidationGate && !item.validation)
+    requiredActions.push({ label: 'Awaiting business outcome validation from Business SPOC', tone: 'warning' });
   if (closed && !value?.valueSignedOff && totalValue > 0)
     requiredActions.push({ label: 'PMO / CIO value sign-off pending — initiative is closed', tone: 'brand' });
   const isDirty =
@@ -258,7 +261,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
           <h1 className="mt-1 text-2xl font-semibold tracking-tight text-slate-900">{item.title}</h1>
           <div className="mt-1.5 flex flex-wrap items-center gap-2">
             <span className="text-sm text-slate-500">
-              Current Stage: <span className="font-medium text-slate-700">{item.currentStage}</span>
+              Current Stage: <span className="font-medium text-slate-700">{item.currentStageLabel}</span>
             </span>
             <span className="text-slate-300">·</span>
             <RagBadge rag={rag} />
@@ -295,7 +298,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
           {([
             {
               label: 'Current Stage',
-              node: <span className="text-sm font-semibold text-slate-800">{item.currentStage}</span>,
+              node: <span className="text-sm font-semibold text-slate-800">{item.currentStageLabel}</span>,
             },
             {
               label: 'Delivery Confidence',
@@ -398,7 +401,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
       )}
 
       {/* Stage progress */}
-      <StageProgress currentStage={item.currentStage} />
+      <StageProgress stages={stages} currentStage={item.currentStage} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Left column */}
@@ -499,7 +502,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge tone={tone} size="sm">{label}</Badge>
-                      {h.stage && <span className="text-[11px] text-slate-400">{h.stage}</span>}
+                      {h.stageLabel && <span className="text-[11px] text-slate-400">{h.stageLabel}</span>}
                     </div>
                     {h.note && <p className="mt-0.5 text-xs text-slate-600">{h.note}</p>}
                     <p className="mt-0.5 text-[10px] text-slate-400">{h.date} · {h.user}</p>
@@ -513,7 +516,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
         {/* Right column */}
         <div className="space-y-4">
           {/* Current Stage metrics */}
-          <SectionCard title="Current Stage" subtitle={item.currentStage}>
+          <SectionCard title="Current Stage" subtitle={item.currentStageLabel}>
             <div className="grid grid-cols-2 gap-3 text-center">
               <div className="rounded-lg bg-slate-50 py-2.5">
                 <div className="tabular text-xl font-semibold text-slate-900">{days}</div>
@@ -591,9 +594,9 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
               <div className="space-y-2">
                 {/* Stage transition arrow */}
                 <div className="flex items-center justify-center gap-2 rounded-lg bg-brand-50/60 px-3 py-2.5">
-                  <span className="text-sm font-semibold text-brand-700">{item.currentStage}</span>
+                  <span className="text-sm font-semibold text-brand-700">{item.currentStageLabel}</span>
                   <ArrowRight className="h-4 w-4 text-brand-400" strokeWidth={2} />
-                  <span className="text-sm font-semibold text-brand-900">{STAGES[stageIdx + 1]}</span>
+                  <span className="text-sm font-semibold text-brand-900">{nextStageLabel}</span>
                 </div>
 
                 {confirmingAdvance ? (
@@ -601,8 +604,8 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                   <div className="space-y-3 rounded-lg border border-amber-200 bg-amber-50/60 p-3">
                     <p className="text-xs font-semibold text-amber-800">
                       You are about to move this initiative from{' '}
-                      <span className="font-bold">{item.currentStage}</span> to{' '}
-                      <span className="font-bold">{STAGES[stageIdx + 1]}</span>.
+                      <span className="font-bold">{item.currentStageLabel}</span> to{' '}
+                      <span className="font-bold">{nextStageLabel}</span>.
                     </p>
                     <p className="text-[11px] leading-relaxed text-amber-700">
                       This will reset delay flags, clear stage notes, and create a history entry.
@@ -629,7 +632,7 @@ export function ItemDetailClient({ item, value }: { item: Item; value: Initiativ
                       className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-700 shadow-sm focus:border-brand-400 focus:outline-none focus:ring-2 focus:ring-brand-400/30"
                     />
                     <Button variant="primary" icon={CheckCircle2} onClick={() => setConfirmingAdvance(true)} className="w-full justify-center">
-                      Move to: {STAGES[stageIdx + 1]}
+                      Move to: {nextStageLabel}
                     </Button>
                   </>
                 )}

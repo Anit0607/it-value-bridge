@@ -1,7 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
 import type {
-  Stage,
   ProcessGroup,
   BenefitCategory,
   InitiativeType,
@@ -17,7 +16,7 @@ import type {
 
 const prisma = new PrismaClient();
 
-const STAGE_TO_PG: Record<Stage, ProcessGroup> = {
+const STAGE_TO_PG: Record<string, ProcessGroup> = {
   BRD: 'PLANNING',
   FSD: 'PLANNING',
   COMMERCIAL: 'PLANNING',
@@ -31,11 +30,11 @@ const STAGE_TO_PG: Record<Stage, ProcessGroup> = {
   CLOSED: 'CLOSING',
 };
 
-const STAGE_ORDER: Stage[] = [
+const STAGE_ORDER: string[] = [
   'BRD', 'FSD', 'COMMERCIAL', 'DEVELOPMENT', 'SIT', 'UAT',
   'APPSEC', 'CAB_APPROVAL', 'GO_LIVE', 'BUSINESS_VALIDATION', 'CLOSED',
 ];
-const stageIdx = (s: Stage) => STAGE_ORDER.indexOf(s);
+const stageIdx = (s: string) => STAGE_ORDER.indexOf(s);
 
 const CR = 10_000_000; // ₹1 crore in rupees
 
@@ -97,7 +96,7 @@ const REGULATORY_BY_TITLE: Record<string, { body: string; due: string }> = {
   'UPI Enhancement v2.0': { body: 'NPCI', due: '2026-07-15' },
 };
 
-const confidenceForStage = (s: Stage): Confidence => {
+const confidenceForStage = (s: string): Confidence => {
   const i = stageIdx(s);
   if (i >= 8) return 'HIGH';     // Go Live onwards
   if (i >= 3) return 'MEDIUM';   // Development onwards
@@ -358,7 +357,7 @@ async function main() {
     outcomeDescription: string;
     targetMetric: string;
     expectedGoLiveDate: Date;
-    currentStage: Stage;
+    currentStage: string;
     stageStartDate: Date;
     stageExpectedDate: Date;
     lastUpdated: Date;
@@ -367,7 +366,7 @@ async function main() {
     delaySource?: DelaySource;
     delayReason?: string;
     committedMonth?: string;
-    history: { stage: Stage; date: Date; user: string; note: string }[];
+    history: { stage: string; date: Date; user: string; note: string }[];
     validation?: { outcomeAchieved: 'YES' | 'PARTIALLY' | 'NO'; actualResult: string; actualMetric: string };
     // Enterprise role model — manager-level assignment (optional demo coverage)
     programHeadName?: string;

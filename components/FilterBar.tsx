@@ -1,6 +1,8 @@
 'use client';
 
-import { STAGES, VERTICAL_HEADS } from '@/lib/types';
+import { VERTICAL_HEADS } from '@/lib/types';
+import type { StageOption } from '@/lib/types';
+import { useWorkspace } from './WorkspaceProvider';
 import type { Stage, RAG, ItemType, DelaySource } from '@/lib/types';
 import { Search, X } from 'lucide-react';
 
@@ -26,6 +28,8 @@ export const EMPTY_FILTERS: Filters = {
 interface Props {
   filters: Filters;
   onChange: (f: Filters) => void;
+  /** The organization's lifecycle, in order. There is no universal stage list. */
+  stages: StageOption[];
 }
 
 const selectCls =
@@ -39,7 +43,8 @@ function GroupLabel({ children }: { children: React.ReactNode }) {
   );
 }
 
-export function FilterBar({ filters, onChange }: Props) {
+export function FilterBar({ filters, onChange, stages }: Props) {
+  const { modules } = useWorkspace();
   const set =
     (key: keyof Filters) =>
     (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) =>
@@ -72,7 +77,7 @@ export function FilterBar({ filters, onChange }: Props) {
           <GroupLabel>Delivery Health</GroupLabel>
           <select value={filters.stage} onChange={set('stage')} className={selectCls}>
             <option value="">All Stages</option>
-            {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+            {stages.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
           </select>
           <select value={filters.rag} onChange={set('rag')} className={selectCls}>
             <option value="">All Confidence</option>
@@ -99,6 +104,7 @@ export function FilterBar({ filters, onChange }: Props) {
             <option value="Change Request">CR</option>
             <option value="Project">Project</option>
           </select>
+          {modules.regulatory && (
           <label className={`inline-flex cursor-pointer items-center gap-1 rounded-lg border px-2.5 py-1.5 text-xs font-medium shadow-sm transition-colors ${filters.regulatory ? 'border-rose-300 bg-rose-50 text-rose-700' : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300'}`}>
             <input
               type="checkbox"
@@ -108,6 +114,7 @@ export function FilterBar({ filters, onChange }: Props) {
             />
             Regulatory
           </label>
+          )}
         </div>
 
         {hasFilters && (

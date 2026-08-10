@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { auth } from '@/auth';
 import { redirect } from 'next/navigation';
 import { getCioSummary } from '@/lib/queries/dashboard';
-import { STAGES } from '@/lib/types';
+
 import { resolvePeriod } from '@/lib/period';
 import { KpiCard } from '@/components/KpiCard';
 import { PageHeader } from '@/components/PageHeader';
@@ -114,7 +114,7 @@ export default async function CioDashboard({
       </PageHeader>
 
       <SavedViewsBar view="cio" />
-      <PortfolioFilterBar options={filterOptions} />
+      <PortfolioFilterBar options={{ ...filterOptions, stages: pipelineByStage.map(st => ({ key: st.key, label: st.label })) }} />
 
       {/* ── Executive Summary Zone ── */}
       <div className="space-y-5 rounded-2xl border border-slate-200 bg-slate-50/60 p-5 shadow-sm">
@@ -197,7 +197,7 @@ export default async function CioDashboard({
                       {i.title}
                     </Link>
                     <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
-                      <span>{i.currentStage}</span>
+                      <span>{i.currentStageLabel}</span>
                       {i.delaySource && <Badge tone="danger" size="sm">{i.delaySource}</Badge>}
                       {i.delayReason && <span className="truncate">· {i.delayReason}</span>}
                     </div>
@@ -218,7 +218,7 @@ export default async function CioDashboard({
           <div>
             {regulatory.map(i => {
               const rag = computeRAG(i);
-              const overdue = i.regulatoryDueDate ? i.regulatoryDueDate < todayIso && i.currentStage !== 'Closed' : false;
+              const overdue = i.regulatoryDueDate ? i.regulatoryDueDate < todayIso && !i.stageIsTerminal : false;
               return (
                 <div key={i.id} className="flex items-center justify-between gap-3 px-5 py-2.5">
                   <div className="min-w-0">
@@ -227,7 +227,7 @@ export default async function CioDashboard({
                     </Link>
                     <div className="mt-0.5 flex flex-wrap items-center gap-2 text-[11px] text-slate-500">
                       {i.regulatoryBody && <Badge tone="danger" size="sm">{i.regulatoryBody}</Badge>}
-                      <span>{i.currentStage}</span>
+                      <span>{i.currentStageLabel}</span>
                       <span className="inline-flex items-center gap-1"><RagDot rag={rag} size="sm" />{rag}</span>
                     </div>
                   </div>
@@ -235,7 +235,7 @@ export default async function CioDashboard({
                     {i.regulatoryDueDate ? (
                       <>
                         <div className={`tabular text-xs font-semibold ${overdue ? 'text-rose-600' : 'text-slate-700'}`}>{i.regulatoryDueDate}</div>
-                        <div className="text-[11px] text-slate-400">{i.currentStage === 'Closed' ? 'delivered' : overdue ? 'overdue' : 'due'}</div>
+                        <div className="text-[11px] text-slate-400">{i.stageIsTerminal ? 'delivered' : overdue ? 'overdue' : 'due'}</div>
                       </>
                     ) : (
                       <span className="text-[11px] text-slate-400">no fixed date</span>
@@ -278,7 +278,7 @@ export default async function CioDashboard({
                         {i.title}
                       </Link>
                     </td>
-                    <td className="px-4 py-2.5 text-slate-600">{i.currentStage}</td>
+                    <td className="px-4 py-2.5 text-slate-600">{i.currentStageLabel}</td>
                     <td className="px-4 py-2.5">
                       <span className="inline-flex items-center gap-1.5">
                         <RagDot rag={i.rag} size="sm" />

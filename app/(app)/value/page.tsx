@@ -6,7 +6,7 @@ import { getBoardSummary } from '@/lib/queries/value';
 import { PrintButton } from '@/components/PrintButton';
 import { formatInr, formatPayback, BENEFIT_CATEGORY_LABEL, CATEGORY_TONE } from '@/lib/value';
 import { resolvePeriod } from '@/lib/period';
-import { STAGE_LABEL } from '@/lib/stage-map';
+
 import { PageHeader } from '@/components/PageHeader';
 import { PeriodPicker } from '@/components/PeriodPicker';
 import { KpiCard } from '@/components/KpiCard';
@@ -389,7 +389,7 @@ export default async function ValueDashboard({
                         {BENEFIT_CATEGORY_LABEL[i.category]}
                       </span>
                     </td>
-                    <td className="px-4 py-2.5 text-slate-600">{STAGE_LABEL[i.stage]}</td>
+                    <td className="px-4 py-2.5 text-slate-600">{i.stageLabel}</td>
                     <td className="px-4 py-2.5 text-right tabular font-semibold text-slate-800">{formatInr(i.projected)}</td>
                   </tr>
                 ))}

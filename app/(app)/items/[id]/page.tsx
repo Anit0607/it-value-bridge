@@ -16,19 +16,24 @@ import { evaluateInvestmentGate } from '@/lib/investment';
 import { InvestmentGatePanel } from '@/components/investment/InvestmentGatePanel';
 import { IntegrityPanel } from '@/components/value/IntegrityPanel';
 import { getInitiativeIntegrity } from '@/lib/queries/integrity';
+import { getLifecycle } from '@/lib/queries/lifecycle';
+import { getWorkspaceConfig } from '@/lib/queries/workspace';
+import { goLiveStage, terminalStage } from '@/lib/lifecycle';
 import { prisma } from '@/lib/db';
 
 export default async function ItemDetailPage({ params }: { params: { id: string } }) {
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
 
-  const [item, value, deps, linkOptions, milestonesRaw, integrity] = await Promise.all([
+  const [item, value, deps, linkOptions, milestonesRaw, integrity, lifecycle, workspace] = await Promise.all([
     getVisibleInitiativeItem(params.id, session.user),
     getInitiativeValue(params.id, session.user.organizationId),
     getInitiativeDependencies(params.id, session.user.organizationId),
     listLinkableInitiatives(params.id, session.user.organizationId),
     listMilestones(params.id, session.user),
     getInitiativeIntegrity(params.id, session.user.organizationId),
+    getLifecycle(session.user.organizationId),
+    getWorkspaceConfig(session.user.organizationId),
   ]);
   if (!item) notFound();
 
@@ -87,7 +92,13 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
   }));
 
   // Benefit-realization status for the value panel (computed at render).
-  const goLive = item.history.find(h => h.stage === 'Go Live') ?? item.history.find(h => h.stage === 'Closed');
+  // History stores stage keys. Which key means "live" is the organization's
+  // decision, so both come from its lifecycle.
+  const goLiveKey = goLiveStage(lifecycle)?.key ?? null;
+  const terminalKey = terminalStage(lifecycle)?.key ?? null;
+  const goLive =
+    (goLiveKey ? item.history.find(h => h.stage === goLiveKey) : undefined) ??
+    (terminalKey ? item.history.find(h => h.stage === terminalKey) : undefined);
   const goLiveIso = goLive?.date ?? null;
   const realizationDueIso = goLiveIso ? addMonthsIso(goLiveIso, 12) : null;
   const realizationConfirmed =
@@ -95,7 +106,7 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
     !!value?.benefitClaims.some(c => c.measurements.some(m => m.realizedInr != null));
   const realization = {
     status: realizationStatus({
-      isLiveOrClosed: ['Go Live', 'Business Validation', 'Closed'].includes(item.currentStage),
+      isLiveOrClosed: item.stageIsPostDelivery,
       confirmed: realizationConfirmed,
       dueIso: realizationDueIso,
     }),
@@ -104,7 +115,8 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
 
   return (
     <div className="space-y-6">
-      <ItemDetailClient item={item} value={value} />
+      <ItemDetailClient item={item} value={value} stages={lifecycle.map(st => ({ key: st.key, label: st.label, deliveryPhase: st.deliveryPhase, isTerminal: st.isTerminal }))} />
+      {workspace.modules.regulatory && (
       <div className="mx-auto max-w-5xl">
         <RegulatoryControl
           initiativeId={params.id}
@@ -114,6 +126,7 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
           canEdit={canRecord}
         />
       </div>
+      )}
       {value && (
         <div className="mx-auto max-w-5xl">
           <ValueRealizationPanel initiativeId={params.id} value={value} canRecord={canRecord} realization={realization} />
@@ -140,17 +153,21 @@ export default async function ItemDetailPage({ params }: { params: { id: string 
           canApprove={canApproveException}
         />
       </div>
-      <div className="mx-auto max-w-5xl">
-        <MilestonesPanel
-          initiativeId={params.id}
-          milestones={milestones}
-          canEdit={canEditMilestones}
-          canComplete={canCompleteMilestones}
-        />
-      </div>
-      <div className="mx-auto max-w-5xl">
-        <DependencyPanel initiativeId={params.id} deps={deps} options={linkOptions} canEdit={canEditDeps} />
-      </div>
+      {workspace.modules.milestones && (
+        <div className="mx-auto max-w-5xl">
+          <MilestonesPanel
+            initiativeId={params.id}
+            milestones={milestones}
+            canEdit={canEditMilestones}
+            canComplete={canCompleteMilestones}
+          />
+        </div>
+      )}
+      {workspace.modules.dependencies && (
+        <div className="mx-auto max-w-5xl">
+          <DependencyPanel initiativeId={params.id} deps={deps} options={linkOptions} canEdit={canEditDeps} />
+        </div>
+      )}
     </div>
   );
 }

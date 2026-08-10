@@ -21,7 +21,9 @@ export function daysSinceUpdate(lastUpdated: string): number {
 }
 
 export function computeRAG(item: Item): RAG {
-  if (item.currentStage === 'Closed') return 'Green';
+  // A terminal stage is done — RAG goes quiet regardless of what the stage is
+  // called in this organization's lifecycle.
+  if (item.stageIsTerminal) return 'Green';
   const daysToExpected = daysFromNow(item.stageExpectedDate);
   const staleDays = daysSinceUpdate(item.lastUpdated);
   if (daysToExpected < 0 || staleDays >= 7) return 'Red';

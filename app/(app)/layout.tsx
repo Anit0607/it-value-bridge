@@ -1,41 +1,34 @@
-'use client';
+import { auth } from '@/auth';
+import { AppShell } from './AppShell';
+import { WorkspaceProvider } from '@/components/WorkspaceProvider';
+import { getWorkspaceConfig } from '@/lib/queries/workspace';
+import { getLifecycle } from '@/lib/queries/lifecycle';
 
-import { useState } from 'react';
-import { usePathname } from 'next/navigation';
-import { useEffect } from 'react';
-import { Sidebar } from '@/components/Sidebar';
-import { TopBar } from '@/components/app/TopBar';
-import { useRole } from '@/components/RoleProvider';
+/**
+ * Resolves the workspace's vocabulary, enabled modules and lifecycle once per
+ * request and hands them to the client shell.
+ *
+ * This layout is a server component purely so that resolution happens here
+ * rather than in every page — the interactive shell lives in AppShell.
+ */
+export default async function AppLayout({ children }: { children: React.ReactNode }) {
+  const session = await auth();
+  const organizationId = session?.user?.organizationId ?? null;
 
-export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user } = useRole();
-  const pathname = usePathname();
-  const [mobileOpen, setMobileOpen] = useState(false);
-
-  useEffect(() => {
-    setMobileOpen(false);
-  }, [pathname]);
-
-  if (!user) return null;
+  const [config, lifecycle] = await Promise.all([
+    getWorkspaceConfig(organizationId),
+    getLifecycle(organizationId),
+  ]);
 
   return (
-    <div className="min-h-screen">
-      <Sidebar mobileOpen={mobileOpen} onNavigate={() => setMobileOpen(false)} />
-
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-40 bg-slate-900/40 backdrop-blur-sm lg:hidden"
-          onClick={() => setMobileOpen(false)}
-          aria-hidden
-        />
-      )}
-
-      <div className="lg:ml-64">
-        <TopBar onMenuClick={() => setMobileOpen(true)} />
-        <main className="mx-auto max-w-[1400px] px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
-          {children}
-        </main>
-      </div>
-    </div>
+    <WorkspaceProvider
+      value={{
+        terms: config.terms,
+        modules: config.modules,
+        stages: lifecycle.map(s => ({ key: s.key, label: s.label })),
+      }}
+    >
+      <AppShell>{children}</AppShell>
+    </WorkspaceProvider>
   );
 }

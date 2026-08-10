@@ -45,18 +45,21 @@ enum Methodology {
   AGILE
 }
 
-enum Stage {
-  BRD
-  FSD
-  COMMERCIAL
-  DEVELOPMENT
-  SIT
-  UAT
-  APPSEC
-  CAB_APPROVAL
-  GO_LIVE
-  BUSINESS_VALIDATION
-  CLOSED
+// The delivery lifecycle is NO LONGER an enum. It lives in LifecycleStage,
+// one row per stage per organization, so a mid-market SME can run six stages
+// and a regulated bank eleven without a schema change or a deploy.
+//
+// See docs/ROADMAP.md R1: converting this was trivial with seed data and
+// painful once clients hold live history, which is why it happened in M4.
+
+// Where a stage sits relative to the thing actually being delivered. This is
+// the semantic the engine keys off — never the stage's name. "Has it shipped
+// yet?" is a question about DeliveryPhase, not about whether a stage is
+// spelled "UAT".
+enum DeliveryPhase {
+  PRE_DELIVERY // shaping, specifying, funding — nothing exists yet
+  IN_DELIVERY // building, testing, approving — exists but is not live
+  POST_DELIVERY // live; the promised value is now observable
 }
 
 enum ProcessGroup {
@@ -203,11 +206,76 @@ model Organization {
   // items move on a single sign-off.
   materialityThresholdInr Float?
 
-  users       User[]
-  initiatives Initiative[]
-  demands     Demand[]
-  okrs        Okr[]
-  reports     MonthlyReport[]
+  // ---- Configurability (M4) ----
+
+  // Which lifecycle template this workspace was provisioned from. Recorded for
+  // support and upgrade purposes only — the stages in LifecycleStage are the
+  // truth, and an organization is free to diverge from its template.
+  lifecycleTemplate String?
+
+  // Per-organization noun overrides, e.g. {"initiative":"Project"}. A BOUNDED
+  // set of keys with shipped defaults — see lib/terminology.ts. Deliberately
+  // not free-form: an unbounded dictionary is unmaintainable and would let a
+  // client rename something the product's own guidance still refers to.
+  terminology Json?
+
+  // Module switches. A lean SME does not carry a regulator, does not model
+  // cross-system dependencies, and does not want a milestone tab it never
+  // fills in. Turning these off removes the surface rather than showing an
+  // empty one, which is the difference between "configurable" and "cluttered".
+  moduleRegulatory   Boolean @default(true)
+  moduleDependencies Boolean @default(true)
+  moduleMilestones   Boolean @default(true)
+
+  users           User[]
+  initiatives     Initiative[]
+  demands         Demand[]
+  okrs            Okr[]
+  reports         MonthlyReport[]
+  lifecycleStages LifecycleStage[]
+}
+
+/// One delivery stage in one organization's lifecycle.
+///
+/// Deliberately NOT referenced by a database foreign key from Initiative or
+/// HistoryLog. The integrity that matters here is "you cannot delete a stage
+/// initiatives are sitting in", which is enforced in the server action with a
+/// message a human can act on, rather than surfacing as a constraint violation.
+/// A raw FK would also make history brittle: a closed initiative's audit trail
+/// should survive its organization retiring a stage.
+model LifecycleStage {
+  id             String       @id @default(cuid())
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  organizationId String
+
+  /// Stable machine key, referenced by Initiative.currentStage and
+  /// HistoryLog.stage. Never rendered — renaming what a client calls a stage
+  /// must not rewrite history, so the label changes and the key does not.
+  key   String
+  /// What this organization calls the stage. Safe to edit at any time.
+  label String
+  /// Position in the lifecycle. Not uniquely constrained: reordering with a
+  /// unique index requires temporary values, and a duplicate order is a
+  /// configuration mistake, not a corruption.
+  order Int
+
+  processGroup  ProcessGroup
+  deliveryPhase DeliveryPhase
+
+  /// The stage at which the initiative is live. Realization clocks start here,
+  /// and the go-live date on the audit trail is read from it. At most one per
+  /// organization.
+  isGoLiveGate Boolean @default(false)
+
+  /// Where the business confirms the outcome actually happened. Drives the
+  /// validation form and the "awaiting confirmation" queue.
+  isValidationGate Boolean @default(false)
+
+  /// Nothing follows. RAG goes quiet, reminders stop, the item is done.
+  isTerminal Boolean @default(false)
+
+  @@unique([organizationId, key])
+  @@index([organizationId])
 }
 
 // ---------- Auth / Users ----------
@@ -310,7 +378,10 @@ model Initiative {
   regulatoryDueDate DateTime?
 
   // waterfall current-state (only meaningful when methodology = WATERFALL)
-  currentStage        Stage        @default(BRD)
+  // The `key` of a LifecycleStage belonging to this initiative's organization.
+  // No default: the first stage depends on the organization's lifecycle, so it
+  // is resolved at creation rather than assumed to be "BRD".
+  currentStage        String
   currentProcessGroup ProcessGroup @default(INITIATING)
   stageStartDate      DateTime
   stageExpectedDate   DateTime
@@ -363,7 +434,7 @@ model WaterfallStage {
   id            String       @id @default(cuid())
   initiative    Initiative   @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
   initiativeId  String
-  stage         Stage
+  stage         String // LifecycleStage.key
   processGroup  ProcessGroup
   expectedDate  DateTime
   startedDate   DateTime?
@@ -505,7 +576,7 @@ model HistoryLog {
   id           String     @id @default(cuid())
   initiative   Initiative @relation(fields: [initiativeId], references: [id], onDelete: Cascade)
   initiativeId String
-  stage        Stage?
+  stage        String? // LifecycleStage.key; null for non-stage edits
   note         String
   user         User?      @relation(fields: [userId], references: [id])
   userId       String?

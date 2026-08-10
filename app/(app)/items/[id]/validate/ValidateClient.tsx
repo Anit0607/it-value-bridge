@@ -20,13 +20,13 @@ export function ValidateClient({ item }: { item: Item }) {
   });
   const [saved, setSaved] = useState(false);
 
-  if (item.currentStage !== 'Business Validation') {
+  if (!item.stageIsValidationGate) {
     return (
       <div className="mx-auto mt-16 max-w-lg rounded-xl border border-amber-200 bg-amber-50 p-8 text-center">
         <AlertTriangle className="mx-auto h-6 w-6 text-amber-500" />
-        <p className="mt-3 font-medium text-amber-800">This item is not in the Business Validation stage.</p>
+        <p className="mt-3 font-medium text-amber-800">This item is not at the outcome-confirmation stage.</p>
         <p className="mt-1 text-sm text-amber-700">
-          Current stage: <strong>{item.currentStage}</strong>
+          Current stage: <strong>{item.currentStageLabel}</strong>
         </p>
         <Link href={`/items/${item.id}`} className="mt-4 inline-block text-sm font-medium text-brand-600 hover:underline">
           ← View item detail

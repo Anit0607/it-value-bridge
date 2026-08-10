@@ -8,9 +8,11 @@ import { PageHeader } from '@/components/PageHeader';
 import { Badge } from '@/components/ui/Badge';
 import { SectionCard } from '@/components/ui/SectionCard';
 import { KpiCard } from '@/components/KpiCard';
-import { STAGES } from '@/lib/types';
+
 import type { DelaySource } from '@/lib/types';
 import { computeRAG, daysFromNow, daysSinceUpdate } from '@/lib/rag';
+import { getLifecycle } from '@/lib/queries/lifecycle';
+import { terminalStage } from '@/lib/lifecycle';
 import { resolvePeriod, inPeriod, onOrBeforeEnd } from '@/lib/period';
 import { formatInr } from '@/lib/value';
 import { PeriodPicker } from '@/components/PeriodPicker';
@@ -33,7 +35,11 @@ export default async function ReportPage({
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
 
-  const items = await listVisibleInitiativesForUser(session.user);
+  const [items, lifecycle] = await Promise.all([
+    listVisibleInitiativesForUser(session.user),
+    getLifecycle(session.user.organizationId),
+  ]);
+  const terminalKey = terminalStage(lifecycle)?.key ?? null;
   const period = resolvePeriod(searchParams);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -55,13 +61,13 @@ export default async function ReportPage({
     {
       total: c.benefitClaims.reduce((s, b) => s + b.estimatedAnnualValueInr, 0),
       signedOff: c.valueSignedOff,
-      closed: c.currentStage === 'CLOSED',
+      closed: !!terminalKey && c.currentStage === terminalKey,
       delayed: c.delayed,
     },
   ]));
 
   const closureDate = (i: (typeof items)[number]) =>
-    i.history.find(h => h.stage === 'Closed')?.date ?? null;
+    (terminalKey ? i.history.find(h => h.stage === terminalKey)?.date : null) ?? null;
 
   const committed = items.filter(i => inPeriod(i.goLiveDate, period));
   const delivered = committed.filter(i => {
@@ -74,10 +80,10 @@ export default async function ReportPage({
   });
 
   const completedWithOutcome = items.filter(
-    i => i.currentStage === 'Closed' && i.validation && inPeriod(closureDate(i) ?? i.lastUpdated, period),
+    i => i.stageIsTerminal && i.validation && inPeriod(closureDate(i) ?? i.lastUpdated, period),
   );
 
-  const delayed = items.filter(i => i.delayed && i.currentStage !== 'Closed');
+  const delayed = items.filter(i => i.delayed && !i.stageIsTerminal);
   const delaySources: Record<DelaySource, number> = { IT: 0, Business: 0, Vendor: 0, External: 0 };
   delayed.forEach(i => { if (i.delaySource) delaySources[i.delaySource]++; });
   const topSource = Object.entries(delaySources).sort(([, a], [, b]) => b - a)[0]?.[0] ?? 'IT';
@@ -94,7 +100,7 @@ export default async function ReportPage({
   const addRow = (row: AttentionRow) => { attentionRows.push(row); seenIds.add(row.id); };
 
   // 1. Red initiatives (by RAG)
-  items.filter(i => computeRAG(i) === 'Red' && i.currentStage !== 'Closed').forEach(i => {
+  items.filter(i => computeRAG(i) === 'Red' && !i.stageIsTerminal).forEach(i => {
     if (!seenIds.has(i.id)) addRow({
       key: `red-${i.id}`, id: i.id, title: i.title,
       issue: 'Red delivery confidence',
@@ -105,7 +111,7 @@ export default async function ReportPage({
   });
 
   // 2. Overdue regulatory
-  items.filter(i => i.isRegulatory && i.regulatoryDueDate && i.regulatoryDueDate < today && i.currentStage !== 'Closed').forEach(i => {
+  items.filter(i => i.isRegulatory && i.regulatoryDueDate && i.regulatoryDueDate < today && !i.stageIsTerminal).forEach(i => {
     addRow({
       key: `reg-${i.id}`, id: i.id, title: i.title,
       issue: `Regulatory deadline overdue${i.regulatoryBody ? ` — ${i.regulatoryBody}` : ''}`,
@@ -116,7 +122,7 @@ export default async function ReportPage({
   });
 
   // 3. Business / Vendor delayed
-  items.filter(i => i.delayed && (i.delaySource === 'Business' || i.delaySource === 'Vendor') && i.currentStage !== 'Closed').forEach(i => {
+  items.filter(i => i.delayed && (i.delaySource === 'Business' || i.delaySource === 'Vendor') && !i.stageIsTerminal).forEach(i => {
     if (!seenIds.has(i.id)) addRow({
       key: `delay-${i.id}`, id: i.id, title: i.title,
       issue: `${i.delaySource} dependency blocking delivery${i.delayReason ? ` — ${i.delayReason}` : ''}`,
@@ -127,7 +133,7 @@ export default async function ReportPage({
   });
 
   // 4. Stale >7 days
-  items.filter(i => daysSinceUpdate(i.lastUpdated) > 7 && i.currentStage !== 'Closed').forEach(i => {
+  items.filter(i => daysSinceUpdate(i.lastUpdated) > 7 && !i.stageIsTerminal).forEach(i => {
     if (!seenIds.has(i.id)) addRow({
       key: `stale-${i.id}`, id: i.id, title: i.title,
       issue: `No update in ${daysSinceUpdate(i.lastUpdated)} days`,
@@ -141,7 +147,7 @@ export default async function ReportPage({
   missed.forEach(i => {
     if (!seenIds.has(i.id)) addRow({
       key: `missed-${i.id}`, id: i.id, title: i.title,
-      issue: `Go-live ${i.goLiveDate} missed — now in ${i.currentStage}`,
+      issue: `Go-live ${i.goLiveDate} missed — now in ${i.currentStageLabel}`,
       owner: i.verticalHead,
       action: 'Assess revised delivery timeline',
       severity: 'critical',
@@ -149,7 +155,7 @@ export default async function ReportPage({
   });
 
   // 6. Closed without outcome validation
-  items.filter(i => i.currentStage === 'Closed' && !i.validation).forEach(i => {
+  items.filter(i => i.stageIsTerminal && !i.validation).forEach(i => {
     addRow({
       key: `val-${i.id}`, id: i.id, title: i.title,
       issue: 'Closed — business outcome not yet validated',
@@ -170,28 +176,35 @@ export default async function ReportPage({
     .map(([s]) => s);
 
   const regDueSoon = regulatory.filter(
-    i => i.regulatoryDueDate && daysFromNow(i.regulatoryDueDate) >= 0 && daysFromNow(i.regulatoryDueDate) <= 14 && i.currentStage !== 'Closed',
+    i => i.regulatoryDueDate && daysFromNow(i.regulatoryDueDate) >= 0 && daysFromNow(i.regulatoryDueDate) <= 14 && !i.stageIsTerminal,
   );
 
-  const stuckStages = ['UAT', 'AppSec', 'CAB Approval'] as const;
-  const stuckInPreLaunch = items.filter(i => (stuckStages as readonly string[]).includes(i.currentStage));
+  // "Built but not yet live" — read from the lifecycle's delivery phases rather
+  // than a list of BFSI gate names.
+  const stuckInPreLaunch = items.filter(i => !i.stageIsPreDelivery && !i.stageIsPostDelivery);
 
-  const closedWithoutValidation = items.filter(i => i.currentStage === 'Closed' && !i.validation);
+  const closedWithoutValidation = items.filter(i => i.stageIsTerminal && !i.validation);
 
   // Regulatory summary indicators
-  const regOverdue  = regulatory.filter(i => i.regulatoryDueDate && i.regulatoryDueDate < today && i.currentStage !== 'Closed').length;
-  const regDue7     = regulatory.filter(i => i.regulatoryDueDate && i.regulatoryDueDate >= today && daysFromNow(i.regulatoryDueDate) <= 7  && i.currentStage !== 'Closed').length;
-  const regDue14    = regulatory.filter(i => i.regulatoryDueDate && i.regulatoryDueDate >= today && daysFromNow(i.regulatoryDueDate) <= 14 && i.currentStage !== 'Closed').length;
-  const regClosed   = regulatory.filter(i => i.currentStage === 'Closed').length;
+  const regOverdue  = regulatory.filter(i => i.regulatoryDueDate && i.regulatoryDueDate < today && !i.stageIsTerminal).length;
+  const regDue7     = regulatory.filter(i => i.regulatoryDueDate && i.regulatoryDueDate >= today && daysFromNow(i.regulatoryDueDate) <= 7  && !i.stageIsTerminal).length;
+  const regDue14    = regulatory.filter(i => i.regulatoryDueDate && i.regulatoryDueDate >= today && daysFromNow(i.regulatoryDueDate) <= 14 && !i.stageIsTerminal).length;
+  const regClosed   = regulatory.filter(i => i.stageIsTerminal).length;
 
   // Stage-wise portfolio snapshot
-  const stageCounts = STAGES.map(stage => ({
-    stage,
-    count: items.filter(i => i.currentStage === stage).length,
+  const stageCounts = lifecycle.map(stage => ({
+    key: stage.key,
+    label: stage.label,
+    isTerminal: stage.isTerminal,
+    // A pile-up between "being built" and "live" is what threatens a go-live
+    // date. Which stages those are is read from the lifecycle's delivery
+    // phases, not from a list of BFSI gate names.
+    isBottleneck: stage.deliveryPhase === 'IN_DELIVERY',
+    count: items.filter(i => i.currentStage === stage.key).length,
   }));
   const maxStageCount = Math.max(...stageCounts.map(s => s.count), 1);
-  const BOTTLENECK_STAGES = new Set(['UAT', 'AppSec', 'CAB Approval']);
-  const totalInPipeline = items.filter(i => i.currentStage !== 'Closed').length;
+  const bottleneckLabels = stageCounts.filter(s => s.isBottleneck && s.count > 0).map(s => s.label);
+  const totalInPipeline = items.filter(i => !i.stageIsTerminal).length;
 
   // Delay accountability stats
   const delayAges = delayed.map(i => {
@@ -230,7 +243,7 @@ export default async function ReportPage({
             delayed={delayed.map(i => ({
               title: i.title,
               verticalHead: i.verticalHead,
-              currentStage: i.currentStage,
+              currentStageLabel: i.currentStageLabel,
               delaySource: i.delaySource,
               delayReason: i.delayReason,
               goLiveDate: i.goLiveDate,
@@ -239,14 +252,14 @@ export default async function ReportPage({
               title: i.title,
               verticalHead: i.verticalHead,
               goLiveDate: i.goLiveDate,
-              currentStage: i.currentStage,
+              currentStageLabel: i.currentStageLabel,
             }))}
             regulatory={regulatory.map(i => ({
               title: i.title,
               regulatoryBody: i.regulatoryBody,
               regulatoryDueDate: i.regulatoryDueDate,
-              currentStage: i.currentStage,
-              isOverdue: !!i.regulatoryDueDate && i.regulatoryDueDate < today && i.currentStage !== 'Closed',
+              currentStageLabel: i.currentStageLabel,
+              isOverdue: !!i.regulatoryDueDate && i.regulatoryDueDate < today && !i.stageIsTerminal,
             }))}
             delivered={completedWithOutcome.map(i => ({
               title: i.title,
@@ -366,17 +379,17 @@ export default async function ReportPage({
       {/* ── 4. Stage-wise Portfolio Snapshot ─────────────────────────────────── */}
       <SectionCard
         title="Stage-wise Portfolio Snapshot"
-        subtitle={`${totalInPipeline} active initiatives across ${STAGES.length - 1} stages`}
+        subtitle={`${totalInPipeline} active initiatives across ${Math.max(0, lifecycle.length - 1)} stages`}
       >
         <div className="space-y-2">
-          {stageCounts.map(({ stage, count }) => {
-            const isBottleneck = BOTTLENECK_STAGES.has(stage) && count > 0;
-            const isClosed = stage === 'Closed';
+          {stageCounts.map(({ key, label, count, isTerminal, isBottleneck: inDelivery }) => {
+            const isBottleneck = inDelivery && count > 0;
+            const isClosed = isTerminal;
             const barW = count === 0 ? 0 : Math.max(4, (count / maxStageCount) * 100);
             return (
-              <div key={stage} className="flex items-center gap-3">
+              <div key={key} className="flex items-center gap-3">
                 <span className={`w-28 shrink-0 text-[11px] font-medium ${isBottleneck ? 'text-amber-700 font-semibold' : 'text-slate-500'}`}>
-                  {stage}
+                  {label}
                   {isBottleneck && <span className="ml-1 text-[9px] font-bold uppercase tracking-wider text-amber-500"> ⚠</span>}
                 </span>
                 <div className="relative flex-1 overflow-hidden rounded-full bg-slate-100" style={{ height: 10 }}>
@@ -398,9 +411,9 @@ export default async function ReportPage({
             );
           })}
           {/* Bottleneck legend */}
-          {[...BOTTLENECK_STAGES].some(s => (stageCounts.find(c => c.stage === s)?.count ?? 0) > 0) && (
+          {bottleneckLabels.length > 0 && (
             <p className="pt-2 text-[11px] text-amber-600">
-              ⚠ UAT, AppSec, and CAB Approval are pre-launch governance gates — concentration here signals potential go-live risk.
+              ⚠ {bottleneckLabels.join(', ')} sit between build and go-live — concentration here signals potential go-live risk.
             </p>
           )}
         </div>
@@ -554,7 +567,7 @@ export default async function ReportPage({
                         <Link href={`/items/${i.id}`} className="font-medium text-slate-700 hover:text-brand-700">{i.title}</Link>
                         <div className="text-[11px] text-slate-400">{i.verticalHead}</div>
                       </td>
-                      <td className="px-4 py-2.5 text-slate-600">{i.currentStage}</td>
+                      <td className="px-4 py-2.5 text-slate-600">{i.currentStageLabel}</td>
                       <td className="px-4 py-2.5">
                         {i.delaySource ? <Badge tone="danger" size="sm">{i.delaySource}</Badge> : <span className="text-xs text-slate-400">—</span>}
                       </td>
@@ -576,7 +589,7 @@ export default async function ReportPage({
             {missed.map(i => (
               <div key={i.id} className="flex items-center justify-between px-5 py-3">
                 <Link href={`/items/${i.id}`} className="text-sm font-medium text-slate-700 hover:text-brand-700">{i.title}</Link>
-                <div className="text-xs text-rose-600">Go-live was {i.goLiveDate} · now in {i.currentStage}</div>
+                <div className="text-xs text-rose-600">Go-live was {i.goLiveDate} · now in {i.currentStageLabel}</div>
               </div>
             ))}
           </div>
@@ -604,20 +617,20 @@ export default async function ReportPage({
           {/* Item list */}
           <div>
             {regulatory.map(i => {
-              const overdue = i.regulatoryDueDate ? i.regulatoryDueDate < today && i.currentStage !== 'Closed' : false;
-              const due7    = i.regulatoryDueDate && i.regulatoryDueDate >= today && daysFromNow(i.regulatoryDueDate) <= 7 && i.currentStage !== 'Closed';
+              const overdue = i.regulatoryDueDate ? i.regulatoryDueDate < today && !i.stageIsTerminal : false;
+              const due7    = i.regulatoryDueDate && i.regulatoryDueDate >= today && daysFromNow(i.regulatoryDueDate) <= 7 && !i.stageIsTerminal;
               return (
                 <div key={i.id} className={`flex items-center justify-between gap-3 border-t px-5 py-3 ${overdue ? 'border-rose-100 bg-rose-50/20' : 'border-slate-100'}`}>
                   <div className="min-w-0">
                     <Link href={`/items/${i.id}`} className="text-sm font-medium text-slate-700 hover:text-brand-700">{i.title}</Link>
                     <div className="mt-0.5 text-xs text-slate-500">
-                      {i.regulatoryBody ?? 'Regulatory'} · {i.currentStage}
+                      {i.regulatoryBody ?? 'Regulatory'} · {i.currentStageLabel}
                     </div>
                   </div>
                   <div className="flex-shrink-0 text-right text-xs">
                     {i.regulatoryDueDate ? (
                       <span className={overdue ? 'font-bold text-rose-600' : due7 ? 'font-semibold text-amber-600' : 'text-slate-600'}>
-                        {i.currentStage === 'Closed' ? '✓ closed' : `due ${i.regulatoryDueDate}`}
+                        {i.stageIsTerminal ? '✓ closed' : `due ${i.regulatoryDueDate}`}
                         {overdue ? ' · overdue' : ''}
                       </span>
                     ) : (

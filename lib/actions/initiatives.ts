@@ -3,7 +3,12 @@
 import { prisma } from '@/lib/db';
 import { requireRole, requireRoleWithOrg, assertVisibleInitiativeAccess } from '@/lib/authz';
 import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES, buildInitiativeVisibilityWhere } from '@/lib/rbac';
-import { STAGE_LABEL, STAGE_TO_PROCESS_GROUP, nextStage } from '@/lib/stage-map';
+import { getLifecycle } from '@/lib/queries/lifecycle';
+import { assertModuleEnabled } from '@/lib/queries/workspace';
+import {
+  stageLabel, stageIndex, nextStage, findStage, firstStage,
+  type Lifecycle,
+} from '@/lib/lifecycle';
 import { computeTco, formatInr, DEFAULT_TCO_HORIZON_YEARS } from '@/lib/value';
 import { INVESTMENT_CATEGORY_LABEL } from '@/lib/investment';
 import { isMaterial, costChangeMagnitude } from '@/lib/integrity';
@@ -11,12 +16,12 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 import { CLASSIFICATION_LABEL } from '@/lib/types';
 import type { Item, Stage, OutcomeCategory, DelaySource, BusinessValidation, ItemClassification } from '@/lib/types';
-import type { BenefitCategory, Stage as PrismaStage, InitiativeClassification } from '@prisma/client';
+import type { BenefitCategory, InitiativeClassification } from '@prisma/client';
 
 // ---- Adapter: Prisma Initiative → UI Item type ----
 
 type InitiativeWithRelations = Awaited<ReturnType<typeof prisma.initiative.findFirstOrThrow>> & {
-  history: { stage: PrismaStage | null; createdAt: Date; userName: string; note: string }[];
+  history: { stage: string | null; createdAt: Date; userName: string; note: string }[];
   valueRealization: { outcomeAchieved: string; actualResult: string; actualMetric: string } | null;
 };
 
@@ -43,7 +48,17 @@ function iso(d: Date): string {
   return d.toISOString().slice(0, 10);
 }
 
-function toItem(i: InitiativeWithRelations): Item {
+/**
+ * Prisma row → UI Item.
+ *
+ * Takes the organization's lifecycle so stage MEANING is resolved once, here,
+ * and stamped onto the Item. Everything downstream — RAG, reminders, value
+ * realization, the funnel — then asks `item.stageIsTerminal` instead of
+ * comparing against the string "Closed", which is what makes a six-stage or
+ * four-stage lifecycle work without touching the engine.
+ */
+function toItem(i: InitiativeWithRelations, lifecycle: Lifecycle): Item {
+  const stage = findStage(lifecycle, i.currentStage);
   return {
     id: i.id,
     title: i.title,
@@ -62,7 +77,13 @@ function toItem(i: InitiativeWithRelations): Item {
     outcomeDescription: i.outcomeDescription,
     targetMetric: i.targetMetric,
     goLiveDate: iso(i.expectedGoLiveDate),
-    currentStage: STAGE_LABEL[i.currentStage] as Stage,
+    currentStage: i.currentStage,
+    currentStageLabel: stageLabel(lifecycle, i.currentStage),
+    stageOrder: stageIndex(lifecycle, i.currentStage),
+    stageIsTerminal: stage?.isTerminal ?? false,
+    stageIsValidationGate: stage?.isValidationGate ?? false,
+    stageIsPostDelivery: stage?.deliveryPhase === 'POST_DELIVERY',
+    stageIsPreDelivery: stage?.deliveryPhase === 'PRE_DELIVERY',
     stageStartDate: iso(i.stageStartDate),
     stageExpectedDate: iso(i.stageExpectedDate),
     lastUpdated: iso(i.lastUpdated),
@@ -95,7 +116,8 @@ function toItem(i: InitiativeWithRelations): Item {
         }
       : undefined,
     history: i.history.map(h => ({
-      stage: h.stage ? (STAGE_LABEL[h.stage] as Stage) : null,
+      stage: h.stage,
+      stageLabel: h.stage ? stageLabel(lifecycle, h.stage) : null,
       date: iso(h.createdAt),
       user: h.userName,
       note: h.note,
@@ -127,12 +149,15 @@ export async function listVisibleInitiativesForUser(user: {
     return [];
   }
 
-  const rows = await prisma.initiative.findMany({
-    where: buildInitiativeVisibilityWhere({ ...user, organizationId: user.organizationId }),
-    include: WITH_RELATIONS,
-    orderBy: { createdAt: 'desc' },
-  });
-  return rows.map(toItem);
+  const [rows, lifecycle] = await Promise.all([
+    prisma.initiative.findMany({
+      where: buildInitiativeVisibilityWhere({ ...user, organizationId: user.organizationId }),
+      include: WITH_RELATIONS,
+      orderBy: { createdAt: 'desc' },
+    }),
+    getLifecycle(user.organizationId),
+  ]);
+  return rows.map(r => toItem(r, lifecycle));
 }
 
 /**
@@ -155,15 +180,18 @@ export async function getVisibleInitiativeItem(
     return null;
   }
 
-  const row = await prisma.initiative.findFirst({
-    where: {
-      id,
-      ...buildInitiativeVisibilityWhere({ ...user, organizationId: user.organizationId }),
-    },
-    include: WITH_RELATIONS,
-  });
+  const [row, lifecycle] = await Promise.all([
+    prisma.initiative.findFirst({
+      where: {
+        id,
+        ...buildInitiativeVisibilityWhere({ ...user, organizationId: user.organizationId }),
+      },
+      include: WITH_RELATIONS,
+    }),
+    getLifecycle(user.organizationId),
+  ]);
 
-  return row ? toItem(row) : null;
+  return row ? toItem(row, lifecycle) : null;
 }
 
 // ---- Mutations ----
@@ -236,6 +264,12 @@ export async function createInitiative(input: CreateInitiativeInput) {
     where: { category: primary.category, active: true, organizationId: user.organizationId },
   });
 
+  const lifecycle = await getLifecycle(user.organizationId);
+  const start = firstStage(lifecycle);
+  if (!start) {
+    throw new Error('This workspace has no delivery lifecycle configured. An administrator must set one up first.');
+  }
+
   const initiative = await prisma.initiative.create({
     data: {
       title: parsed.title,
@@ -250,8 +284,10 @@ export async function createInitiative(input: CreateInitiativeInput) {
       outcomeDescription: primary.narrative || primary.metricName,
       targetMetric: primary.metricName,
       expectedGoLiveDate: new Date(parsed.goLiveDate),
-      currentStage: 'BRD',
-      currentProcessGroup: 'PLANNING',
+      // Where work starts depends on the organization's lifecycle. A lean
+      // workspace begins at "Planned", not at "BRD".
+      currentStage: start.key,
+      currentProcessGroup: start.processGroup,
       stageStartDate: today,
       stageExpectedDate: expectedDate,
       lastUpdated: today,
@@ -311,7 +347,8 @@ export async function advanceStage(id: string, note: string) {
   const initiative = await prisma.initiative.findUnique({ where: { id } });
   if (!initiative) throw new Error('Initiative not found');
 
-  const next = nextStage(initiative.currentStage);
+  const lifecycle = await getLifecycle(initiative.organizationId);
+  const next = nextStage(lifecycle, initiative.currentStage);
   if (!next) return;
 
   const today = new Date();
@@ -320,8 +357,8 @@ export async function advanceStage(id: string, note: string) {
   await prisma.initiative.update({
     where: { id },
     data: {
-      currentStage: next,
-      currentProcessGroup: STAGE_TO_PROCESS_GROUP[next],
+      currentStage: next.key,
+      currentProcessGroup: next.processGroup,
       stageStartDate: today,
       stageExpectedDate: nextExpected,
       lastUpdated: today,
@@ -330,8 +367,8 @@ export async function advanceStage(id: string, note: string) {
       delaySource: null,
       history: {
         create: {
-          stage: next,
-          note: note || `Moved to ${STAGE_LABEL[next]}`,
+          stage: next.key,
+          note: note || `Moved to ${next.label}`,
           userName,
           createdAt: today,
         },
@@ -412,8 +449,20 @@ export async function saveValidation(id: string, validation: BusinessValidation)
   const user = await requireRole(...BUSINESS_EQUIVALENT_ROLES, ...PMO_EQUIVALENT_ROLES, 'CIO');
   await assertVisibleInitiativeAccess(id, user);
   const initiative = await prisma.initiative.findUnique({ where: { id } });
-  if (!initiative || initiative.currentStage !== 'BUSINESS_VALIDATION') {
-    throw new Error('Item not in Business Validation stage');
+  if (!initiative) throw new Error('Initiative not found');
+
+  // Which stage confirms an outcome is the organization's decision, so this
+  // asks whether the current stage IS the confirmation gate rather than
+  // whether it happens to be called "Business Validation".
+  const lifecycle = await getLifecycle(initiative.organizationId);
+  const gate = findStage(lifecycle, initiative.currentStage);
+  if (!gate?.isValidationGate) {
+    const expected = lifecycle.find(st => st.isValidationGate);
+    throw new Error(
+      expected
+        ? `Outcomes are confirmed at the "${expected.label}" stage. This initiative is at "${stageLabel(lifecycle, initiative.currentStage)}".`
+        : 'This workspace has no outcome-confirmation stage configured.',
+    );
   }
 
   const outcomeMap: Record<string, 'YES' | 'PARTIALLY' | 'NO'> = {
@@ -847,6 +896,7 @@ export async function updateInitiative(id: string, input: EditInitiativeInput) {
 
 export async function setRegulatory(id: string, input: SetRegulatoryInput) {
   const user = await requireRole(...PMO_EQUIVALENT_ROLES, 'CIO');
+  await assertModuleEnabled(user.organizationId, 'regulatory', 'Regulatory commitments');
   await assertVisibleInitiativeAccess(id, user);
   const parsed = RegulatoryInput.parse(input);
   await prisma.initiative.update({

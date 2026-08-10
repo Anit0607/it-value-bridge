@@ -6,11 +6,11 @@ import { PageHeader } from '@/components/PageHeader';
 import { CsvImportPanel, norm, type PreviewRow } from '@/components/import/CsvImportPanel';
 import {
   importDemands, importInitiatives, importMilestones, importValueClaims, importValidations,
-  listImportableInitiatives,
+  listImportableInitiatives, listImportableStages,
   type ImportRow, type InitiativeImportRow, type MilestoneImportRow, type ValueClaimImportRow, type ValidationImportRow,
 } from '@/lib/actions/import';
 import { BENEFIT_CATEGORY_LABEL, BENEFIT_CATEGORIES, BENEFIT_UNIT_LABEL, BENEFIT_UNITS, CONFIDENCE_LABEL, formatInr } from '@/lib/value';
-import { STAGE_LABEL, LABEL_TO_STAGE } from '@/lib/stage-map';
+
 import { INVESTMENT_CATEGORIES, INVESTMENT_CATEGORY_LABEL } from '@/lib/investment';
 import { CLASSIFICATION_LABEL } from '@/lib/types';
 import type { BenefitCategory, DemandPriority, Confidence, BenefitUnit, InitiativeClassification, MilestoneOwnerRole, MilestoneStatus, OutcomeAchieved, InvestmentCategory } from '@prisma/client';
@@ -27,10 +27,6 @@ const CATEGORY_LOOKUP: Record<string, BenefitCategory> = Object.fromEntries([
 const PRIORITY_LOOKUP: Record<string, DemandPriority> = {
   low: 'LOW', medium: 'MEDIUM', high: 'HIGH', critical: 'CRITICAL',
 };
-
-const STAGE_LOOKUP: Record<string, keyof typeof STAGE_LABEL> = Object.fromEntries(
-  Object.entries(LABEL_TO_STAGE).map(([label, stage]) => [norm(label), stage]),
-);
 
 const CLASSIFICATION_LOOKUP: Record<string, InitiativeClassification> = Object.fromEntries(
   Object.entries(CLASSIFICATION_LABEL).map(([key, label]) => [norm(label), key as InitiativeClassification]),
@@ -114,6 +110,20 @@ export default function ImportPage() {
   const [tab, setTab] = useState<TabKey>('initiatives');
   const [initiatives, setInitiatives] = useState<{ id: string; title: string }[] | null>(null);
   const [initiativesError, setInitiativesError] = useState('');
+  // The workspace's own stages. A CSV may name them by key or by label, so
+  // both resolve — a client exporting "Outcome Confirmation" and one exporting
+  // "CONFIRM" should both import cleanly.
+  const [stages, setStages] = useState<{ key: string; label: string }[]>([]);
+
+  useEffect(() => {
+    listImportableStages().then(setStages).catch(() => setStages([]));
+  }, []);
+
+  const stageLookup = new Map<string, string>();
+  for (const s of stages) {
+    stageLookup.set(norm(s.key), s.key);
+    stageLookup.set(norm(s.label), s.key);
+  }
 
   useEffect(() => {
     if (tab === 'milestones' || tab === 'valueClaims' || tab === 'validations') {
@@ -169,13 +179,13 @@ export default function ImportPage() {
           }
           note="Brings initiatives in at whatever stage they're already at — this does not fabricate the earlier stage history, only a starting snapshot."
           previewHead={['Title', 'Stage', 'Vertical Head', 'Go-Live']}
-          renderPreviewRow={r => [r.title, STAGE_LABEL[r.currentStage], r.verticalHeadName, r.expectedGoLiveDate.toISOString().slice(0, 10)]}
+          renderPreviewRow={r => [r.title, stages.find(st => st.key === r.currentStage)?.label ?? r.currentStage, r.verticalHeadName, r.expectedGoLiveDate.toISOString().slice(0, 10)]}
           onSubmit={importInitiatives}
           parseRow={(cells, col) => {
             const title = get(cells, col('title'));
             const type = TYPE_LOOKUP[norm(get(cells, col('type')))];
             const classification = CLASSIFICATION_LOOKUP[norm(get(cells, col('classification')))];
-            const currentStage = STAGE_LOOKUP[norm(get(cells, col('stage')))];
+            const currentStage = stageLookup.get(norm(get(cells, col('stage'))));
             const verticalHeadName = get(cells, col('vertical_head'));
             const businessSpoc = get(cells, col('business_spoc'));
             const businessSponsor = get(cells, col('business_sponsor'));

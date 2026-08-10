@@ -6,6 +6,7 @@ import { LayoutGrid } from 'lucide-react';
 import { PORTFOLIO_FILTER_KEYS } from '@/lib/portfolioFilters';
 import { savedViewsFor, type DashboardView, type SavedView } from '@/lib/savedViews';
 import { chipCls } from '@/components/ui/Chip';
+import { useWorkspace } from '@/components/WorkspaceProvider';
 
 /** Label for the reset-to-unfiltered chip, per dashboard. */
 const RESET_LABEL: Record<DashboardView, string> = {
@@ -35,7 +36,12 @@ interface Props {
 export function SavedViewsBar({ view }: Props) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const views = savedViewsFor(view);
+  const { modules } = useWorkspace();
+  // A saved view that filters on a switched-off module has nothing to find, so
+  // it is dropped rather than left as a chip that always returns an empty list.
+  const views = savedViewsFor(view).filter(
+    v => modules.regulatory || v.queryParams.isRegulatory === undefined,
+  );
   if (views.length === 0) return null;
 
   const buildHref = (queryParams: SavedView['queryParams']) => {

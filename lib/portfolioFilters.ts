@@ -1,5 +1,5 @@
 import type { EnrichedItem } from '@/lib/queries/enrich';
-import { STAGES, OUTCOME_CATEGORIES, CLASSIFICATION_LABEL } from '@/lib/types';
+import { OUTCOME_CATEGORIES, CLASSIFICATION_LABEL } from '@/lib/types';
 import type { Stage, ItemType, ItemClassification, RAG, OutcomeCategory, DelaySource } from '@/lib/types';
 
 export const ITEM_TYPES: ItemType[] = ['Change Request', 'Project'];
@@ -100,9 +100,12 @@ export function parsePortfolioFilters(searchParams: SearchParams): PortfolioFilt
     filters.rag = rag as RAG;
   }
 
+  // A stage key, not a label. Not validated against a fixed list any more —
+  // the set of valid stages is per-organization, and an unknown key simply
+  // matches nothing rather than being silently dropped.
   const stage = first(searchParams.stage);
-  if (stage && (STAGES as readonly string[]).includes(stage)) {
-    filters.stage = stage as Stage;
+  if (stage) {
+    filters.stage = stage;
   }
 
   const isRegulatory = first(searchParams.isRegulatory);
@@ -177,8 +180,8 @@ export function applyPortfolioFilters(items: EnrichedItem[], filters: PortfolioF
     if (filters.isRegulatory !== undefined && item.isRegulatory !== filters.isRegulatory) return false;
     if (filters.delaySource && item.delaySource !== filters.delaySource) return false;
     if (filters.goLiveThisMonth && !item.goLiveDate?.startsWith(thisMonth)) return false;
-    if (filters.staleOnly && (item.currentStage === 'Closed' || item.staleDays <= 7)) return false;
-    if (filters.pendingValidation && !(item.currentStage === 'Business Validation' && !item.validation)) return false;
+    if (filters.staleOnly && (item.stageIsTerminal || item.staleDays <= 7)) return false;
+    if (filters.pendingValidation && !(item.stageIsValidationGate && !item.validation)) return false;
     if (filters.verticalHead && item.verticalHead !== filters.verticalHead) return false;
     if (filters.programHead && item.programHeadName !== filters.programHead) return false;
     if (filters.programManager && item.programManagerName !== filters.programManager) return false;

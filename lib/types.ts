@@ -17,21 +17,23 @@ export const CLASSIFICATION_LABEL: Record<'STRATEGIC' | 'MAJOR_PROJECT' | 'TACTI
   BAU: 'BAU',
 };
 
-export const STAGES = [
-  'BRD',
-  'FSD',
-  'Commercial',
-  'Development',
-  'SIT',
-  'UAT',
-  'AppSec',
-  'CAB Approval',
-  'Go Live',
-  'Business Validation',
-  'Closed',
-] as const;
+// The fixed STAGES list was removed in M4. The lifecycle is per-organization
+// (see prisma LifecycleStage), so a stage is now referenced by its stable key
+// and rendered through its organization's label.
+//
+// `Stage` stays as a named alias rather than bare `string` so call sites keep
+// saying what they mean.
+export type Stage = string;
 
-export type Stage = (typeof STAGES)[number];
+/** A stage as offered in a dropdown: stable value, organization-facing text.
+ *  The optional semantics let callers that need them (e.g. "queues sit between
+ *  build and go-live") filter without a second round trip; dropdowns ignore them. */
+export interface StageOption {
+  key: string;
+  label: string;
+  deliveryPhase?: 'PRE_DELIVERY' | 'IN_DELIVERY' | 'POST_DELIVERY';
+  isTerminal?: boolean;
+}
 
 export type RAG = 'Green' | 'Amber' | 'Red';
 
@@ -49,6 +51,8 @@ export interface HistoryEntry {
   // null for metadata-only edits (title, classification, ownership, etc.)
   // that aren't tied to a stage transition — see updateInitiative().
   stage: Stage | null;
+  /** Resolved at read time; falls back to the key if the stage was retired. */
+  stageLabel: string | null;
   date: string;
   user: string;
   note?: string;
@@ -82,7 +86,20 @@ export interface Item {
   targetMetric: string;
   goLiveDate: string;
 
+  // The LifecycleStage key. Never render this — render currentStageLabel.
   currentStage: Stage;
+  /** What this organization calls the current stage. */
+  currentStageLabel: string;
+  /** Position in the lifecycle, or -1 if the stage is no longer configured. */
+  stageOrder: number;
+  // Semantics resolved from the organization's lifecycle, stamped here so the
+  // engine (RAG, reminders, realization) can ask what a stage MEANS without
+  // needing the lifecycle passed alongside every Item — and without ever
+  // comparing against the string "UAT".
+  stageIsTerminal: boolean;
+  stageIsValidationGate: boolean;
+  stageIsPostDelivery: boolean;
+  stageIsPreDelivery: boolean;
   stageStartDate: string;
   stageExpectedDate: string;
   lastUpdated: string;

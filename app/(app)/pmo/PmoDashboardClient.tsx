@@ -3,9 +3,10 @@
 import { useState, useMemo, useCallback } from 'react';
 import Link from 'next/link';
 import { computeRAG, daysSinceUpdate, daysFromNow, daysInStage } from '@/lib/rag';
+import { useWorkspace } from '@/components/WorkspaceProvider';
 import { ItemTable } from '@/components/ItemTable';
 import { FilterBar, EMPTY_FILTERS, type Filters } from '@/components/FilterBar';
-import type { Item, DelaySource, Stage } from '@/lib/types';
+import type { Item, DelaySource, StageOption } from '@/lib/types';
 import { AlertOctagon, ArrowRight, Download } from 'lucide-react';
 import { SectionCard, InsightCard } from '@/components/ui/SectionCard';
 import { Button } from '@/components/ui/Button';
@@ -23,7 +24,7 @@ function exportCsv(items: Item[]) {
   const rows = items.map(i => {
     const rag = computeRAG(i);
     const daysToEta = daysFromNow(i.stageExpectedDate);
-    const eta = i.currentStage === 'Closed'
+    const eta = i.stageIsTerminal
       ? 'Closed'
       : daysToEta < 0 ? `${Math.abs(daysToEta)}d overdue` : i.stageExpectedDate.slice(5);
     const stale = daysSinceUpdate(i.lastUpdated);
@@ -63,7 +64,7 @@ const CHIPS: Chip[] = [
   {
     key: 'red',
     label: 'Red only',
-    count: items => items.filter(i => i.currentStage !== 'Closed' && computeRAG(i) === 'Red').length,
+    count: items => items.filter(i => !i.stageIsTerminal && computeRAG(i) === 'Red').length,
     active: f => f.rag === 'Red',
     apply: f => ({ ...f, rag: 'Red' as const }),
     clear: f => ({ ...f, rag: '' }),
@@ -73,7 +74,7 @@ const CHIPS: Chip[] = [
   {
     key: 'amber',
     label: 'Amber only',
-    count: items => items.filter(i => i.currentStage !== 'Closed' && computeRAG(i) === 'Amber').length,
+    count: items => items.filter(i => !i.stageIsTerminal && computeRAG(i) === 'Amber').length,
     active: f => f.rag === 'Amber',
     apply: f => ({ ...f, rag: 'Amber' as const }),
     clear: f => ({ ...f, rag: '' }),
@@ -83,7 +84,7 @@ const CHIPS: Chip[] = [
   {
     key: 'stale',
     label: 'Stale >7d',
-    count: items => items.filter(i => i.currentStage !== 'Closed' && daysSinceUpdate(i.lastUpdated) > 7).length,
+    count: items => items.filter(i => !i.stageIsTerminal && daysSinceUpdate(i.lastUpdated) > 7).length,
     active: f => f.staleOnly,
     apply: f => ({ ...f, staleOnly: true }),
     clear: f => ({ ...f, staleOnly: false }),
@@ -93,7 +94,7 @@ const CHIPS: Chip[] = [
   {
     key: 'due',
     label: 'Due this week',
-    count: items => items.filter(i => { const d = daysFromNow(i.stageExpectedDate); return i.currentStage !== 'Closed' && d >= 0 && d <= 7; }).length,
+    count: items => items.filter(i => { const d = daysFromNow(i.stageExpectedDate); return !i.stageIsTerminal && d >= 0 && d <= 7; }).length,
     active: f => f.dueThisWeek,
     apply: f => ({ ...f, dueThisWeek: true }),
     clear: f => ({ ...f, dueThisWeek: false }),
@@ -103,7 +104,7 @@ const CHIPS: Chip[] = [
   {
     key: 'regulatory',
     label: 'Regulatory',
-    count: items => items.filter(i => i.isRegulatory && i.currentStage !== 'Closed').length,
+    count: items => items.filter(i => i.isRegulatory && !i.stageIsTerminal).length,
     active: f => f.regulatory,
     apply: f => ({ ...f, regulatory: true }),
     clear: f => ({ ...f, regulatory: false }),
@@ -113,7 +114,7 @@ const CHIPS: Chip[] = [
   {
     key: 'business',
     label: 'Business delay',
-    count: items => items.filter(i => i.currentStage !== 'Closed' && i.delaySource === 'Business').length,
+    count: items => items.filter(i => !i.stageIsTerminal && i.delaySource === 'Business').length,
     active: f => f.delaySource === 'Business',
     apply: f => ({ ...f, delaySource: 'Business' as DelaySource }),
     clear: f => ({ ...f, delaySource: '' }),
@@ -123,34 +124,46 @@ const CHIPS: Chip[] = [
   {
     key: 'vendor',
     label: 'Vendor delay',
-    count: items => items.filter(i => i.currentStage !== 'Closed' && i.delaySource === 'Vendor').length,
+    count: items => items.filter(i => !i.stageIsTerminal && i.delaySource === 'Vendor').length,
     active: f => f.delaySource === 'Vendor',
     apply: f => ({ ...f, delaySource: 'Vendor' as DelaySource }),
     clear: f => ({ ...f, delaySource: '' }),
     tone: 'border-slate-200 bg-white text-slate-600 hover:border-slate-400 hover:bg-slate-100 hover:text-slate-800',
     activeTone: 'border-slate-500 bg-slate-100 text-slate-800',
   },
-  {
-    key: 'appsec',
-    label: 'AppSec pending',
-    count: items => items.filter(i => i.currentStage === 'AppSec').length,
-    active: f => f.stage === 'AppSec',
-    apply: f => ({ ...f, stage: 'AppSec' as Stage }),
-    clear: f => ({ ...f, stage: '' }),
-    tone: 'border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:bg-emerald-50 hover:text-emerald-700',
-    activeTone: 'border-emerald-400 bg-emerald-50 text-emerald-700',
-  },
-  {
-    key: 'uat',
-    label: 'UAT pending',
-    count: items => items.filter(i => i.currentStage === 'UAT').length,
-    active: f => f.stage === 'UAT',
-    apply: f => ({ ...f, stage: 'UAT' as Stage }),
-    clear: f => ({ ...f, stage: '' }),
-    tone: 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700',
-    activeTone: 'border-sky-400 bg-sky-50 text-sky-700',
-  },
 ];
+
+/**
+ * A stage is "queueable" when work can meaningfully be waiting in it: between
+ * being built and being live. A finished initiative is not pending anything, so
+ * the terminal stage never gets a queue.
+ */
+const queueable = (st: StageOption) => st.deliveryPhase === 'IN_DELIVERY' && !st.isTerminal;
+
+/**
+ * Queue chips for the stages between "being built" and "live", generated from
+ * the workspace's own lifecycle.
+ *
+ * These used to be two hardcoded chips, "AppSec pending" and "UAT pending",
+ * which only exist in a regulated-bank lifecycle. Generating them from the
+ * in-delivery stages keeps the same "what is queued at a gate" answer for a
+ * bank while working for a six- or four-stage workspace, and only stages with
+ * something actually waiting get a chip.
+ */
+function stageChips(stages: StageOption[], items: Item[]): Chip[] {
+  return stages
+    .filter(st => queueable(st) && items.some(i => i.currentStage === st.key))
+    .map(st => ({
+      key: `stage-${st.key}`,
+      label: `${st.label} pending`,
+      count: (list: Item[]) => list.filter(i => i.currentStage === st.key).length,
+      active: (f: Filters) => f.stage === st.key,
+      apply: (f: Filters) => ({ ...f, stage: st.key }),
+      clear: (f: Filters) => ({ ...f, stage: '' }),
+      tone: 'border-slate-200 bg-white text-slate-600 hover:border-sky-300 hover:bg-sky-50 hover:text-sky-700',
+      activeTone: 'border-sky-400 bg-sky-50 text-sky-700',
+    }));
+}
 
 interface QueueItem {
   label: string;
@@ -178,9 +191,24 @@ const SAVED_VIEWS: SavedView[] = [
   { key: 'stale',       label: 'Not Updated in 7 Days',   preset: { ...EMPTY_FILTERS, staleOnly: true } },
 ];
 
-export function PmoDashboardClient({ items }: { items: Item[] }) {
+export function PmoDashboardClient({ items, stages }: { items: Item[]; stages: StageOption[] }) {
   const [filters, setFilters] = useState<Filters>(EMPTY_FILTERS);
   const [activeView, setActiveView] = useState<string | null>(null);
+
+  // Fixed chips first, then one per in-delivery stage that currently has work
+  // queued in it — see stageChips().
+  const { modules } = useWorkspace();
+  const chips = useMemo(
+    () => [
+      ...CHIPS.filter(c => c.key !== 'regulatory' || modules.regulatory),
+      ...stageChips(stages, items),
+    ],
+    [stages, items, modules.regulatory],
+  );
+  const savedViews = useMemo(
+    () => SAVED_VIEWS.filter(v => v.key !== 'regulatory' || modules.regulatory),
+    [modules.regulatory],
+  );
 
   const applyView = useCallback((view: SavedView) => {
     if (activeView === view.key) {
@@ -201,7 +229,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
     {
       label: 'Overdue Stage Updates',
       desc: 'past their stage deadline',
-      count: items.filter(i => i.currentStage !== 'Closed' && daysFromNow(i.stageExpectedDate) < 0).length,
+      count: items.filter(i => !i.stageIsTerminal && daysFromNow(i.stageExpectedDate) < 0).length,
       apply: () => setFilters({ ...EMPTY_FILTERS, rag: 'Red' as const }),
       topBorder: 'border-t-2 border-t-rose-400',
       countCls: 'text-rose-600',
@@ -209,7 +237,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
     {
       label: 'Stale Updates',
       desc: 'not updated in the last 7 days',
-      count: items.filter(i => i.currentStage !== 'Closed' && daysSinceUpdate(i.lastUpdated) > 7).length,
+      count: items.filter(i => !i.stageIsTerminal && daysSinceUpdate(i.lastUpdated) > 7).length,
       apply: () => setFilters({ ...EMPTY_FILTERS, staleOnly: true }),
       topBorder: 'border-t-2 border-t-orange-400',
       countCls: 'text-orange-600',
@@ -217,7 +245,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
     {
       label: 'Due This Week',
       desc: 'stage deadline in the next 7 days',
-      count: items.filter(i => { const d = daysFromNow(i.stageExpectedDate); return i.currentStage !== 'Closed' && d >= 0 && d <= 7; }).length,
+      count: items.filter(i => { const d = daysFromNow(i.stageExpectedDate); return !i.stageIsTerminal && d >= 0 && d <= 7; }).length,
       apply: () => setFilters({ ...EMPTY_FILTERS, dueThisWeek: true }),
       topBorder: 'border-t-2 border-t-brand-400',
       countCls: 'text-brand-600',
@@ -225,7 +253,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
     {
       label: 'Business Pending',
       desc: 'delay attributed to business side',
-      count: items.filter(i => i.currentStage !== 'Closed' && i.delaySource === 'Business').length,
+      count: items.filter(i => !i.stageIsTerminal && i.delaySource === 'Business').length,
       apply: () => setFilters({ ...EMPTY_FILTERS, delaySource: 'Business' as DelaySource }),
       topBorder: 'border-t-2 border-t-violet-400',
       countCls: 'text-violet-600',
@@ -233,37 +261,34 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
     {
       label: 'Vendor Pending',
       desc: 'delay attributed to vendor',
-      count: items.filter(i => i.currentStage !== 'Closed' && i.delaySource === 'Vendor').length,
+      count: items.filter(i => !i.stageIsTerminal && i.delaySource === 'Vendor').length,
       apply: () => setFilters({ ...EMPTY_FILTERS, delaySource: 'Vendor' as DelaySource }),
       topBorder: 'border-t-2 border-t-amber-400',
       countCls: 'text-amber-600',
     },
-    {
-      label: 'AppSec Pending',
-      desc: 'in security review stage',
-      count: items.filter(i => i.currentStage === 'AppSec').length,
-      apply: () => setFilters({ ...EMPTY_FILTERS, stage: 'AppSec' as Stage }),
-      topBorder: 'border-t-2 border-t-emerald-400',
-      countCls: 'text-emerald-600',
-    },
-    {
-      label: 'UAT Pending',
-      desc: 'in user acceptance testing',
-      count: items.filter(i => i.currentStage === 'UAT').length,
-      apply: () => setFilters({ ...EMPTY_FILTERS, stage: 'UAT' as Stage }),
-      topBorder: 'border-t-2 border-t-sky-400',
-      countCls: 'text-sky-600',
-    },
-  ], [items]);
+    // One card per in-delivery stage that has work queued in it. These were
+    // two fixed cards, "AppSec Pending" and "UAT Pending" — stage names that
+    // only exist in a regulated-bank lifecycle.
+    ...stages
+      .filter(st => queueable(st) && items.some(i => i.currentStage === st.key))
+      .map(st => ({
+        label: `${st.label} Pending`,
+        desc: `currently at the ${st.label} stage`,
+        count: items.filter(i => i.currentStage === st.key).length,
+        apply: () => setFilters({ ...EMPTY_FILTERS, stage: st.key }),
+        topBorder: 'border-t-2 border-t-sky-400',
+        countCls: 'text-sky-600',
+      })),
+  ], [items, stages]);
 
   const needsAttention = useMemo(
-    () => items.filter(i => i.currentStage !== 'Closed' && computeRAG(i) === 'Red'),
+    () => items.filter(i => !i.stageIsTerminal && computeRAG(i) === 'Red'),
     [items],
   );
 
   const chipCounts = useMemo(
-    () => Object.fromEntries(CHIPS.map(c => [c.key, c.count(items)])),
-    [items],
+    () => Object.fromEntries(chips.map(c => [c.key, c.count(items)])),
+    [items, chips],
   );
 
   const filtered = useMemo(() => {
@@ -274,10 +299,10 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
       if (filters.verticalHead && i.verticalHead !== filters.verticalHead) return false;
       if (filters.type && i.type !== filters.type) return false;
       if (filters.regulatory && !i.isRegulatory) return false;
-      if (filters.staleOnly && (i.currentStage === 'Closed' || daysSinceUpdate(i.lastUpdated) <= 7)) return false;
+      if (filters.staleOnly && (i.stageIsTerminal || daysSinceUpdate(i.lastUpdated) <= 7)) return false;
       if (filters.dueThisWeek) {
         const d = daysFromNow(i.stageExpectedDate);
-        if (i.currentStage === 'Closed' || d < 0 || d > 7) return false;
+        if (i.stageIsTerminal || d < 0 || d > 7) return false;
       }
       if (filters.delaySource && i.delaySource !== filters.delaySource) return false;
       if (filters.goLiveThisMonth && !i.goLiveDate?.startsWith(THIS_MONTH)) return false;
@@ -304,18 +329,20 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
     if (filters.delaySource === 'Business') return { title: 'No business delays found.', sub: 'No active initiatives are currently awaiting business action.' };
     if (filters.delaySource === 'Vendor')  return { title: 'No vendor delays found.', sub: 'No active initiatives are currently blocked by vendors.' };
     if (filters.goLiveThisMonth)          return { title: 'No go-lives this month.', sub: 'No initiatives are scheduled to go live in this period.' };
-    if (filters.stage === 'AppSec')       return { title: 'No AppSec reviews pending.', sub: 'No initiatives are currently in security review.' };
-    if (filters.stage === 'UAT')          return { title: 'No UAT pending.', sub: 'No initiatives are currently in user acceptance testing.' };
+    if (filters.stage) {
+      const label = stages.find(st => st.key === filters.stage)?.label ?? filters.stage;
+      return { title: `Nothing in ${label}.`, sub: `No initiatives are currently at the ${label} stage.` };
+    }
     if (filters.search)                   return { title: `No results for "${filters.search}".`, sub: 'Try a different search term or clear your filters.' };
     if (activeView) {
-      const v = SAVED_VIEWS.find(sv => sv.key === activeView);
+      const v = savedViews.find(sv => sv.key === activeView);
       if (v) return { title: `No items in "${v.label}".`, sub: 'This saved view returned no results for the current portfolio.' };
     }
     return { title: 'No initiatives match the current filters.', sub: 'Try clearing a filter or adjusting your selection.' };
-  }, [items, filters, activeView]);
+  }, [items, filters, activeView, stages, savedViews]);
 
   const insight = useMemo(() => {
-    const active = items.filter(i => i.currentStage !== 'Closed');
+    const active = items.filter(i => !i.stageIsTerminal);
     const overdue  = active.filter(i => daysFromNow(i.stageExpectedDate) < 0).length;
     const stale    = active.filter(i => daysSinceUpdate(i.lastUpdated) > 7).length;
     const business = active.filter(i => i.delaySource === 'Business').length;
@@ -386,7 +413,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
                 >
                   <div className="min-w-0">
                     <div className="truncate text-sm font-medium text-slate-800 group-hover:text-brand-700">{i.title}</div>
-                    <div className="mt-0.5 text-xs text-slate-500">{i.currentStage}</div>
+                    <div className="mt-0.5 text-xs text-slate-500">{i.currentStageLabel}</div>
                   </div>
                   <div className="flex flex-shrink-0 items-center gap-2">
                     <span className="rounded-md bg-rose-50 px-1.5 py-0.5 text-[11px] font-medium text-rose-700 ring-1 ring-inset ring-rose-600/20">
@@ -407,7 +434,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
           <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Saved Views
           </span>
-          {SAVED_VIEWS.map(view => (
+          {savedViews.map(view => (
             <button
               key={view.key}
               type="button"
@@ -428,7 +455,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
           <span className="mr-1 text-[11px] font-semibold uppercase tracking-wider text-slate-400">
             Quick filters
           </span>
-          {CHIPS.map(chip => {
+          {chips.map(chip => {
             const isActive = chip.active(filters);
             const n = chipCounts[chip.key] ?? 0;
             return (
@@ -455,7 +482,7 @@ export function PmoDashboardClient({ items }: { items: Item[] }) {
 
         {/* Full filter bar */}
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <FilterBar filters={filters} onChange={handleFilterChange} />
+          <FilterBar filters={filters} onChange={handleFilterChange} stages={stages} />
           <div className="flex flex-shrink-0 items-center gap-3">
             <span className="hidden text-xs text-slate-400 sm:block">
               {filtered.length} of {items.length}

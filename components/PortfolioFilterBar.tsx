@@ -1,7 +1,9 @@
 'use client';
 
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
-import { STAGES, CLASSIFICATION_LABEL, OUTCOME_CATEGORIES } from '@/lib/types';
+import { CLASSIFICATION_LABEL, OUTCOME_CATEGORIES } from '@/lib/types';
+import type { StageOption } from '@/lib/types';
+import { useWorkspace } from '@/components/WorkspaceProvider';
 import { RAG_VALUES, CLASSIFICATION_KEYS, PORTFOLIO_FILTER_KEYS } from '@/lib/portfolioFilters';
 import { Badge } from '@/components/ui/Badge';
 import { Filter, RotateCcw } from 'lucide-react';
@@ -10,6 +12,8 @@ const selectCls =
   'rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm text-slate-700 shadow-sm transition-colors hover:border-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/30 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-400';
 
 export interface PortfolioFilterBarOptions {
+  /** The organization's lifecycle, in order — there is no universal stage list. */
+  stages?: StageOption[];
   verticalHeads?: string[];
   programHeads?: string[];
   programManagers?: string[];
@@ -46,6 +50,8 @@ interface Props {
  * / applyPortfolioFilters() on the page/server side.
  */
 export function PortfolioFilterBar({ options = {} }: Props) {
+  const stages = options.stages ?? [];
+  const { modules } = useWorkspace();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -103,19 +109,21 @@ export function PortfolioFilterBar({ options = {} }: Props) {
         aria-label="Stage"
       >
         <option value="">Stage: Any</option>
-        {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+        {stages.map(s => <option key={s.key} value={s.key}>{s.label}</option>)}
       </select>
 
-      <select
-        value={searchParams.get('isRegulatory') ?? ''}
-        onChange={e => setParam('isRegulatory', e.target.value)}
-        className={selectCls}
-        aria-label="Regulatory"
-      >
-        <option value="">Regulatory: Any</option>
-        <option value="true">Regulatory: Yes</option>
-        <option value="false">Regulatory: No</option>
-      </select>
+      {modules.regulatory && (
+        <select
+          value={searchParams.get('isRegulatory') ?? ''}
+          onChange={e => setParam('isRegulatory', e.target.value)}
+          className={selectCls}
+          aria-label="Regulatory"
+        >
+          <option value="">Regulatory: Any</option>
+          <option value="true">Regulatory: Yes</option>
+          <option value="false">Regulatory: No</option>
+        </select>
+      )}
 
       <select
         value={searchParams.get('type') ?? ''}

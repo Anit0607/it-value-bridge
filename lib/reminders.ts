@@ -1,6 +1,5 @@
 import type { EnrichedItem } from '@/lib/queries/enrich';
 import { daysFromNow } from '@/lib/rag';
-import { STAGES } from '@/lib/types';
 import type { Stage } from '@/lib/types';
 import type { Milestone } from '@prisma/client';
 
@@ -84,13 +83,6 @@ export interface Reminder {
 const GO_LIVE_RISK_WINDOW_DAYS = 30;
 const REGULATORY_RISK_WINDOW_DAYS = 14;
 
-// Stages at/after which an item is considered "near closure" — Go-Live Risk
-// only fires before this point, since being here already means the item is
-// on its way out regardless of how close the go-live date is.
-const NEAR_CLOSURE_STAGES: Stage[] = ['Go Live', 'Business Validation', 'Closed'];
-
-const UAT_INDEX = STAGES.indexOf('UAT');
-
 /**
  * Severity rules — simple, deterministic, fixed thresholds per type (6A).
  * No graduated/ML scoring: each type maps directly to one of the bands
@@ -132,7 +124,8 @@ function itemHref(itemId: string, suffix = ''): string {
  * generateReminders() below).
  */
 function remindersForItem(item: EnrichedItem, milestones: Milestone[]): Reminder[] {
-  if (item.currentStage === 'Closed') return [];
+  // Nothing follows a terminal stage, whatever the organization calls it.
+  if (item.stageIsTerminal) return [];
 
   const reminders: Reminder[] = [];
   const href = itemHref(item.id);
@@ -160,7 +153,7 @@ function remindersForItem(item: EnrichedItem, milestones: Milestone[]): Reminder
       id: `${item.id}-STAGE_OVERDUE`,
       initiativeId: item.id,
       title: item.title,
-      message: `${item.currentStage} is ${daysOverdue} day${daysOverdue === 1 ? '' : 's'} past its expected date`,
+      message: `${item.currentStageLabel} is ${daysOverdue} day${daysOverdue === 1 ? '' : 's'} past its expected date`,
       type: 'STAGE_OVERDUE',
       severity: daysOverdue > 7 ? 'CRITICAL' : 'HIGH',
       owner: item.programManagerName || item.verticalHead,
@@ -171,23 +164,24 @@ function remindersForItem(item: EnrichedItem, milestones: Milestone[]): Reminder
     });
   }
 
-  // Go-Live Risk — CRITICAL when within 7 days AND stage is still before
-  // UAT (barely any runway left before a QA/business-facing stage even
-  // starts); MEDIUM for the rest of the 30-day window.
-  if (!NEAR_CLOSURE_STAGES.includes(item.currentStage)) {
+  // Go-Live Risk — only meaningful before the thing has actually shipped.
+  // CRITICAL when go-live is within 7 days and nothing has been built yet
+  // (still pre-delivery, so there is barely any runway); MEDIUM for the rest
+  // of the 30-day window.
+  if (!item.stageIsPostDelivery) {
     const daysToGoLive = daysFromNow(item.goLiveDate);
     if (daysToGoLive <= GO_LIVE_RISK_WINDOW_DAYS) {
       const overdue = daysToGoLive < 0;
-      const beforeUAT = STAGES.indexOf(item.currentStage) < UAT_INDEX;
+      const notYetBuilding = item.stageIsPreDelivery;
       reminders.push({
         id: `${item.id}-GO_LIVE_RISK`,
         initiativeId: item.id,
         title: item.title,
         message: overdue
-          ? `Go-live was ${Math.abs(daysToGoLive)} days ago but the item is still in ${item.currentStage}`
-          : `Go-live is in ${daysToGoLive} days but the item is still in ${item.currentStage}`,
+          ? `Go-live was ${Math.abs(daysToGoLive)} days ago but the item is still in ${item.currentStageLabel}`
+          : `Go-live is in ${daysToGoLive} days but the item is still in ${item.currentStageLabel}`,
         type: 'GO_LIVE_RISK',
-        severity: daysToGoLive <= 7 && beforeUAT ? 'CRITICAL' : 'MEDIUM',
+        severity: daysToGoLive <= 7 && notYetBuilding ? 'CRITICAL' : 'MEDIUM',
         owner: item.verticalHead,
         ownerRole: 'VERTICAL_HEAD',
         dueDate: item.goLiveDate,
@@ -200,7 +194,7 @@ function remindersForItem(item: EnrichedItem, milestones: Milestone[]): Reminder
   // Business Validation Pending — CRITICAL once pending > 7 days; MEDIUM
   // otherwise (no explicit band given for the early days, so this is the
   // simple "still needs attention but not yet critical" default).
-  if (item.currentStage === 'Business Validation' && !item.validation) {
+  if (item.stageIsValidationGate && !item.validation) {
     reminders.push({
       id: `${item.id}-BUSINESS_VALIDATION_PENDING`,
       initiativeId: item.id,

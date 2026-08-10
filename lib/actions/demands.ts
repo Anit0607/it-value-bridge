@@ -5,7 +5,8 @@ import { requireRoleWithOrg } from '@/lib/authz';
 import { PMO_EQUIVALENT_ROLES, BUSINESS_EQUIVALENT_ROLES } from '@/lib/rbac';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import { STAGE_TO_PROCESS_GROUP } from '@/lib/stage-map';
+import { getLifecycle } from '@/lib/queries/lifecycle';
+import { firstStage } from '@/lib/lifecycle';
 import type { DemandStatus } from '@prisma/client';
 
 const BenefitInput = z.object({
@@ -138,6 +139,12 @@ export async function approveDemand(id: string, input: ApproveDemandInput) {
     where: { category: primary.category, active: true, organizationId: user.organizationId },
   });
 
+  const lifecycle = await getLifecycle(user.organizationId);
+  const start = firstStage(lifecycle);
+  if (!start) {
+    throw new Error('This workspace has no delivery lifecycle configured. An administrator must set one up first.');
+  }
+
   const initiative = await prisma.initiative.create({
     data: {
       title: demand.title,
@@ -155,8 +162,8 @@ export async function approveDemand(id: string, input: ApproveDemandInput) {
       outcomeDescription: primary.narrative || primary.metricName,
       targetMetric: primary.metricName,
       expectedGoLiveDate: new Date(completion.goLiveDate),
-      currentStage: 'BRD',
-      currentProcessGroup: STAGE_TO_PROCESS_GROUP['BRD'],
+      currentStage: start.key,
+      currentProcessGroup: start.processGroup,
       stageStartDate: today,
       stageExpectedDate: expectedDate,
       lastUpdated: today,

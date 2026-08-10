@@ -2,7 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import Link from 'next/link';
-import { Item, STAGES } from '@/lib/types';
+import { Item } from '@/lib/types';
 import { computeRAG, daysInStage, daysFromNow, daysSinceUpdate } from '@/lib/rag';
 import { RagDot } from './RagBadge';
 import { StateCard } from './StateCard';
@@ -39,10 +39,8 @@ const DELAY_TONE: Record<string, BadgeTone> = {
 };
 
 function getNextAction(item: Item, rag: RAG): string {
-  if (item.currentStage === 'Closed') return '—';
-  if (item.currentStage === 'Business Validation') return 'Awaiting business sign-off';
-  if (item.currentStage === 'CAB Approval') return 'Awaiting CAB approval';
-  if (item.currentStage === 'AppSec') return 'Awaiting security clearance';
+  if (item.stageIsTerminal) return '—';
+  if (item.stageIsValidationGate) return 'Awaiting business sign-off';
   if (rag === 'Red' && item.delayed && item.delaySource) return `Escalate: ${item.delaySource} delay`;
   if (rag === 'Red') return 'Advance or escalate';
   if (daysSinceUpdate(item.lastUpdated) > 7) return 'Update required';
@@ -84,8 +82,8 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint, emptySubh
           bv = b.verticalHead.toLowerCase();
           break;
         case 'stage':
-          av = STAGES.indexOf(a.currentStage);
-          bv = STAGES.indexOf(b.currentStage);
+          av = a.stageOrder;
+          bv = b.stageOrder;
           break;
         case 'rag':
           av = RAG_ORDER[computeRAG(a)];
@@ -229,7 +227,7 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint, emptySubh
               const rag = computeRAG(item);
               const days = daysInStage(item.stageStartDate);
               const daysToEta = daysFromNow(item.stageExpectedDate);
-              const closed = item.currentStage === 'Closed';
+              const closed = item.stageIsTerminal;
               const stale = daysSinceUpdate(item.lastUpdated);
               const staleLabel = stale === 0 ? 'today' : stale === 1 ? 'yesterday' : `${stale}d ago`;
               const staleCls = stale >= 7 ? 'text-rose-500 font-medium' : stale >= 4 ? 'text-amber-500' : 'text-slate-400';
@@ -281,7 +279,7 @@ export function ItemTable({ items, showVerticalHead = true, emptyHint, emptySubh
                   {showVerticalHead && (
                     <td className="px-4 py-2.5 text-slate-600">{item.verticalHead}</td>
                   )}
-                  <td className="px-4 py-2.5 text-slate-600">{item.currentStage}</td>
+                  <td className="px-4 py-2.5 text-slate-600">{item.currentStageLabel}</td>
                   <td className="px-4 py-2.5">
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium text-slate-600">
                       <RagDot rag={rag} />

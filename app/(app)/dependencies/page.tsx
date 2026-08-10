@@ -4,6 +4,7 @@ import Link from 'next/link';
 import { notFound, redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getDependencyOverview } from '@/lib/actions/dependencies';
+import { getWorkspaceConfig } from '@/lib/queries/workspace';
 import { PageHeader } from '@/components/PageHeader';
 import { KpiCard } from '@/components/KpiCard';
 import { Link2, AlertTriangle, GitBranch, ArrowUp, Inbox } from 'lucide-react';
@@ -12,6 +13,11 @@ export default async function DependenciesPage() {
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
   if (!session.user.organizationId) notFound();
+
+  // A switched-off module must not be reachable by typing the URL — hiding the
+  // nav link alone would be a cosmetic control.
+  const workspace = await getWorkspaceConfig(session.user.organizationId);
+  if (!workspace.modules.dependencies) notFound();
 
   const o = await getDependencyOverview(session.user.organizationId);
   const topBlocker = o.topBlockers[0];

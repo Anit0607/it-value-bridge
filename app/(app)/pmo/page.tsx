@@ -9,6 +9,7 @@ import { PageHeader } from '@/components/PageHeader';
 import { PortfolioFilterBar } from '@/components/PortfolioFilterBar';
 import { SavedViewsBar } from '@/components/SavedViewsBar';
 import { parsePortfolioFilters } from '@/lib/portfolioFilters';
+import { getLifecycle } from '@/lib/queries/lifecycle';
 import { generateReminders } from '@/lib/reminders';
 import { GroupedRemindersList, sortBySeverity } from '@/components/RemindersPanel';
 import { listAtRiskMilestones, listOpenMilestonesForInitiatives } from '@/lib/actions/milestones';
@@ -34,7 +35,10 @@ export default async function PmoDashboard({
   const session = await auth();
   if (!session?.user) redirect('/sign-in');
   const filters = parsePortfolioFilters(searchParams);
-  const { items, totalCount, activeCount, counts, filterOptions } = await getPmoList(session.user, filters);
+  const [{ items, totalCount, activeCount, counts, filterOptions }, lifecycle] = await Promise.all([
+    getPmoList(session.user, filters),
+    getLifecycle(session.user.organizationId),
+  ]);
 
   // Governance Action Queue: same portfolio-filter-scoped items as the rest
   // of the page, grouped by type so PMO can triage by kind of problem.
@@ -67,7 +71,7 @@ export default async function PmoDashboard({
       </PageHeader>
 
       <SavedViewsBar view="pmo" />
-      <PortfolioFilterBar options={filterOptions} />
+      <PortfolioFilterBar options={{ ...filterOptions, stages: lifecycle.map(st => ({ key: st.key, label: st.label, deliveryPhase: st.deliveryPhase, isTerminal: st.isTerminal })) }} />
 
       <TodaysFocus
         title="Today's governance actions"
@@ -138,7 +142,7 @@ export default async function PmoDashboard({
         )}
       </SectionCard>
 
-      <PmoDashboardClient items={items} />
+      <PmoDashboardClient items={items} stages={lifecycle.map(st => ({ key: st.key, label: st.label, deliveryPhase: st.deliveryPhase, isTerminal: st.isTerminal }))} />
     </div>
   );
 }

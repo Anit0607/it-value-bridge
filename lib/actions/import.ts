@@ -3,10 +3,10 @@
 import { prisma } from '@/lib/db';
 import { requireRoleWithOrg } from '@/lib/authz';
 import { PMO_EQUIVALENT_ROLES, buildInitiativeVisibilityWhere } from '@/lib/rbac';
-import { STAGE_TO_PROCESS_GROUP } from '@/lib/stage-map';
+import { getLifecycle } from '@/lib/queries/lifecycle';
+import { findStage, firstStage } from '@/lib/lifecycle';
 import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
-import type { Stage } from '@prisma/client';
 
 const RowInput = z.object({
   title: z.string().min(1),
@@ -81,6 +81,16 @@ export async function listImportableInitiatives(): Promise<{ id: string; title: 
   return visibleInitiativesForImport();
 }
 
+/** The importing organization's lifecycle, so the Initiatives tab can resolve
+ *  a CSV "stage" column against the client's own stage names during preview —
+ *  and so the column hint lists stages that actually exist in this workspace
+ *  rather than a fixed eleven. */
+export async function listImportableStages(): Promise<{ key: string; label: string }[]> {
+  const user = await requireRoleWithOrg(...PMO_EQUIVALENT_ROLES, 'CIO');
+  const lifecycle = await getLifecycle(user.organizationId);
+  return lifecycle.map(s => ({ key: s.key, label: s.label }));
+}
+
 /** Re-derives the caller's visible initiative id set server-side and
  *  rejects any submitted initiativeId outside it — defense in depth so a
  *  buggy or tampered client can never attach a record to an initiative the
@@ -96,13 +106,14 @@ async function assertAllVisible(initiativeIds: string[]): Promise<void> {
 
 // ── Initiatives ──────────────────────────────────────────────────────────────
 
-const STAGE_VALUES = ['BRD', 'FSD', 'COMMERCIAL', 'DEVELOPMENT', 'SIT', 'UAT', 'APPSEC', 'CAB_APPROVAL', 'GO_LIVE', 'BUSINESS_VALIDATION', 'CLOSED'] as const;
-
 const InitiativeRowInput = z.object({
   title: z.string().min(1),
   type: z.enum(['CHANGE_REQUEST', 'PROJECT']),
   classification: z.enum(['STRATEGIC', 'MAJOR_PROJECT', 'TACTICAL', 'BAU']),
-  currentStage: z.enum(STAGE_VALUES),
+  // Validated against the importing organization's own lifecycle below, not
+  // against a fixed enum — a client running six stages must be able to import
+  // its own stage names.
+  currentStage: z.string().min(1),
   verticalHeadName: z.string().min(1),
   businessSpoc: z.string().min(1),
   businessSponsor: z.string().min(1),
@@ -143,9 +154,25 @@ export async function importInitiatives(rows: InitiativeImportRow[]): Promise<{ 
   const parsed = z.array(InitiativeRowInput).min(1).parse(rows);
   const today = new Date();
 
+  const lifecycle = await getLifecycle(user.organizationId);
+  if (lifecycle.length === 0) {
+    throw new Error('This workspace has no delivery lifecycle configured. An administrator must set one up first.');
+  }
+
+  // Reject the whole import rather than silently parking unrecognised rows at
+  // the first stage — landing a mid-flight initiative at the start of the
+  // lifecycle would misstate delivery progress across the whole portfolio.
+  const unknown = [...new Set(parsed.map(r => r.currentStage).filter(k => !findStage(lifecycle, k)))];
+  if (unknown.length > 0) {
+    throw new Error(
+      `Unknown stage${unknown.length === 1 ? '' : 's'}: ${unknown.join(', ')}. ` +
+      `This workspace's lifecycle uses: ${lifecycle.map(st => st.key).join(', ')}.`,
+    );
+  }
+
   await prisma.$transaction(
     parsed.map(r => {
-      const processGroup = STAGE_TO_PROCESS_GROUP[r.currentStage as Stage];
+      const processGroup = findStage(lifecycle, r.currentStage)!.processGroup;
       const stageExpectedDate = r.expectedGoLiveDate > today ? r.expectedGoLiveDate : new Date(today.getTime() + 21 * 86_400_000);
       return prisma.initiative.create({
         data: {

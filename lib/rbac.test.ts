@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { buildInitiativeVisibilityWhere, isPmoEquivalent, isBusinessEquivalent } from './rbac';
+import {
+  buildInitiativeVisibilityWhere, isPmoEquivalent, isBusinessEquivalent,
+  can, visibilityScope, ROLE_DEFINITIONS, CAPABILITIES,
+} from './rbac';
 
 const ORG = 'org-1';
 const base = { name: 'Asha Rao', organizationId: ORG };
@@ -71,12 +74,20 @@ describe('buildInitiativeVisibilityWhere', () => {
     }
   });
 
-  it('treats an unknown role as unscoped-within-org, matching the documented default', () => {
-    // Guards the switch default: a new Role added to the enum without a case
-    // here silently gets full org visibility. If this test ever fails because
-    // someone added a role, add an explicit case rather than changing this.
+  it('fails closed for an unknown role rather than granting the whole organization', () => {
+    // Changed in M4. This used to assert the opposite — an undefined role got
+    // full org visibility — which meant adding a Role to the enum and
+    // forgetting its definition silently over-shared the entire portfolio.
+    // visibilityScope() now falls back to the NARROWEST scope, so the failure
+    // mode of a half-finished role is "sees too little", not "sees everything".
     const where = buildInitiativeVisibilityWhere({ ...base, role: 'SOME_FUTURE_ROLE' });
-    expect(Object.keys(where)).toEqual(['organizationId']);
+    expect(where).toEqual({ organizationId: base.organizationId, businessSpoc: base.name });
+  });
+
+  it('gives every defined role a visibility scope', () => {
+    for (const role of Object.keys(ROLE_DEFINITIONS)) {
+      expect(visibilityScope(role), role).toBeTruthy();
+    }
   });
 });
 
@@ -102,5 +113,63 @@ describe('role equivalence helpers', () => {
     expect(isPmoEquivalent(null)).toBe(false);
     expect(isPmoEquivalent(undefined)).toBe(false);
     expect(isBusinessEquivalent(null)).toBe(false);
+  });
+});
+
+
+describe('capabilities', () => {
+  it('keeps exception approval one tier above the roles that fund work', () => {
+    // The whole point of the exception gate: the people who create and sign off
+    // initiatives cannot also approve their own below-threshold investments.
+    expect(can('CIO', 'APPROVE_EXCEPTION')).toBe(true);
+    expect(can('PMO', 'APPROVE_EXCEPTION')).toBe(false);
+    expect(can('PROGRAM_HEAD', 'APPROVE_EXCEPTION')).toBe(false);
+    expect(can('PROGRAM_MANAGER', 'APPROVE_EXCEPTION')).toBe(false);
+  });
+
+  it('does not let the platform administrator run the portfolio', () => {
+    // ADMIN configures the workspace and manages users; it is not a delivery role.
+    expect(can('ADMIN', 'CONFIGURE_WORKSPACE')).toBe(true);
+    expect(can('ADMIN', 'MANAGE_USERS')).toBe(true);
+    expect(can('ADMIN', 'MANAGE_PORTFOLIO')).toBe(false);
+  });
+
+  it('keeps outcome confirmation on the business side', () => {
+    expect(can('BUSINESS', 'VALIDATE_OUTCOME')).toBe(true);
+    expect(can('BUSINESS_HEAD', 'VALIDATE_OUTCOME')).toBe(true);
+    expect(can('VERTICAL_HEAD', 'VALIDATE_OUTCOME')).toBe(false);
+  });
+
+  it('grants nothing to an unknown role', () => {
+    for (const capability of CAPABILITIES) {
+      expect(can('SOME_FUTURE_ROLE', capability), capability).toBe(false);
+    }
+  });
+
+  it('only grants capabilities that actually exist', () => {
+    for (const [role, def] of Object.entries(ROLE_DEFINITIONS)) {
+      for (const capability of def.capabilities) {
+        expect(CAPABILITIES, `${role} grants an unknown capability`).toContain(capability);
+      }
+    }
+  });
+});
+
+describe('derived role lists still match the shipped roles', () => {
+  it('derives PMO-equivalence from MANAGE_PORTFOLIO, excluding the CIO tier', () => {
+    // These lists used to be hand-written. Deriving them means a new role with
+    // MANAGE_PORTFOLIO is picked up by middleware and requireRole() for free.
+    expect(isPmoEquivalent('PMO')).toBe(true);
+    expect(isPmoEquivalent('PROGRAM_HEAD')).toBe(true);
+    expect(isPmoEquivalent('PROGRAM_MANAGER')).toBe(true);
+    expect(isPmoEquivalent('CIO')).toBe(false);
+    expect(isPmoEquivalent('BUSINESS')).toBe(false);
+  });
+
+  it('derives business-equivalence without pulling in portfolio managers', () => {
+    expect(isBusinessEquivalent('BUSINESS')).toBe(true);
+    expect(isBusinessEquivalent('BUSINESS_HEAD')).toBe(true);
+    expect(isBusinessEquivalent('PMO')).toBe(false);
+    expect(isBusinessEquivalent('CIO')).toBe(false);
   });
 });

@@ -1,21 +1,33 @@
-import { STAGES, type Stage } from '@/lib/types';
+import type { StageOption } from '@/lib/types';
 import { Check } from 'lucide-react';
 
 interface Props {
-  currentStage: Stage;
+  /** The organization's lifecycle, in order. */
+  stages: StageOption[];
+  /** The current stage's key. */
+  currentStage: string;
   compact?: boolean;
 }
 
-export function StageProgress({ currentStage, compact = false }: Props) {
-  const currentIdx = STAGES.indexOf(currentStage);
+/**
+ * Progress across the organization's own lifecycle.
+ *
+ * Takes the stage list rather than importing a fixed one, so it renders four
+ * steps for a lean workspace and eleven for a regulated bank without knowing
+ * which is which.
+ */
+export function StageProgress({ stages, currentStage, compact = false }: Props) {
+  const currentIdx = stages.findIndex(s => s.key === currentStage);
+
+  if (stages.length === 0) return null;
 
   if (compact) {
     return (
       <div className="flex items-center gap-1">
-        {STAGES.map((stage, i) => (
+        {stages.map((stage, i) => (
           <div
-            key={stage}
-            title={stage}
+            key={stage.key}
+            title={stage.label}
             className={`h-1.5 flex-1 rounded-full ${
               i < currentIdx ? 'bg-brand-500' : i === currentIdx ? 'bg-brand-700' : 'bg-slate-200'
             }`}
@@ -28,11 +40,11 @@ export function StageProgress({ currentStage, compact = false }: Props) {
   return (
     <div className="w-full overflow-x-auto">
       <div className="flex min-w-max items-start gap-0">
-        {STAGES.map((stage, i) => {
+        {stages.map((stage, i) => {
           const done = i < currentIdx;
           const active = i === currentIdx;
           return (
-            <div key={stage} className="flex items-start">
+            <div key={stage.key} className="flex items-start">
               <div className="flex w-16 flex-col items-center">
                 <div
                   className={`flex h-7 w-7 items-center justify-center rounded-full text-[11px] font-semibold transition-colors ${
@@ -54,10 +66,10 @@ export function StageProgress({ currentStage, compact = false }: Props) {
                         : 'text-slate-400'
                   }`}
                 >
-                  {stage}
+                  {stage.label}
                 </span>
               </div>
-              {i < STAGES.length - 1 && (
+              {i < stages.length - 1 && (
                 <div
                   className={`mt-3.5 h-0.5 w-4 rounded-full ${
                     i < currentIdx ? 'bg-brand-500' : 'bg-slate-200'
