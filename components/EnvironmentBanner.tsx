@@ -14,8 +14,16 @@ import { appEnv, environmentBanner } from '@/lib/env';
  * runtime environment, which is what actually differs between the two.
  *
  * Renders nothing in production.
+ *
+ * Also defers entirely to DemoBanner. Both are fixed at bottom-left, so on the
+ * hosted demo — which sets NEXT_PUBLIC_DEMO_MODE and leaves APP_ENV unset —
+ * they rendered on top of each other. "Demo environment — sample data only,
+ * don't enter real information" already says everything this banner would and
+ * says it more usefully, so it wins rather than being stacked beside it.
  */
 export function EnvironmentBanner() {
+  if (process.env.NEXT_PUBLIC_DEMO_MODE === 'true') return null;
+
   const env = appEnv();
   const label = environmentBanner(env);
   if (!label) return null;
