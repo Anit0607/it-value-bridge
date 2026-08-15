@@ -37,6 +37,7 @@ export default function SignInPage() {
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [totp, setTotp] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [error, setError] = useState('');
   const [isPending, startTransition] = useTransition();
@@ -48,10 +49,14 @@ export default function SignInPage() {
       const result = await signIn('credentials', {
         email,
         password,
+        totp,
         redirect: false,
       });
       if (result?.error) {
-        setError('Invalid email or password.');
+        // Deliberately one message for every failure — wrong password, wrong
+        // code, missing code, unknown account. Distinguishing them would tell
+        // an attacker which accounts exist and which have a second factor.
+        setError('Invalid email, password, or authenticator code.');
       } else {
         const session = await getSession();
         router.push(session?.user?.role ? getRoleHome(session.user.role) : '/');
@@ -217,6 +222,24 @@ export default function SignInPage() {
                   {showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
+
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">
+                Authenticator code
+                <span className="ml-1.5 font-normal text-slate-400">only if two-factor is enabled</span>
+              </label>
+              <input
+                inputMode="numeric"
+                autoComplete="one-time-code"
+                value={totp}
+                onChange={e => setTotp(e.target.value)}
+                placeholder="123456"
+                className={inputCls + ' tabular tracking-widest'}
+              />
+              <p className="mt-1 text-[11px] text-slate-400">
+                Leave blank if you have not set up two-factor authentication. A recovery code also works here.
+              </p>
             </div>
 
             {error && (

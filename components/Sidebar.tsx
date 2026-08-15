@@ -31,6 +31,7 @@ import {
   ClipboardCheck,
   FileSpreadsheet,
   Wrench,
+  ShieldCheck,
 } from 'lucide-react';
 
 interface NavItem {
@@ -233,6 +234,14 @@ export function Sidebar({
             </div>
             <div className="truncate text-[10px] text-slate-500">{ROLE_ACCESS[user.role]}</div>
           </div>
+          <Link
+            href="/account/security"
+            onClick={onNavigate}
+            title="Account security"
+            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg text-slate-400 transition-colors hover:bg-white/5 hover:text-white"
+          >
+            <ShieldCheck className="h-[17px] w-[17px]" strokeWidth={2} />
+          </Link>
           <button
             onClick={logout}
             title="Sign out"

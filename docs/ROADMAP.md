@@ -438,26 +438,109 @@ This is the feature no tracker can copy, because a tracker never captured the pr
 
 Attach each item to the event that forces it, not to a phase.
 
-**Start now (calendar-bound, low engineering time):**
+**Start now (calendar-bound, low engineering time):** — **NOT ENGINEERING WORK.**
+These are commercial and legal actions. None of them can be closed by writing code,
+and none are done.
 - [ ] Get VAPT quotes from CERT-In empanelled auditors — understand cost and lead time
 - [ ] Resolve data residency for any client-facing deployment
 - [ ] Legal entity, cyber liability insurance, SLA and support model
 
-**Before any pilot with real client data:**
-- [ ] Error tracking and basic observability
-- [ ] Tested backup and restore procedure
-- [ ] Staging environment separate from production
-- [ ] Security questionnaire and DPA prepared
+**Before any pilot with real client data:** ✅ **ALL DONE (2026-08-15).**
+- [x] Error tracking and basic observability
+- [x] Tested backup and restore procedure
+- [x] Staging environment separate from production
+- [x] Security questionnaire and DPA prepared
 
 **Before a bank customer:**
-- [ ] SSO/SAML and MFA
-- [ ] VAPT complete, including remediation and retest
-- [ ] Source code escrow, audit rights
-- [ ] Approved/hardened base image, clean image scan (Trivy or equivalent)
+- [x] ~~SSO/SAML and~~ **MFA** — TOTP done and verified against RFC 6238 vectors. **SSO/SAML is NOT built** and is not claimed; it needs a real identity provider to be anything but a stub.
+- [ ] VAPT complete, including remediation and retest — *blocked on the quotes above*
+- [ ] Source code escrow, audit rights — *legal*
+- [x] Approved/hardened base image, clean image scan (Trivy or equivalent)
 
 **Deferred until a customer forces it:** DR planning and RTO/RPO, Helm/OpenShift
 manifests, load testing, caching and pagination, full multi-tenancy proving, i18n,
 append-only audit logs, full-text search.
+
+---
+
+### What was built (2026-08-15)
+
+**Observability without phoning home.** No Sentry, no Datadog, no hosted log
+drain. "No outbound network calls at runtime" is one of the few claims this
+product can make that a SaaS competitor cannot, and shipping an agent that calls
+home would quietly destroy it — the first security questionnaire would catch it.
+So: structured JSON on stdout (`lib/observability.ts`), which every on-prem stack
+already collects and every bank SIEM already ingests. A redaction list strips
+credentials, email addresses **and ₹ business values** before a line is written —
+a benefit figure in a log is still client-confidential financial data.
+
+**A readiness probe, not a liveness one.** `GET /api/health` runs `SELECT 1`,
+because a container that boots against an unreachable database returns 200 on a
+process check while every page 500s. It is unauthenticated by necessity — an
+orchestrator must reach it before anyone can log in — and therefore returns no
+version, hostname or error text. Verified both ways in a running container:
+`200 {"status":"ok"}` against a live database, `503 {"status":"unavailable"}`
+against a dead one, with `health.database_unreachable` in the logs and Docker
+reporting the container `healthy`.
+
+**Environment separation that is enforced, not conventional.** `APP_ENV` drives a
+visible non-production banner and hard guards. `npm run db:seed` — which deletes
+portfolio data and inserts records with a known shared password — now refuses
+outright under `APP_ENV=production`; verified by running it and getting the
+refusal. The check is deliberately on `APP_ENV` and not `NODE_ENV`, because
+`NODE_ENV` is `production` on a staging build too, and that conflation is exactly
+how a seed script ends up running for real. It defaults to `development`, so an
+unconfigured box shows a banner rather than silently accepting a destructive
+operation.
+
+**Backup and restore, actually tested.** Scripts plus
+`docs/RUNBOOK-BACKUP-RESTORE.md`. The dump verifies its own archive integrity at
+backup time, so corruption fails then rather than during an incident; the restore
+runs in a single transaction, because a half-restored portfolio is worse than a
+failed restore since it looks like it worked. The round trip was executed against
+the populated database — dumped, restored into a **scratch** database, and
+compared. Initiative 26/26, HistoryLog 132/132, BenefitClaim 34/34, User 16/16,
+LifecycleStage 11/11. Restoring into a scratch database rather than over the
+source is deliberate: a restore drill that can destroy the data it protects is
+not a drill.
+
+**MFA with no new dependency.** TOTP (RFC 6238) implemented directly on Node's
+`crypto` rather than pulling in otplib. "How many third-party packages touch
+authentication?" is a standard questionnaire question and the best answer is
+"none beyond the framework" — and the algorithm is fixed by RFC and verifiable
+against the specification's own published vectors, which `lib/totp.test.ts` does
+for all six. Single-use recovery codes stored bcrypt-hashed; disabling MFA
+requires password re-authentication, or anyone at an unlocked screen could strip
+the second factor off the account.
+
+The sign-in form shows the code field **always**, rather than prompting for it
+after the password is accepted. A second-step prompt would confirm that an
+account exists AND has MFA enabled before authentication completes, which is free
+account enumeration. Every failure — wrong password, wrong code, missing code,
+unknown account — returns one identical message for the same reason.
+
+**CI that gates rather than reports.** `.github/workflows/ci.yml` runs typecheck,
+lint, 122 tests and a production build against a real PostgreSQL service, then
+builds the image and runs Trivy with `exit-code: 1` on fixable HIGH/CRITICAL.
+Unfixed findings are advisory-only — a vulnerability with no available patch
+cannot be actioned, and blocking on it only trains people to bypass the gate. CI
+also asserts the image does not run as root. The image build was verified
+locally: builds clean, runs as `nextjs`, boots, migrates and serves.
+
+**A security pack that states its own gaps.** `docs/SECURITY-QUESTIONNAIRE.md`
+answers 40+ standard questions with ✅ / ⚠️ / ❌ and closes with a consolidated
+gap table — SSO/SAML, org-wide MFA enforcement, account lockout, append-only
+audit storage, VAPT, RTO/RPO, load testing. `docs/DPA-TEMPLATE.md` is a draft
+marked clearly as needing legal review. A questionnaire that overstates controls
+fails at the first evidence request and takes the credible answers down with it,
+which is R4 applied to sales rather than to the product.
+
+**Known gap introduced and closed:** the M4 verification cleanup deleted a test
+Organization but left 2 initiatives and 2 users orphaned, because those relations
+are `SetNull` rather than `Cascade`. They were invisible in the app (every query
+is org-scoped) and were only found because the backup drill compared raw table
+counts. Removed. Worth noting that the org-scoping which hid the rows is the same
+control that makes them harmless.
 
 ---
 
@@ -520,3 +603,4 @@ make the rupee number more credible?* Milestones and dependencies would not have
 | 2026-08-09 | **M1 complete.** Real TCO capture across all four surfaces, ROI + payback per initiative and portfolio, sign-off snapshot, and the first test suite (35 tests). A second fabricated `× 0.3` cost was found on the demand-approval path and removed. Currency abstraction deliberately deferred with reasoning recorded. |
 | 2026-08-11 | **M4 complete.** The `Stage` enum is gone — lifecycle is a per-organization table with semantic role tags, and the engine keys off meaning rather than the string `UAT`. Per-organization terminology, module switches that remove surfaces rather than empty them, roles expressed as capability + visibility scope, three shipped templates and a guided setup form at `/admin/setup`. Verified by provisioning a second workspace on the four-stage Lean lifecycle and driving it end to end, which found four bugs the type checker could not see — including one that made outcome confirmation unreachable in any lifecycle where confirm and close are the same stage. **R1 is closed.** |
 | 2026-08-09 | **M3 complete.** Maker-checker on value sign-off and cost changes gated by an org materiality threshold, claims locked at sign-off, formal restatement flow, evidence/provenance fields (mandatory for realized ₹ figures), portfolio double-count review, and period snapshots that freeze board figures at publication. The whole chain — proposed by, approved by, restated by, sourced from — is verified live across PMO and CIO. `MonthlyReport`'s unique key moved to `[organizationId, year, month]`, closing a cross-tenant collision that had never been exercised because the model was unused. |
+| 2026-08-15 | **M5 (pilot tier) complete.** Observability with no outbound calls, readiness probe verified both ways in a container, enforced staging/production separation, a backup/restore round trip actually executed, TOTP MFA verified against RFC 6238 vectors, CI gating on Trivy, and a security questionnaire + DPA that state their own gaps. The three "start now" items and VAPT/escrow remain — they are commercial and legal actions, not engineering. SSO/SAML is explicitly NOT built. A backup drill caught 4 orphaned rows left by the M4 cleanup; removed. |

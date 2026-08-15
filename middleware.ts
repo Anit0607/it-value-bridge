@@ -17,6 +17,10 @@ const PUBLIC_PATHS = ['/', '/sign-in', '/sign-up'];
 type RouteRule = { path: string; allow: Role[] };
 
 const ROUTE_RULES: RouteRule[] = [
+  // Own-account security (MFA enrolment). Every authenticated role — the
+  // people approving large figures are exactly who needs a second factor.
+  { path: '/account', allow: ['ADMIN', 'CIO', 'VERTICAL_HEAD', ...PMO_EQUIVALENT_ROLES, ...BUSINESS_EQUIVALENT_ROLES] },
+
   // Platform admin — ADMIN only
   { path: '/admin',         allow: ['ADMIN'] },
 
@@ -65,6 +69,10 @@ export default auth(req => {
   const isPublic =
     PUBLIC_PATHS.some(p => pathname === p) ||
     pathname.startsWith('/api/auth') ||
+    // Readiness probe: an orchestrator has to reach this before anyone can log
+    // in. It returns no detail precisely because it is unauthenticated —
+    // see app/api/health/route.ts.
+    pathname === '/api/health' ||
     pathname.startsWith('/_next') ||
     pathname.includes('.');
 

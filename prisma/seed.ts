@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import bcrypt from 'bcryptjs';
+import { assertNotProduction } from '../lib/env';
 import type {
   ProcessGroup,
   BenefitCategory,
@@ -104,6 +105,15 @@ const confidenceForStage = (s: string): Confidence => {
 };
 
 async function main() {
+  // This script deletes portfolio data and inserts fabricated records with a
+  // known shared password. Running it against a real deployment would be
+  // catastrophic and unrecoverable, so it refuses outright (M5).
+  //
+  // The check is on APP_ENV, not NODE_ENV: NODE_ENV is "production" on a
+  // staging build too, and that conflation is exactly how a seed script ends up
+  // running for real.
+  assertNotProduction('database seed');
+
   const password = await bcrypt.hash('Welcome@1234!', 12);
 
   // --- Default organisation (Pilot workspace) ---

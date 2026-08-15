@@ -39,7 +39,16 @@ FROM node:20-alpine AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 ENV NEXT_TELEMETRY_DISABLED=1
-RUN apk add --no-cache openssl libc6-compat
+# APP_ENV drives the non-production banner and the guards that refuse
+# destructive operations. It defaults to `development` in lib/env.ts, so a real
+# deployment MUST set APP_ENV=production explicitly — failing safe means an
+# unconfigured box shows a banner rather than silently accepting a seed.
+ENV APP_ENV=production
+
+# `apk upgrade` picks up security fixes published after the base image was cut,
+# which is what turns a stale tag into a clean Trivy scan. The package cache is
+# never written, so nothing is left to clean up.
+RUN apk upgrade --no-cache && apk add --no-cache openssl libc6-compat
 RUN addgroup -g 1001 -S nodejs && adduser -S nextjs -u 1001
 
 # Everything is chowned to the runtime user: Prisma writes to its engine
@@ -61,4 +70,10 @@ USER nextjs
 EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
+
+# Readiness, not liveness: /api/health checks the database, because a container
+# that boots against an unreachable database will serve 200 on a process check
+# while every page 500s. See app/api/health/route.ts.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3   CMD node -e "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+
 CMD ["./docker-entrypoint.sh"]

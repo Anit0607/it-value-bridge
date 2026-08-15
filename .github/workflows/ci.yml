@@ -1,0 +1,108 @@
+name: CI
+
+# Runs the same four checks used locally before every commit, plus the image
+# build and a vulnerability scan (docs/ROADMAP.md M5).
+#
+# The scan is a gate, not a report. "Approved/hardened base image, clean image
+# scan" is a bank prerequisite, and a scan whose failures are advisory tells you
+# nothing on the day the questionnaire arrives.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  verify:
+    name: Typecheck, lint, test, build
+    runs-on: ubuntu-latest
+
+    services:
+      # The build runs `next build`, which collects page data and instantiates
+      # Prisma. A real database is cheaper than mocking that.
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: itvb
+          POSTGRES_PASSWORD: itvb
+          POSTGRES_DB: itvb
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    env:
+      DATABASE_URL: postgresql://itvb:itvb@localhost:5432/itvb
+      AUTH_SECRET: ci-only-secret-not-used-for-anything-real
+      APP_ENV: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+
+      - name: Apply migrations
+        run: npx prisma migrate deploy
+
+      - name: Typecheck
+        run: npx tsc --noEmit
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  image:
+    name: Build image and scan
+    runs-on: ubuntu-latest
+    needs: verify
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build image
+        run: docker build -t itvb-app:${{ github.sha }} .
+
+      - name: Scan image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: itvb-app:${{ github.sha }}
+          format: table
+          # Fails the job on anything HIGH or CRITICAL that has a fix available.
+          exit-code: '1'
+          severity: HIGH,CRITICAL
+          # Unfixed findings are reported separately below rather than blocking:
+          # a vulnerability with no available patch cannot be actioned by us, and
+          # blocking on it just trains people to bypass the gate.
+          ignore-unfixed: true
+
+      - name: Report unfixed findings (advisory)
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: itvb-app:${{ github.sha }}
+          format: table
+          exit-code: '0'
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+
+      - name: Fail if the image runs as root
+        run: |
+          USER_ID=$(docker inspect --format '{{.Config.User}}' itvb-app:${{ github.sha }})
+          echo "image user: '${USER_ID}'"
+          if [ -z "$USER_ID" ] || [ "$USER_ID" = "root" ] || [ "$USER_ID" = "0" ]; then
+            echo "::error::Image must not run as root."
+            exit 1
+          fi

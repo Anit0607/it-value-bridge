@@ -4,6 +4,7 @@ import './globals.css';
 import { SessionProvider } from 'next-auth/react';
 import { RoleProvider } from '@/components/RoleProvider';
 import { DemoBanner } from '@/components/DemoBanner';
+import { EnvironmentBanner } from '@/components/EnvironmentBanner';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -26,6 +27,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </RoleProvider>
         </SessionProvider>
         {process.env.NEXT_PUBLIC_DEMO_MODE === 'true' && <DemoBanner />}
+        {/* Non-production marker, read from APP_ENV at runtime (M5). */}
+        <EnvironmentBanner />
       </body>
     </html>
   );

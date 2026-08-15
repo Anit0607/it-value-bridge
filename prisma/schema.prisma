@@ -287,6 +287,16 @@ model User {
   role         Role
   // when role = VERTICAL_HEAD this is their own name key used to scope initiatives
   verticalHead String?
+
+  // ---- Multi-factor authentication (M5) ----
+  // Base32 TOTP secret. Present but with mfaEnabledAt null means enrolment was
+  // started and never confirmed — that state must NOT enforce a second factor,
+  // or a user who closed the tab mid-enrolment locks themselves out.
+  mfaSecret        String?
+  mfaEnabledAt     DateTime?
+  // bcrypt hashes, single-use. Hashed for the same reason passwords are: a
+  // database dump must not hand someone a working second factor.
+  mfaRecoveryCodes String[]  @default([])
   avatarUrl    String?
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
