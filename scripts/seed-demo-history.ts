@@ -3,6 +3,7 @@
  *
  *   npx tsx scripts/seed-demo-history.ts            # add
  *   npx tsx scripts/seed-demo-history.ts --remove   # take it all back out
+ *   npx tsx scripts/seed-demo-history.ts --status   # report what is there, change nothing
  *
  * ─────────────────────────────────────────────────────────────────────────────
  * WHY THIS EXISTS
@@ -347,6 +348,25 @@ async function seed() {
   console.log('one restated promise measured against its original figure, one unsourced, one not yet due.');
 }
 
+/**
+ * Report what is in the target database without changing anything.
+ *
+ * Exists because a seed that reports success while writing to the wrong
+ * database is the worst possible outcome, and `--status` makes the question
+ * answerable in one command against any connection string.
+ */
+async function status() {
+  const org = await prisma.organization.findFirst({ orderBy: { createdAt: 'asc' }, select: { id: true, name: true, slug: true, createdAt: true } });
+  const orgCount = await prisma.organization.count();
+  const total = await prisma.initiative.count();
+  const tagged = await prisma.initiative.count({ where: { notes: { contains: DEMO_TAG } } });
+  const inOrg = org ? await prisma.initiative.count({ where: { organizationId: org.id } }) : 0;
+  console.log(`organizations      : ${orgCount}`);
+  console.log(`oldest org         : ${org ? org.name + " (" + org.slug + ", created " + org.createdAt.toISOString().slice(0,10) + ")" : "none"}`);
+  console.log(`initiatives (total): ${total}`);
+  console.log(`initiatives in org : ${inOrg}`);
+  console.log(`seeded (tagged)    : ${tagged}`);
+}
 async function main() {
   // Never against a real deployment — this fabricates portfolio history.
   assertNotProduction('demo history seed');
@@ -358,7 +378,8 @@ async function main() {
   const { PrismaClient } = await import('@prisma/client');
   prisma = new PrismaClient();
 
-  if (process.argv.includes('--remove')) await remove();
+  if (process.argv.includes('--status')) await status();
+  else if (process.argv.includes('--remove')) await remove();
   else await seed();
 }
 
