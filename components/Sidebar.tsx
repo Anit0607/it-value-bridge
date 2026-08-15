@@ -32,6 +32,7 @@ import {
   FileSpreadsheet,
   Wrench,
   ShieldCheck,
+  GraduationCap,
 } from 'lucide-react';
 
 interface NavItem {
@@ -71,6 +72,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: 'Value Intelligence',
     items: [
       { href: '/value', label: 'Value Board', icon: TrendingUp, roles: ['CIO', ...PMO_EQUIVALENT_ROLES] },
+      { href: '/learning', label: 'Claim Accuracy', icon: GraduationCap, roles: ['CIO', ...PMO_EQUIVALENT_ROLES] },
       { href: '/okrs', label: 'Strategic OKRs', icon: Target, roles: ['CIO', ...PMO_EQUIVALENT_ROLES], term: 'okrPlural' },
       { href: '/report', label: 'Value Report', icon: FileBarChart, roles: ['CIO', ...PMO_EQUIVALENT_ROLES] },
     ],

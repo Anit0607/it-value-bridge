@@ -43,6 +43,10 @@ const ROUTE_RULES: RouteRule[] = [
 
   // Leadership + intelligence — CIO and PMO-equivalent
   { path: '/value',         allow: ['CIO', ...PMO_EQUIVALENT_ROLES] },
+  // Claim accuracy (M6). Same tier as the Value Board: these are judgements
+  // about named people's forecasting records, so the audience is the roles
+  // already accountable for portfolio value, not everyone who can read a page.
+  { path: '/learning',      allow: ['CIO', ...PMO_EQUIVALENT_ROLES] },
   { path: '/okrs',          allow: ['CIO', ...PMO_EQUIVALENT_ROLES] },
   { path: '/report',        allow: ['CIO', ...PMO_EQUIVALENT_ROLES] },
 

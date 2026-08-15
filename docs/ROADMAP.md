@@ -421,16 +421,71 @@ inventing one to preserve two sentences would re-import the assumption M4 exists
 
 ---
 
-### M6 — The learning loop
+### M6 — The learning loop ✅ **BUILT (2026-08-15) — but time-gated by design**
 **Unlocks at 12+ months. Design early, build late.**
 
-- [ ] Projected vs realized ROI per initiative
-- [ ] Claim accuracy by sponsor, vertical, category, over time
-- [ ] How exception-approved projects actually performed
+- [x] Projected vs realized ROI per initiative
+- [x] Claim accuracy by sponsor, vertical, category, over time
+- [x] How exception-approved projects actually performed
 
 **Note:** effort-light but **time-gated**. Depends entirely on snapshots captured from M1
 onward. Build the capture now; build the analytics when there is history worth analysing.
 This is the feature no tracker can copy, because a tracker never captured the promise.
+
+**Built now; will say almost nothing until history accumulates. That is correct behaviour,
+not a defect.** Today's portfolio yields **0 assessable initiatives**, and the page says so
+in those words rather than rendering an empty chart.
+
+**The valuable part is not the charts — it is the refusal to draw conclusions.** These are
+judgements about named people's forecasting records. "Sponsor Sharma's claims run 40%
+optimistic", computed from two initiatives, is not an insight; it is a defamation with a
+progress bar. The same discipline the rest of the product applies to portfolio figures —
+never claim *correct*, only claim *traceable* — has to apply to the analytics about those
+figures, or M6 becomes the very thing the rest of the product exists to prevent. So:
+
+- **Patterns are withheld below 5 assessed initiatives**, with the reason stated on the row.
+  Thin groups are still *shown*, with their sample size, rather than dropped — hiding them
+  would make the page look confidently sparse instead of honestly thin.
+- **Every figure carries its `n`.** That, not the constant, is the real mitigation.
+- **Median, not mean.** One ₹200 Cr programme that overdelivered would drag a sponsor's mean
+  above 1.0 while every other claim they made fell short. Verified live: at n=6 the median
+  read 70% where the mean was 74%.
+- **A restated promise cannot flatter its own accuracy.** Accuracy is measured against the
+  figure *originally* committed, not the revised one. Otherwise the M3 restatement flow
+  becomes a way of manufacturing a perfect record.
+- **Five distinct "cannot assess" states**, never a score of zero: `not_signed_off`,
+  `promise_not_frozen`, `not_yet_due`, `awaiting_measurement`, `unsourced`. An initiative
+  that went live last week is not a failure; it has not had time to happen.
+- **Unsourced realized figures do not count.** A ₹ figure with no evidence source cannot
+  support a conclusion about a colleague.
+
+**Exception outcomes grade the override, not the rule.** If work funded *below* the ROI
+threshold routinely delivers, the threshold is set too high; if it routinely misses, the
+exception process is a rubber stamp. Neither conclusion is available yet, and the page says
+which.
+
+**Live verification found a real bug the type checker could not.** The readiness panel
+originally reported *"23 initiatives were signed off without freezing the promised value…
+they can never be assessed"* — but only 17 had ever been signed off. The other 6 simply had
+no sign-off yet and **can** be assessed later. Telling a user that a fixable gap is permanent
+is its own false claim, on the one page whose entire purpose is not making those. Split into
+`not_signed_off` (recoverable) and `promise_not_frozen` (permanent), with a regression test.
+The corrected panel reads 7 / 16 / 1, which reconciles exactly to the 17 sign-offs in the
+database.
+
+**Positive path verified by seeding, then removing, temporary records:** at n=3 the verdict
+was withheld with the reason shown; at n=6 it reported 80% for a 5-initiative sponsor and 70%
+across all six, with ₹ totals and a 120% overdelivery rendered uncapped. All verification data
+was removed afterwards and the database confirmed back to 24 initiatives, 0 orphans.
+
+**One deliberate call worth flagging:** ₹ totals are shown even on withheld rows, so a reader
+could divide them. Those totals are *facts* about what was promised and delivered; the
+withheld thing is the *characterisation* of someone's forecasting. The sample size sits
+directly beside them, which is the honest mitigation.
+
+**160 tests** (38 new). What M6 cannot do is manufacture history — the first real answers are
+12+ months away, and 16 initiatives signed off before promise capture existed can never be
+assessed at all.
 
 ---
 
@@ -604,3 +659,4 @@ make the rupee number more credible?* Milestones and dependencies would not have
 | 2026-08-11 | **M4 complete.** The `Stage` enum is gone — lifecycle is a per-organization table with semantic role tags, and the engine keys off meaning rather than the string `UAT`. Per-organization terminology, module switches that remove surfaces rather than empty them, roles expressed as capability + visibility scope, three shipped templates and a guided setup form at `/admin/setup`. Verified by provisioning a second workspace on the four-stage Lean lifecycle and driving it end to end, which found four bugs the type checker could not see — including one that made outcome confirmation unreachable in any lifecycle where confirm and close are the same stage. **R1 is closed.** |
 | 2026-08-09 | **M3 complete.** Maker-checker on value sign-off and cost changes gated by an org materiality threshold, claims locked at sign-off, formal restatement flow, evidence/provenance fields (mandatory for realized ₹ figures), portfolio double-count review, and period snapshots that freeze board figures at publication. The whole chain — proposed by, approved by, restated by, sourced from — is verified live across PMO and CIO. `MonthlyReport`'s unique key moved to `[organizationId, year, month]`, closing a cross-tenant collision that had never been exercised because the model was unused. |
 | 2026-08-15 | **M5 (pilot tier) complete.** Observability with no outbound calls, readiness probe verified both ways in a container, enforced staging/production separation, a backup/restore round trip actually executed, TOTP MFA verified against RFC 6238 vectors, CI gating on Trivy, and a security questionnaire + DPA that state their own gaps. The three "start now" items and VAPT/escrow remain — they are commercial and legal actions, not engineering. SSO/SAML is explicitly NOT built. A backup drill caught 4 orphaned rows left by the M4 cleanup; removed. |
+| 2026-08-15 | **M6 built.** Claim accuracy — promised vs realized per initiative, by sponsor/vertical/category, and how exception-approved work performed. The substance is the refusal to conclude: patterns withheld below 5 assessed initiatives, every figure carrying its sample size, median over mean, and accuracy measured against the *original* promise so a restatement cannot flatter it. Live verification caught the panel calling 6 not-yet-signed-off initiatives "permanently unassessable"; split into recoverable and permanent states with a regression test. Today the page correctly reports 0 assessable and says exactly what is missing — the first real answers are 12+ months away. |
